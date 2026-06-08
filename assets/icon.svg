@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="FightBots icon">
+  <rect width="512" height="512" rx="112" fill="#244d42"/>
+  <circle cx="164" cy="360" r="54" fill="#10241f"/>
+  <circle cx="348" cy="360" r="54" fill="#10241f"/>
+  <rect x="96" y="188" width="320" height="178" rx="48" fill="#78d4b0"/>
+  <rect x="138" y="136" width="236" height="92" rx="42" fill="#f7ca4d"/>
+  <rect x="182" y="234" width="56" height="48" rx="18" fill="#10241f"/>
+  <rect x="274" y="234" width="56" height="48" rx="18" fill="#10241f"/>
+  <path d="M184 326h144" stroke="#10241f" stroke-width="24" stroke-linecap="round"/>
+  <path d="M92 248 44 218" stroke="#f36f45" stroke-width="28" stroke-linecap="round"/>
+  <path d="M420 248 468 218" stroke="#f36f45" stroke-width="28" stroke-linecap="round"/>
+  <path d="M256 126V76" stroke="#f7ca4d" stroke-width="28" stroke-linecap="round"/>
+  <circle cx="256" cy="58" r="24" fill="#f36f45"/>
+</svg>
