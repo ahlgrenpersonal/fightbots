@@ -1,5 +1,5 @@
 const app = document.querySelector("#app");
-const buildVersion = "world27";
+const buildVersion = "world38";
 const budget = 8;
 const gridSize = 7;
 const turnMs = 900;
@@ -10,8 +10,8 @@ const colors = [
   { id: "blue", name: "Blue", value: "#2f80d8" },
   { id: "green", name: "Green", value: "#2f9f67" },
   { id: "yellow", name: "Yellow", value: "#f0b83e" },
-  { id: "pink", name: "Pink", value: "#d75ca8" },
-  { id: "gray", name: "Gray", value: "#73808a" }
+  { id: "orange", name: "Orange", value: "#f06f3e" },
+  { id: "purple", name: "Purple", value: "#8f57d6" }
 ];
 
 const parts = {
@@ -199,14 +199,18 @@ const defaultBuild = {
 let state = {
   screen: "build",
   builder: 1,
-  builds: {
-    1: { ...defaultBuild },
-    2: { ...defaultBuild, color: colors[1].id }
-  },
+  builds: createDefaultBuilds(),
   battle: null
 };
 
 let battleTimer = null;
+
+function createDefaultBuilds() {
+  return {
+    1: { ...defaultBuild },
+    2: { ...defaultBuild, color: colors[1].id }
+  };
+}
 
 function findPart(type, id) {
   return parts[type].find((part) => part.id === id);
@@ -298,11 +302,12 @@ function setScreen(screen) {
 }
 
 function updateBuild(type, value) {
+  const preservedScrollTop = app.querySelector(".parts-scroll")?.scrollTop ?? 0;
   state.builds[state.builder] = {
     ...state.builds[state.builder],
     [type]: value
   };
-  renderBuild();
+  renderBuild(preservedScrollTop);
 }
 
 function lockBuild() {
@@ -334,6 +339,7 @@ function startSecondBuild() {
 }
 
 function startBattle() {
+  clearBattleTimer();
   state.battle = createBattle();
   state.screen = "battle";
   renderBattle();
@@ -349,9 +355,14 @@ function clearBattleTimer() {
 
 function rematch() {
   state.builder = 1;
+  state.builds = createDefaultBuilds();
   state.screen = "build";
   state.battle = null;
   render();
+}
+
+function newMatch() {
+  startBattle();
 }
 
 function createBattle() {
@@ -385,6 +396,7 @@ function makeBattleBot(player, build, position) {
     shieldUsed: false,
     repairUsed: false,
     magnetUsed: false,
+    retreatCooldown: 0,
     lastAction: "ready"
   };
 }
@@ -435,6 +447,10 @@ function takeAction(bot, enemy) {
     bot.cooldown -= 1;
   }
 
+  if (bot.retreatCooldown > 0) {
+    bot.retreatCooldown -= 1;
+  }
+
   if (tryRepair(bot)) {
     return;
   }
@@ -443,8 +459,14 @@ function takeAction(bot, enemy) {
     return;
   }
 
+  const repositioned = tryKeepDistance(bot, enemy);
+
   if (canAttack(bot, enemy)) {
     attack(bot, enemy);
+    return;
+  }
+
+  if (repositioned) {
     return;
   }
 
@@ -453,6 +475,35 @@ function takeAction(bot, enemy) {
   if (canAttack(bot, enemy)) {
     attack(bot, enemy);
   }
+}
+
+function tryKeepDistance(bot, enemy) {
+  const weapon = findPart("weapon", bot.build.weapon);
+  const enemyWeapon = findPart("weapon", enemy.build.weapon);
+  const gap = distance(bot.position, enemy.position);
+
+  if (
+    bot.build.brain !== "range" ||
+    weapon.range <= 1 ||
+    enemyWeapon.range > 1 ||
+    bot.cooldown > 0 ||
+    bot.retreatCooldown > 0 ||
+    gap !== 1
+  ) {
+    return false;
+  }
+
+  const moves = getOpenMoves(bot).filter((move) => distance(move, enemy.position) > gap);
+
+  if (moves.length === 0) {
+    return false;
+  }
+
+  bot.position = bestMove(moves, (move) => distance(move, enemy.position));
+  bot.retreatCooldown = 2;
+  bot.lastAction = "move";
+  addLog(`Bot ${bot.player} backs up.`);
+  return true;
 }
 
 function tryRepair(bot) {
@@ -588,6 +639,14 @@ function pushEnemy(bot, enemy) {
 }
 
 function moveBot(bot, enemy) {
+  const weapon = findPart("weapon", bot.build.weapon);
+
+  if (bot.cooldown > 0 && weapon.range === 1 && distance(bot.position, enemy.position) === 1) {
+    bot.lastAction = "wait";
+    addLog(`Bot ${bot.player} holds position.`);
+    return;
+  }
+
   const steps = bot.stats.speed >= 3 ? 2 : 1;
 
   for (let index = 0; index < steps; index += 1) {
@@ -742,7 +801,7 @@ function render() {
   }
 }
 
-function renderBuild() {
+function renderBuild(preservedScrollTop = 0) {
   const player = state.builder;
   const build = state.builds[player];
   const stats = getStats(build);
@@ -753,8 +812,7 @@ function renderBuild() {
   app.innerHTML = `
     <header class="top-bar">
       <div>
-        <p class="eyebrow">Player ${player}</p>
-        <h1>Build Bot</h1>
+        <h1>Build Bot ${player}</h1>
       </div>
       <div class="budget ${overBudget ? "is-over" : ""}">
         <span>${remaining}</span>
@@ -788,6 +846,11 @@ function renderBuild() {
   `;
 
   app.querySelector(".done-action").addEventListener("click", lockBuild);
+
+  const partsScroll = app.querySelector(".parts-scroll");
+  if (partsScroll) {
+    partsScroll.scrollTop = preservedScrollTop;
+  }
 
   app.querySelectorAll("[data-part-type]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -959,7 +1022,7 @@ function renderBattle() {
     }
   `;
 
-  app.querySelector(".small-action").addEventListener("click", rematch);
+  app.querySelector(".small-action").addEventListener("click", newMatch);
 
   const resultButton = app.querySelector(".result-action");
 
@@ -1069,9 +1132,6 @@ function renderBotFigure(build, player, action = "") {
         <span class="bot-weapon weapon-${weapon.id}"></span>
         <span class="bot-gadget gadget-${gadget.id}"></span>
       </span>
-      <span class="bot-bolt bolt-left"></span>
-      <span class="bot-bolt bolt-right"></span>
-      <span class="bot-number">${player}</span>
     </div>
   `;
 }
