@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#244d42">
+    <title>FightBots Refresh</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #b9e7d8;
+        color: #173832;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+
+      main {
+        width: min(100%, 360px);
+        display: grid;
+        gap: 16px;
+      }
+
+      h1,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 32px;
+        line-height: 1.05;
+      }
+
+      p {
+        font-size: 17px;
+        line-height: 1.35;
+      }
+
+      button {
+        min-height: 54px;
+        border: 0;
+        border-radius: 8px;
+        background: #244d42;
+        color: white;
+        font: inherit;
+        font-weight: 800;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>FightBots Refresh</h1>
+      <p id="status">Clearing the old saved game files...</p>
+      <button type="button" id="refreshButton">Refresh FightBots</button>
+    </main>
+
+    <script>
+      const statusText = document.querySelector("#status");
+      const refreshButton = document.querySelector("#refreshButton");
+
+      async function clearSavedApp() {
+        statusText.textContent = "Clearing the old saved game files...";
+
+        if ("serviceWorker" in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map((registration) => registration.unregister()));
+        }
+
+        if ("caches" in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((key) => caches.delete(key)));
+        }
+
+        statusText.textContent = "Opening the fresh game...";
+        window.location.replace("./index.html?fresh=" + Date.now());
+      }
+
+      refreshButton.addEventListener("click", clearSavedApp);
+      window.addEventListener("load", () => {
+        window.setTimeout(clearSavedApp, 500);
+      });
+    </script>
+  </body>
+</html>

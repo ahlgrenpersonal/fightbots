@@ -1,9 +1,9 @@
-const CACHE_NAME = "fightbots-world26";
+const CACHE_NAME = "fightbots-world27";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=world26",
-  "./app.js?v=world26",
+  "./styles.css?v=world27",
+  "./app.js?v=world27",
   "./version.json",
   "./manifest.webmanifest",
   "./assets/icon.svg"
