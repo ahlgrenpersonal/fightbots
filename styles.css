@@ -207,11 +207,12 @@ h2 {
 
 .part-card {
   position: relative;
-  min-height: 64px;
+  min-height: 76px;
   display: grid;
-  align-content: center;
+  grid-template-columns: 52px minmax(0, 1fr);
+  align-items: center;
   justify-items: start;
-  gap: 2px;
+  gap: 8px;
   padding: 8px 36px 8px 10px;
   border: 3px solid #31504a;
   border-radius: 8px;
@@ -221,15 +222,67 @@ h2 {
   box-shadow: 0 4px 0 #c6a761;
 }
 
-.part-card span {
+.part-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.part-copy span {
   font-size: 15px;
   line-height: 1.08;
 }
 
-.part-card small {
+.part-copy small {
   color: #705a46;
   font-size: 11px;
   line-height: 1.1;
+}
+
+.part-visual {
+  position: relative;
+  width: 48px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: rgb(169 213 187 / 0.45);
+}
+
+.part-visual .bot-figure {
+  width: 44px;
+}
+
+.part-visual .bot-antenna {
+  border-width: 2px;
+}
+
+.part-visual .bot-antenna::before,
+.part-visual .bot-body,
+.part-visual .bot-wheel,
+.part-visual .bot-wheel::after,
+.part-visual .bot-weapon,
+.part-visual .bot-gadget,
+.part-visual .weapon-bumper::before,
+.part-visual .weapon-bumper::after,
+.part-visual .weapon-blaster::before,
+.part-visual .weapon-blaster::after,
+.part-visual .weapon-hammer::after,
+.part-visual .weapon-saw::before,
+.part-visual .weapon-saw::after {
+  border-width: 2px;
+}
+
+.part-visual .bot-eye {
+  border-width: 1px;
+}
+
+.part-visual .bot-panel {
+  border-width: 2px;
+}
+
+.part-card.is-selected .part-visual {
+  background: rgb(255 248 222 / 0.2);
 }
 
 .part-card b {
@@ -782,7 +835,7 @@ h2 {
 .armor-reflect {
   border-radius: 15%;
   background:
-    linear-gradient(135deg, #e8fbff 0 15%, #70d1ff 16% 34%, #f7ffff 35% 52%, #4388e7 53% 72%, #d8f7ff 73% 100%),
+    linear-gradient(135deg, #e8fbff 0 15%, #70d1ff 16% 34%, #f7ffff 35% 52%, var(--bot-color) 53% 72%, #d8f7ff 73% 100%),
     var(--bot-color);
   box-shadow:
     inset 0 0 0 8px rgb(255 255 255 / 0.28),
@@ -879,10 +932,26 @@ h2 {
 }
 
 .bot-wheel.speed {
-  width: 25%;
+  width: 29%;
   background:
-    radial-gradient(circle, #97d7ff 0 22%, transparent 23%),
-    #242628;
+    radial-gradient(circle at center, #ffe06d 0 17%, transparent 18%),
+    repeating-conic-gradient(from 20deg, #97d7ff 0 22deg, #2368a6 22deg 44deg),
+    #1c2f4e;
+  box-shadow:
+    0 0 0 2px rgb(151 215 255 / 0.25),
+    0 3px 0 rgb(29 41 38 / 0.18);
+}
+
+.bot-wheel.speed::before {
+  content: "";
+  position: absolute;
+  left: 31%;
+  top: 5%;
+  width: 38%;
+  height: 88%;
+  background: #ffe06d;
+  clip-path: polygon(58% 0, 22% 44%, 48% 44%, 28% 100%, 82% 36%, 55% 36%);
+  z-index: 2;
 }
 
 .bot-wheel.grip {
@@ -1005,16 +1074,60 @@ h2 {
 .weapon-hammer::after {
   content: "";
   position: absolute;
-  right: -33%;
+  right: -68%;
   top: 50%;
-  width: 52%;
-  height: 315%;
+  width: 92%;
+  height: 470%;
   transform: translateY(-50%);
   border: 3px solid #1d2926;
-  border-radius: 6px;
+  border-radius: 7px;
   background:
     linear-gradient(90deg, rgb(255 255 255 / 0.32), transparent),
     #aeb2ac;
+}
+
+.weapon-saw {
+  left: 59%;
+  top: 58%;
+  bottom: auto;
+  width: 54%;
+  aspect-ratio: 1;
+  border: 3px solid #1d2926;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at center, #6d7478 0 22%, #1d2926 23% 30%, transparent 31%),
+    conic-gradient(from 10deg, #e7ecec 0 8%, #8e9699 8% 16%, #e7ecec 16% 24%, #8e9699 24% 32%, #e7ecec 32% 40%, #8e9699 40% 48%, #e7ecec 48% 56%, #8e9699 56% 64%, #e7ecec 64% 72%, #8e9699 72% 80%, #e7ecec 80% 88%, #8e9699 88% 96%, #e7ecec 96%);
+  box-shadow:
+    inset 0 0 0 5px rgb(255 255 255 / 0.22),
+    0 4px 0 rgb(29 41 38 / 0.16);
+  transform: none;
+  animation: bladeIdle 1.25s linear infinite;
+}
+
+.weapon-saw::before {
+  content: "";
+  position: absolute;
+  left: -38%;
+  top: 38%;
+  width: 45%;
+  height: 24%;
+  border: 3px solid #1d2926;
+  border-radius: 999px;
+  background: #705a46;
+  transform: rotate(-18deg);
+  transform-origin: right center;
+  z-index: -1;
+}
+
+.weapon-saw::after {
+  content: "";
+  position: absolute;
+  inset: 31%;
+  border: 3px solid #1d2926;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 36% 32%, rgb(255 255 255 / 0.55) 0 18%, transparent 19%),
+    #ffe06d;
 }
 
 .weapon-spinner {

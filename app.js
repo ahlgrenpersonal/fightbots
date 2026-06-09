@@ -1,5 +1,5 @@
 const app = document.querySelector("#app");
-const buildVersion = "world42";
+const buildVersion = "world44";
 const budget = 8;
 const gridSize = 5;
 const turnMs = 900;
@@ -35,6 +35,17 @@ const parts = {
       cooldown: 1,
       kind: "blaster",
       note: "Range bonus"
+    },
+    {
+      id: "saw",
+      name: "Saw",
+      cost: 3,
+      damage: 4,
+      range: 1,
+      cooldown: 2,
+      kind: "saw",
+      armorPierce: 1,
+      note: "Circular blade"
     },
     {
       id: "hammer",
@@ -164,26 +175,6 @@ const parts = {
       cost: 2,
       note: "Pulls once"
     }
-  ],
-  brain: [
-    {
-      id: "charge",
-      name: "Charge",
-      cost: 0,
-      note: "Gets close"
-    },
-    {
-      id: "guard",
-      name: "Guard",
-      cost: 0,
-      note: "Holds center"
-    },
-    {
-      id: "range",
-      name: "Ranger",
-      cost: 0,
-      note: "Keeps space"
-    }
   ]
 };
 
@@ -192,8 +183,7 @@ const defaultBuild = {
   weapon: "bumper",
   armor: "light",
   wheels: "basic",
-  gadget: "none",
-  brain: "charge"
+  gadget: "none"
 };
 
 let state = {
@@ -217,14 +207,22 @@ function findPart(type, id) {
 }
 
 function getColor(id) {
+  if (id === "preview") {
+    return { id: "preview", name: "Preview", value: "#f7f5ec" };
+  }
+
   return colors.find((color) => color.id === id) || colors[0];
 }
 
 function getBuildCost(build) {
-  return ["weapon", "armor", "wheels", "gadget", "brain"].reduce(
+  return ["weapon", "armor", "wheels", "gadget"].reduce(
     (total, type) => total + findPart(type, build[type]).cost,
     0
   );
+}
+
+function getBuildBrain(build) {
+  return build.weapon === "blaster" ? "range" : "charge";
 }
 
 function getCostAfterSelection(build, type, partId) {
@@ -241,19 +239,16 @@ function enumerateLegalBuilds(maxCost = budget) {
     for (const armor of parts.armor) {
       for (const wheels of parts.wheels) {
         for (const gadget of parts.gadget) {
-          for (const brain of parts.brain) {
-            const build = {
-              color: colors[1 + Math.floor(Math.random() * (colors.length - 1))].id,
-              weapon: weapon.id,
-              armor: armor.id,
-              wheels: wheels.id,
-              gadget: gadget.id,
-              brain: brain.id
-            };
+          const build = {
+            color: colors[1 + Math.floor(Math.random() * (colors.length - 1))].id,
+            weapon: weapon.id,
+            armor: armor.id,
+            wheels: wheels.id,
+            gadget: gadget.id
+          };
 
-            if (getBuildCost(build) <= maxCost) {
-              builds.push(build);
-            }
+          if (getBuildCost(build) <= maxCost) {
+            builds.push(build);
           }
         }
       }
@@ -265,7 +260,7 @@ function enumerateLegalBuilds(maxCost = budget) {
 
 function createAiBuild() {
   const roll = Math.random();
-  const aiBudget = roll < 0.62 ? 4 : roll < 0.88 ? 6 : 8;
+  const aiBudget = roll < 1 / 3 ? budget : roll < 2 / 3 ? Math.floor(budget * 0.9) : Math.floor(budget * 0.8);
   const builds = enumerateLegalBuilds(aiBudget);
   const sturdyStarter = builds.filter((build) => getBuildCost(build) >= Math.max(0, aiBudget - 2));
   const pool = sturdyStarter.length > 0 ? sturdyStarter : builds;
@@ -484,7 +479,7 @@ function tryKeepDistance(bot, enemy) {
   const gap = distance(bot.position, enemy.position);
 
   if (
-    bot.build.brain !== "range" ||
+    getBuildBrain(bot.build) !== "range" ||
     weapon.range <= 1 ||
     enemyWeapon.range > 1 ||
     bot.cooldown > 0 ||
@@ -672,7 +667,7 @@ function moveBot(bot, enemy) {
 
 function chooseMove(bot, enemy) {
   const weapon = findPart("weapon", bot.build.weapon);
-  const brain = bot.build.brain;
+  const brain = getBuildBrain(bot.build);
   const moves = getOpenMoves(bot);
 
   if (moves.length === 0) {
@@ -837,7 +832,6 @@ function renderBuild(preservedScrollTop = 0) {
       ${renderPartGroup("armor", "Armor", build)}
       ${renderPartGroup("wheels", "Wheels", build)}
       ${renderPartGroup("gadget", "Gadget", build)}
-      ${renderPartGroup("brain", "Brain", build)}
       <div class="build-actions done-actions">
         <button class="done-action" type="button" ${overBudget ? "disabled" : ""}>
           Done
@@ -922,10 +916,25 @@ function renderPartButton(type, part, selected, disabled) {
       data-part-id="${part.id}"
       ${disabled ? "disabled" : ""}
     >
-      <span>${part.name}</span>
-      <small>${part.note}</small>
+      <span class="part-visual" aria-hidden="true">${renderPartIcon(type, part.id)}</span>
+      <span class="part-copy">
+        <span>${part.name}</span>
+        <small>${part.note}</small>
+      </span>
       <b>${part.cost}</b>
     </button>
+  `;
+}
+
+function renderPartIcon(type, partId) {
+  const previewBuild = {
+    ...defaultBuild,
+    color: "preview",
+    [type]: partId
+  };
+
+  return `
+    ${renderBotFigure(previewBuild, "sample")}
   `;
 }
 
