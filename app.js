@@ -1,5 +1,5 @@
 const app = document.querySelector("#app");
-const buildVersion = "world44";
+const buildVersion = "world45";
 const budget = 8;
 const gridSize = 5;
 const turnMs = 900;
@@ -672,11 +672,6 @@ function chooseMove(bot, enemy) {
 
   if (moves.length === 0) {
     return null;
-  }
-
-  if (brain === "guard") {
-    const center = { x: Math.floor(gridSize / 2), y: Math.floor(gridSize / 2) };
-    return bestMove(moves, (move) => -distance(move, center) - distance(move, enemy.position) * 0.15);
   }
 
   if (brain === "range" || weapon.range > 1) {
