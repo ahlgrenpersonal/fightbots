@@ -452,8 +452,8 @@ h2 {
   width: 100%;
   aspect-ratio: 1;
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  grid-template-rows: repeat(7, 1fr);
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(5, 1fr);
   gap: 4px;
   padding: 7px;
   border: 4px solid #1d2926;
@@ -708,10 +708,10 @@ h2 {
 }
 
 .armor-heavy {
-  border-width: 6px;
+  border-width: 4px;
   border-radius: 10%;
   background:
-    linear-gradient(90deg, #132923 0 17%, transparent 18% 82%, #132923 83%),
+    linear-gradient(90deg, #132923 0 11%, transparent 12% 88%, #132923 89%),
     linear-gradient(180deg, rgb(255 255 255 / 0.28) 0 17%, transparent 18%),
     radial-gradient(circle at 33% 25%, rgb(255 255 255 / 0.36) 0 10%, transparent 11%),
     var(--bot-color);
@@ -720,18 +720,18 @@ h2 {
 .armor-heavy::before {
   content: "";
   position: absolute;
-  inset: -12%;
-  border: 4px solid #1d2926;
+  inset: -8%;
+  border: 2px solid #1d2926;
   border-radius: 10%;
   background:
-    linear-gradient(135deg, transparent 0 18%, #303b3a 19% 27%, transparent 28%),
-    linear-gradient(225deg, transparent 0 18%, #303b3a 19% 27%, transparent 28%),
+    linear-gradient(135deg, transparent 0 18%, #303b3a 19% 24%, transparent 25%),
+    linear-gradient(225deg, transparent 0 18%, #303b3a 19% 24%, transparent 25%),
     radial-gradient(circle at 18% 18%, #ffe06d 0 4%, transparent 5%),
     radial-gradient(circle at 82% 18%, #ffe06d 0 4%, transparent 5%),
     radial-gradient(circle at 18% 82%, #ffe06d 0 4%, transparent 5%),
     radial-gradient(circle at 82% 82%, #ffe06d 0 4%, transparent 5%);
   box-shadow:
-    inset 0 0 0 6px rgb(48 59 58 / 0.9),
+    inset 0 0 0 4px rgb(48 59 58 / 0.9),
     0 5px 0 rgb(29 41 38 / 0.16);
   pointer-events: none;
 }
@@ -741,20 +741,20 @@ h2 {
   position: absolute;
   left: 10%;
   right: 10%;
-  top: -18%;
-  height: 20%;
-  border: 4px solid #1d2926;
+  top: -12%;
+  height: 13%;
+  border: 2px solid #1d2926;
   border-radius: 8px 8px 3px 3px;
   background:
-    repeating-linear-gradient(90deg, #ffe06d 0 9px, #2c3533 9px 18px);
+    repeating-linear-gradient(90deg, #ffe06d 0 6px, #2c3533 6px 12px);
   pointer-events: none;
 }
 
 .armor-steel {
-  border-width: 5px;
+  border-width: 3px;
   border-radius: 11%;
   background:
-    linear-gradient(90deg, #132923 0 9%, transparent 10% 90%, #132923 91%),
+    linear-gradient(90deg, #132923 0 6%, transparent 7% 93%, #132923 94%),
     linear-gradient(180deg, rgb(255 255 255 / 0.22) 0 14%, transparent 15%),
     radial-gradient(circle at 33% 25%, rgb(255 255 255 / 0.36) 0 10%, transparent 11%),
     var(--bot-color);
@@ -763,16 +763,16 @@ h2 {
 .armor-steel::before {
   content: "";
   position: absolute;
-  inset: -4%;
-  border: 4px solid #1d2926;
+  inset: -2%;
+  border: 2px solid #1d2926;
   border-radius: 11%;
   background:
     radial-gradient(circle at 16% 17%, #f7ca4d 0 4%, transparent 5%),
     radial-gradient(circle at 84% 17%, #f7ca4d 0 4%, transparent 5%),
     radial-gradient(circle at 16% 83%, #f7ca4d 0 4%, transparent 5%),
     radial-gradient(circle at 84% 83%, #f7ca4d 0 4%, transparent 5%),
-    linear-gradient(135deg, transparent 0 18%, #303b3a 19% 23%, transparent 24%),
-    linear-gradient(225deg, transparent 0 18%, #303b3a 19% 23%, transparent 24%);
+    linear-gradient(135deg, transparent 0 18%, #303b3a 19% 21%, transparent 22%),
+    linear-gradient(225deg, transparent 0 18%, #303b3a 19% 21%, transparent 22%);
   box-shadow:
     inset 0 0 0 2px rgb(48 59 58 / 0.82),
     0 3px 0 rgb(29 41 38 / 0.13);

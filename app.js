@@ -1,7 +1,7 @@
 const app = document.querySelector("#app");
-const buildVersion = "world38";
+const buildVersion = "world42";
 const budget = 8;
-const gridSize = 7;
+const gridSize = 5;
 const turnMs = 900;
 const repairAmount = 6;
 
@@ -366,8 +366,9 @@ function newMatch() {
 }
 
 function createBattle() {
-  const botOne = makeBattleBot(1, state.builds[1], { x: 1, y: 3 });
-  const botTwo = makeBattleBot(2, state.builds[2], { x: 5, y: 3 });
+  const middle = Math.floor(gridSize / 2);
+  const botOne = makeBattleBot(1, state.builds[1], { x: 1, y: middle });
+  const botTwo = makeBattleBot(2, state.builds[2], { x: gridSize - 2, y: middle });
 
   return {
     turn: 0,
@@ -679,7 +680,7 @@ function chooseMove(bot, enemy) {
   }
 
   if (brain === "guard") {
-    const center = { x: 3, y: 3 };
+    const center = { x: Math.floor(gridSize / 2), y: Math.floor(gridSize / 2) };
     return bestMove(moves, (move) => -distance(move, center) - distance(move, enemy.position) * 0.15);
   }
 
