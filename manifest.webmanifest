@@ -2,7 +2,7 @@
   "name": "FightBots",
   "short_name": "FightBots",
   "description": "A tiny installable bot arena game.",
-  "start_url": "./index.html?v=world45",
+  "start_url": "./index.html?v=world46",
   "scope": ".",
   "display": "standalone",
   "background_color": "#b9e7d8",

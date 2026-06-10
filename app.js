@@ -1,5 +1,5 @@
 const app = document.querySelector("#app");
-const buildVersion = "world45";
+const buildVersion = "world46";
 const budget = 8;
 const gridSize = 5;
 const turnMs = 900;

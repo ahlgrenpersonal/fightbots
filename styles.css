@@ -281,6 +281,19 @@ h2 {
   border-width: 2px;
 }
 
+.part-visual .weapon-hammer {
+  left: 48%;
+  width: 82%;
+  height: 20%;
+}
+
+.part-visual .weapon-hammer::after {
+  right: -78%;
+  width: 118%;
+  height: 760%;
+  border-radius: 5px;
+}
+
 .part-card.is-selected .part-visual {
   background: rgb(255 248 222 / 0.2);
 }
