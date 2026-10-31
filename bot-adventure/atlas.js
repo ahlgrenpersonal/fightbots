@@ -2,12 +2,20 @@ export const ATLAS_WIDTH=600,ATLAS_HEIGHT=760;
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 
 export class AtlasView {
-  constructor(){this.reset();}
+  constructor({initialFocus,initialZoom=1,maxZoom=3}={}){
+    this.maxZoom=Number.isFinite(maxZoom)?Math.max(1,maxZoom):3;
+    this.reset();
+    this.zoomAt(Number.isFinite(initialZoom)?initialZoom:1);
+    if(initialFocus&&Number.isFinite(initialFocus.x)&&Number.isFinite(initialFocus.y)){
+      this.x=ATLAS_WIDTH/2-initialFocus.x*this.zoom;
+      this.y=ATLAS_HEIGHT/2-initialFocus.y*this.zoom;this.bound();
+    }
+  }
   reset(){this.zoom=1;this.x=0;this.y=0;}
   bound(){this.x=clamp(this.x,ATLAS_WIDTH*(1-this.zoom),0);this.y=clamp(this.y,ATLAS_HEIGHT*(1-this.zoom),0);}
   fromScreen(p){return {x:(p.x-this.x)/this.zoom,y:(p.y-this.y)/this.zoom};}
   zoomAt(factor,p={x:ATLAS_WIDTH/2,y:ATLAS_HEIGHT/2}){
-    const anchor=this.fromScreen(p);this.zoom=clamp(this.zoom*factor,1,3);
+    const anchor=this.fromScreen(p);this.zoom=clamp(this.zoom*factor,1,this.maxZoom);
     this.x=p.x-anchor.x*this.zoom;this.y=p.y-anchor.y*this.zoom;this.bound();
   }
   pan(dx,dy){this.x+=dx;this.y+=dy;this.bound();}
@@ -39,8 +47,8 @@ export class AtlasGesture {
   }
 }
 
-export function mountAtlas(canvas,{source,onSelect,onChange}){
-  const view=new AtlasView(),gesture=new AtlasGesture(view),events=new AbortController();
+export function mountAtlas(canvas,{source,onSelect,onChange,initialFocus,initialZoom=1,maxZoom=3}){
+  const view=new AtlasView({initialFocus,initialZoom,maxZoom}),gesture=new AtlasGesture(view),events=new AbortController();
   const options={signal:events.signal};
   const point=e=>{const r=canvas.getBoundingClientRect();return {x:(e.clientX-r.left)*ATLAS_WIDTH/r.width,y:(e.clientY-r.top)*ATLAS_HEIGHT/r.height};};
   function render(){

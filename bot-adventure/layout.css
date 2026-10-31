@@ -1,6 +1,6 @@
-/* Reserve the mission and controls outside the moving world. */
+/* Keep controls outside the moving world. */
 html,body{background:var(--ink)}
-#game{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;height:100dvh}
+#game{display:grid;grid-template-rows:auto minmax(0,1fr) auto;height:100dvh}
 .topbar{position:static;min-height:0;gap:10px;padding-top:calc(24px + var(--safe-top,env(safe-area-inset-top,0px)));padding-bottom:2px;background:var(--ink);box-shadow:none}
 .brand{gap:8px}.brand-mark{flex-shrink:0;width:34px;height:34px;font-size:25px}.brand-mark span{top:-3px;font-size:15px}
 .brand>div{min-width:0;padding:0;overflow:visible}
@@ -41,6 +41,20 @@ dialog[data-mode="map"] .panel-head{padding:14px 16px;margin-bottom:8px}
 .map-key .player-key{display:inline-flex;align-items:center;gap:5px;color:#c4d5c9}
 .player-key::before{content:"";width:12px;height:12px;border:3px solid #173d68;border-radius:50%;background:#65ef86;outline:1px solid #f4fff8}
 .station-row{border-color:#77c6a250}.station-row span{color:#a9efd0}
+.workshop-row{border-color:#e5c56a80}.workshop-row>span{font-size:30px;color:#ffe292}
+.return-row{border-color:#c998f4}.return-row>span{color:#deb5ff}
+.tabs button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:78px;padding:7px 2px;border-radius:6px 6px 0 0}
+.tabs button canvas{width:55px;height:45px;pointer-events:none}
+.tabs button small{font-size:10px;pointer-events:none}
+.tabs button.active{background:#91dec91a}
+.item button{width:44px;min-width:44px;height:48px;min-height:48px;padding:2px;font-size:27px}
+.lock-icon{display:inline-block;position:relative;width:17px;height:15px;border-radius:2px;background:currentColor;margin-top:7px}
+.lock-icon::before{content:"";position:absolute;left:3px;top:-9px;width:11px;height:12px;border:3px solid currentColor;border-radius:8px 8px 0 0}
+.item.locked canvas,.item.unaffordable:not(.equipped) canvas{filter:grayscale(1);opacity:.4}
+.item.locked h3,.item.unaffordable:not(.equipped) h3{color:#9aadaa}
+.pictorial-action{display:flex;align-items:center;justify-content:center;gap:12px;min-height:62px}
+.pictorial-action>span{font-size:30px;line-height:1}
+.pictorial-action>small{font-size:12px}
 @keyframes warning-pulse{50%{opacity:.45;transform:scale(1.2)}}
 @media(min-width:900px){.quest{padding-left:28px}.console{padding-bottom:10px}.tools button{min-height:48px}.tools .boost{min-height:52px}}
 @media(max-width:380px){.quest{padding-left:10px;padding-right:10px}.quest b{font-size:12px}.quest div>span{font-size:10px}.health-row>span:last-child{max-width:105px;min-width:0}}
