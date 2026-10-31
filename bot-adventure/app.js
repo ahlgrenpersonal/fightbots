@@ -1,8 +1,8 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, canWalk, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, REQUIRED_CELLS } from './data.js?v=world56';
-import { Adventure, distance } from './engine.js?v=world56';
-import { Painter, bot, weapon, rounded } from './art.js?v=world56';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, canWalk, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, REQUIRED_CELLS } from './data.js?v=world57';
+import { Adventure, distance } from './engine.js?v=world57';
+import { Painter, bot, weapon, rounded } from './art.js?v=world57';
 
-const buildVersion = 'world56';
+const buildVersion = 'world57';
 const SAVE_KEY='bot-adventure-save-v1';
 const $=id=>document.getElementById(id);
 $('buildLabel').textContent=buildVersion;
@@ -27,6 +27,11 @@ function load(){
 const game=new Adventure(load());
 if(!canWalk(game.world,game.save,Math.floor(game.player.x),Math.floor(game.player.y))){game.player.x=HOME.x;game.player.y=HOME.y;}
 const painter=new Painter($('world'));painter.resize();painter.camera={x:game.player.x,y:game.player.y};
+const worldSizeObserver=new ResizeObserver(()=>painter.resize());
+worldSizeObserver.observe($('playfield'));
+window.visualViewport?.addEventListener('resize',()=>painter.resize());
+window.addEventListener('pageshow',()=>painter.resize());
+document.fonts?.ready.then(()=>painter.resize());
 game.reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const panel=$('panel');let panelMode=null,workTab='weapon',toastTimer,bannerTimer,frame=0,last=performance.now(),lastSave=0,wasPaused=false;
 let audio;
@@ -83,6 +88,14 @@ function goRegion(r){
 }
 function pauseMenu(){
   openPanel('pause',`${head('Take a breather','Your adventure is saved.')}<div class="panel-body"><div class="pause-actions"><button class="primary" data-action="close">Keep exploring ↗</button><button class="secondary" data-action="home">Home workshop</button><button class="secondary" data-action="map">Adventure map</button></div><label class="settings-row"><span>Gentle battles</span><input type="checkbox" id="gentle" ${game.save.gentle?'checked':''}></label><label class="settings-row"><span>Sound</span><input type="checkbox" id="audio" ${game.save.sound?'checked':''}></label><p class="install-note">On iPhone: Safari → Share → Add to Home Screen. Your adventure saves on this device and works offline after its first visit.</p><p class="install-note">${BUILD} · ${Math.floor(game.save.playSeconds/60)} minutes exploring</p></div>`);
+  panel.querySelector('.pause-actions').insertAdjacentHTML('beforeend','<button class="secondary" data-action="display">Display details</button>');
+}
+function displayDetails(){
+  const rect=element=>{const r=element.getBoundingClientRect();return [r.x,r.y,r.width,r.height].map(n=>Math.round(n*100)/100);};
+  const canvas=$('world'),r=canvas.getBoundingClientRect(),v=window.visualViewport;
+  const report={build:buildVersion,standalone:matchMedia('(display-mode: standalone)').matches||navigator.standalone===true,screen:[screen.width,screen.height],window:[innerWidth,innerHeight],visualViewport:v?[v.width,v.height,v.offsetTop,v.scale]:null,game:rect($('game')),header:rect(document.querySelector('.topbar')),footer:rect(document.querySelector('.console')),canvasCss:[r.width,r.height],canvasPixels:[canvas.width,canvas.height],canvasScale:[canvas.width/r.width,canvas.height/r.height],headerPadding:getComputedStyle(document.querySelector('.topbar')).paddingTop,footerPadding:getComputedStyle(document.querySelector('.console')).paddingBottom};
+  openPanel('display',`${head('Display details','Screen measurements only. No saved-game or personal data.')}<div class="panel-body"><pre id="displayReport" class="display-report"></pre><button class="secondary" data-action="pause">Back</button></div>`);
+  $('displayReport').textContent=Object.entries(report).map(([key,value])=>`${key}: ${JSON.stringify(value)}`).join('\n');
 }
 function showRescue(){openPanel('rescue',`${head('A little rescue','Every good explorer gets a helping hand.','BACK HOME')}<div class="panel-body"><canvas class="celebration" id="rewardBot" width="700" height="280"></canvas><p class="dialog-copy">Your bot is fully repaired. All your equipment, parts and discoveries are safe. The rescue cost at most 1 scrap.</p><button class="primary" data-action="home">Back to the workshop ⌂</button></div>`);}
 function showGuardian(r){
@@ -103,6 +116,8 @@ panel.addEventListener('click',e=>{
   if(action==='close')closePanel();
   if(action==='home')workshop();
   if(action==='map')adventureMap();
+  if(action==='display')displayDetails();
+  if(action==='pause')pauseMenu();
   if(action==='depart'){closePanel();game.depart();painter.camera={x:game.player.x,y:game.player.y};}
   if(action==='repair'){game.repair();closePanel();}
 });
@@ -126,7 +141,7 @@ $('world').addEventListener('pointermove',e=>{if(!pressed||game.paused||Math.hyp
 for(const event of ['pointerup','pointercancel'])$('world').addEventListener(event,()=>pressed=false);
 window.addEventListener('keydown',e=>{if(panel.open)return;const directions={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],w:[0,-1],s:[0,1],a:[-1,0],d:[1,0]};if(directions[e.key]){e.preventDefault();const [dx,dy]=directions[e.key];game.moveTo({x:Math.floor(game.player.x)+dx+.5,y:Math.floor(game.player.y)+dy+.5});}if(e.code==='Space'){e.preventDefault();game.boost();}if(e.key==='Escape')pauseMenu();});
 window.addEventListener('resize',()=>painter.resize());
-document.addEventListener('visibilitychange',()=>{if(document.hidden){wasPaused=game.paused;game.paused=true;persist();}else{game.paused=panel.open||wasPaused;last=performance.now();}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){wasPaused=game.paused;game.paused=true;persist();}else{game.paused=panel.open||wasPaused;last=performance.now();painter.resize();}});
 window.addEventListener('pagehide',persist);
 function hud(){
   const s=game.save,r=regionAt(game.player.x,game.player.y),max=game.maxHp(),current=Math.ceil(game.player.hp);

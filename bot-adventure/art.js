@@ -1,4 +1,4 @@
-import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, regionOrigin, relayFor, atlasLayout, isRoad, REQUIRED_CELLS } from './data.js?v=world56';
+import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, regionOrigin, relayFor, atlasLayout, isRoad, REQUIRED_CELLS } from './data.js?v=world57';
 
 export function rounded(c,x,y,w,h,r,fill,stroke,line=2) {
   c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=line;c.stroke();}
@@ -91,14 +91,24 @@ export function bot(c,x,y,size,options={},t=0) {
 
 export class Painter {
   constructor(canvas){this.canvas=canvas;this.c=canvas.getContext('2d');this.w=0;this.h=0;this.camera={x:HOME.x,y:HOME.y};this.tile=72;this.dpr=1;}
-  resize(){const r=this.canvas.getBoundingClientRect();this.w=r.width;this.h=r.height;this.dpr=Math.min(window.devicePixelRatio||1,2);this.canvas.width=Math.round(this.w*this.dpr);this.canvas.height=Math.round(this.h*this.dpr);this.tile=(this.w<600?Math.max(55,Math.min(76,this.w/6.3)):85)*.9;}
+  resize(){
+    const r=this.canvas.getBoundingClientRect();if(r.width<=0||r.height<=0)return;
+    this.w=r.width;this.h=r.height;this.dpr=Math.min(window.devicePixelRatio||1,2);
+    const width=Math.round(this.w*this.dpr),height=Math.round(this.h*this.dpr);
+    if(this.canvas.width!==width)this.canvas.width=width;
+    if(this.canvas.height!==height)this.canvas.height=height;
+    this.tile=(this.w<600?Math.max(55,Math.min(76,this.w/6.3)):85)*.9;
+  }
   screenToWorld(x,y){return {x:(x-this.w/2)/this.tile+this.camera.x,y:(y-this.h*.51)/this.tile+this.camera.y};}
   worldToScreen(x,y){return {x:(x-this.camera.x)*this.tile+this.w/2,y:(y-this.camera.y)*this.tile+this.h*.51};}
   draw(g,t,dt){
+    if(!this.canvas.clientWidth||!this.canvas.clientHeight)return;
+    // WebKit can resize the playfield without dispatching a window resize event.
+    if(this.canvas.clientWidth!==Math.round(this.w)||this.canvas.clientHeight!==Math.round(this.h)||Math.min(window.devicePixelRatio||1,2)!==this.dpr)this.resize();
     const {c,tile:s,w,h}=this;
     const smooth=1-Math.exp(-dt*6);this.camera.x+=(g.player.x-this.camera.x)*smooth;this.camera.y+=(g.player.y-this.camera.y)*smooth;
     this.camera.x=Math.max(w/s/2,Math.min(WORLD_W-w/s/2,this.camera.x));this.camera.y=Math.max(h/s*.51,Math.min(WORLD_H-h/s*.49,this.camera.y));
-    c.setTransform(this.dpr,0,0,this.dpr,0,0);c.clearRect(0,0,w,h);c.fillStyle='#284d4a';c.fillRect(0,0,w,h);
+    c.setTransform(this.canvas.width/w,0,0,this.canvas.height/h,0,0);c.clearRect(0,0,w,h);c.fillStyle='#284d4a';c.fillRect(0,0,w,h);
     const shake=g.reducedMotion?0:g.shake;const sx=shake?Math.sin(t*100)*shake:0,sy=shake?Math.cos(t*93)*shake:0;
     c.save();c.translate(w/2-this.camera.x*s+sx,h*.51-this.camera.y*s+sy);c.scale(s,s);
     const x0=Math.max(0,Math.floor(this.camera.x-w/s/2)-2),x1=Math.min(WORLD_W,Math.ceil(this.camera.x+w/s/2)+2),y0=Math.max(0,Math.floor(this.camera.y-h/s*.51)-2),y1=Math.min(WORLD_H,Math.ceil(this.camera.y+h/s*.49)+2);
