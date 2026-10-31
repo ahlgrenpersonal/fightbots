@@ -1,9 +1,9 @@
-const CACHE_NAME = "fightbots-world46";
+const CACHE_NAME = "fightbots-world50";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=world46",
-  "./app.js?v=world46",
+  "./styles.css?v=world50",
+  "./app.js?v=world50",
   "./version.json",
   "./manifest.webmanifest",
   "./assets/icon.svg"
@@ -22,7 +22,7 @@ self.addEventListener("activate", (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((key) => key !== CACHE_NAME)
+          .filter((key) => key.startsWith("fightbots-") && key !== CACHE_NAME)
           .map((key) => caches.delete(key))
       )
     ).then(() => self.clients.claim())
@@ -36,7 +36,11 @@ self.addEventListener("message", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") {
+  const url = new URL(event.request.url);
+  const scope = new URL("./", self.location.href);
+  if (event.request.method !== "GET" || url.origin !== scope.origin ||
+      !url.pathname.startsWith(scope.pathname) ||
+      url.pathname.startsWith(scope.pathname + "bot-adventure/")) {
     return;
   }
 
@@ -64,6 +68,5 @@ self.addEventListener("fetch", (event) => {
         return response;
       })
       .catch(() => caches.match(event.request))
-    )
   );
 });

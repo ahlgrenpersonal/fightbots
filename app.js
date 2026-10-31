@@ -1,5 +1,5 @@
 const app = document.querySelector("#app");
-const buildVersion = "world46";
+const buildVersion = "world50";
 const budget = 8;
 const gridSize = 5;
 const turnMs = 900;
@@ -1155,9 +1155,13 @@ function checkForUpdates() {
 
       return navigator.serviceWorker
         .getRegistrations()
-        .then((registrations) => Promise.all(registrations.map((entry) => entry.unregister())))
+        .then((registrations) => Promise.all(registrations
+          .filter((entry) => entry.scope === new URL("./", window.location.href).href)
+          .map((entry) => entry.unregister())))
         .then(() => caches.keys())
-        .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
+        .then((keys) => Promise.all(keys
+          .filter((key) => key.startsWith("fightbots-"))
+          .map((key) => caches.delete(key))))
         .then(() => {
           window.location.replace(`index.html?fresh=${Date.now()}`);
         });

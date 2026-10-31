@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#192c30">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="Build a little bot. Find a big adventure. A gentle single-player robot adventure.">
+  <title>Bot Adventure</title>
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css?v=world49">
+</head>
+<body>
+  <main id="game">
+    <canvas id="world" aria-label="Adventure world. Tap a destination to move your bot." tabindex="0"></canvas>
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">B<span>+</span></span><div><b>BOT ADVENTURE</b><span id="regionName">Clover Fields</span></div></div>
+      <div class="wallet" aria-label="Scrap"><span class="scrap-symbol">◆</span><b id="scrapCount">0</b></div>
+      <button id="pause" class="icon-button" title="Pause" aria-label="Pause">Ⅱ</button>
+    </header>
+    <section class="quest" id="quest" aria-live="polite"><span class="quest-icon">ϟ</span><div><b id="questTitle">Wake the first relay</b><span id="questDetail">Find power cells in Clover Fields</span></div><button id="questRoute" aria-label="Show adventure map" title="Show adventure map">↗</button></section>
+    <div id="bossHud" class="boss-hud" hidden><b id="bossName"></b><div><i id="bossHealth"></i></div></div>
+    <div id="announcement" role="status" class="announcement" hidden></div>
+    <div id="toast" role="status" class="toast"></div>
+    <button id="interact" class="interact" hidden></button>
+    <footer class="console">
+      <div class="health-row"><span class="health-heart">♥</span><div class="health-track"><i id="healthFill"></i></div><b id="healthText">60 / 60</b><span id="weaponLabel">Bumper</span></div>
+      <nav class="tools" aria-label="Adventure controls">
+        <button id="home" title="Return to your free workshop"><span>⌂</span><b>Home</b></button>
+        <button id="map" title="Adventure map"><span>◇</span><b>Map</b></button>
+        <button id="boost" class="boost" title="Power boost"><span>ϟ</span><b id="boostLabel">Power</b></button>
+        <button id="workshop" title="Build and equip your bot"><span>⚙</span><b>Build</b></button>
+        <button id="sound" title="Toggle sound" aria-label="Turn sound on"><span>♪</span><b id="soundLabel">Sound off</b></button>
+      </nav>
+    </footer>
+  </main>
+  <dialog id="panel" aria-labelledby="panelTitle"><div id="panelContent"></div></dialog>
+  <script type="module" src="app.js?v=world49"></script>
+</body>
+</html>
