@@ -1,4 +1,4 @@
-import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, regionOrigin, relayFor, atlasLayout, isRoad, REQUIRED_CELLS } from './data.js?v=world60';
+import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells } from './data.js?v=world61';
 
 export function rounded(c,x,y,w,h,r,fill,stroke,line=2) {
   c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=line;c.stroke();}
@@ -225,10 +225,10 @@ export class Painter {
     if(charging){const hp=g.player.hp/g.maxHp();c.beginPath();c.arc(0,0,1.35,-Math.PI/2,-Math.PI/2+hp*Math.PI*2);c.strokeStyle='#e6ffae';c.lineWidth=.11;c.stroke();for(let i=0;i<4;i++){const f=(t*.65+i*.25)%1;ellipse(c,Math.cos(i*1.57)*.8,-f*1.5,.035,.07,'#eeffd0');}}
     c.restore();
   }
-  relay(x,y,r,g,t){const c=this.c;const done=g.save.bosses.includes(r),awake=cellsIn(g.save,r)>=REQUIRED_CELLS;c.save();c.translate(x,y);ellipse(c,0,.1,2.1,1.7,'#263e3f22');
+  relay(x,y,r,g,t){const c=this.c;const required=requiredCells(r),done=g.save.bosses.includes(r),awake=cellsIn(g.save,r)>=required;c.save();c.translate(x,y);ellipse(c,0,.1,2.1,1.7,'#263e3f22');
     c.beginPath();c.ellipse(0,0,2.2,1.8,0,0,Math.PI*2);c.strokeStyle=done?'#e8f8b69a':'#edf0d549';c.lineWidth=.07;c.setLineDash([.15,.16]);c.stroke();c.setLineDash([]);
     rounded(c,-.35,-1.2,.7,.9,.12,done?'#91c6a4':'#658383','#355b59',.04);rounded(c,-.48,-1.35,.96,.25,.07,'#a1bdb0','#365b59',.03);
-    for(let i=0;i<REQUIRED_CELLS;i++)ellipse(c,-(REQUIRED_CELLS-1)*.05+i*.1,-1.22,.03,.03,done||i<cellsIn(g.save,r)?'#ffdf87':'#3c6461');
+    for(let i=0;i<required;i++)ellipse(c,-(required-1)*.035+i*.07,-1.22,.025,.03,done||i<cellsIn(g.save,r)?'#ffdf87':'#3c6461');
     if(done||awake){const a=t*.5;ellipse(c,0,-1.6,.2,.22,done?'#d2f7b2':'#ffe58a');bolt(c,0,-1.61,.3,'#fffce2');}
     c.restore();
   }

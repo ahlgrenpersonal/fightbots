@@ -1,9 +1,9 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, canWalk, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, REQUIRED_CELLS } from './data.js?v=world60';
-import { Adventure, distance } from './engine.js?v=world60';
-import { Painter, bot, weapon, rounded } from './art.js?v=world60';
-import { mountAtlas } from './atlas.js?v=world60';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, canWalk, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, TOTAL_CELLS } from './data.js?v=world61';
+import { Adventure, distance } from './engine.js?v=world61';
+import { Painter, bot, weapon, rounded } from './art.js?v=world61';
+import { mountAtlas } from './atlas.js?v=world61';
 
-const buildVersion = 'world60';
+const buildVersion = 'world61';
 const SAVE_KEY='bot-adventure-save-v1';
 const $=id=>document.getElementById(id);
 $('buildLabel').textContent=buildVersion;
@@ -12,7 +12,7 @@ function load(){
   const base=freshSave();
   try{
     const raw=JSON.parse(localStorage.getItem(SAVE_KEY));if(!raw||raw.schema!==1)return base;
-    const s={...base,...raw};
+    const s={...base,...raw,siteLayout:raw.siteLayout||0};
     for(const key of ['scrap','gears','totalBots','playSeconds'])s[key]=Math.max(0,Number.isFinite(s[key])?s[key]:0);
     for(const key of ['owned','cleared','kills','chests','discovered','visited'])s[key]=Array.isArray(s[key])?s[key]:base[key];
     s.bosses=Array.isArray(s.bosses)?[...new Set(s.bosses.filter(v=>Number.isInteger(v)&&v>=0&&v<5))].sort():[];
@@ -48,7 +48,7 @@ game.onEvent=e=>{
   if(e.type==='toast')toast(e.text);
   if(e.type==='defeat'){tone(e.boss?130:320,.12,'triangle',.03,75);}
   if(e.type==='explosion')tone(90,.35,'sawtooth',.035,30);
-  if(e.type==='cell'){toast(`Power cell found! ${Math.min(REQUIRED_CELLS,e.count)} / ${REQUIRED_CELLS}`);tone(630,.2,'sine',.05,1000);persist();}
+  if(e.type==='cell'){toast(`Power cell found! ${Math.min(requiredCells(e.r),e.count)} / ${requiredCells(e.r)}`);tone(630,.2,'sine',.05,1000);persist();}
   if(e.type==='chest'){toast(`Treasure! +${e.scrap} scrap · +1 gear`);tone(750,.18,'sine',.04,1200);persist();}
   if(e.type==='awake'){banner('The guardian is awake!',REGIONS[e.r].boss);}
   if(e.type==='region'){banner(REGIONS[e.r].name,REGIONS[e.r].subtitle);persist();}
@@ -76,7 +76,7 @@ function workshop(){
 }
 function adventureMap(){
   const s=game.save,region=unlockedRegion(s);
-  openPanel('map',`${head('The little big world',`${s.bosses.length} relays restored · ${s.cleared.length} power cells found`,'VALLEY ATLAS')}<div class="panel-body"><canvas id="atlas" class="map-canvas" aria-label="Map of five regions. Select a destination." width="1200" height="960"></canvas><div class="map-key"><span>● Power cell</span><span>▣ Guardian</span><span>⌂ Home</span></div><div class="region-list">${REGIONS.map((reg,r)=>`<button class="region-row" data-region="${r}" ${r>region?'disabled':''}><span>${s.bosses.includes(r)?'✓':r>region?'◇':'ϟ'}</span><div><b>${reg.name}</b><small>${s.bosses.includes(r)?'Relay restored · more treasures to find':r>region?'Bridge asleep':`${cellsIn(s,r)} / ${REQUIRED_CELLS} power cells · ${reg.boss}`}</small></div><em>${r<=region?'Go ↗':'Locked'}</em></button>`).join('')}</div></div>`);
+  openPanel('map',`${head('The little big world',`${s.bosses.length} relays restored · ${s.cleared.length} power cells found`,'VALLEY ATLAS')}<div class="panel-body"><canvas id="atlas" class="map-canvas" aria-label="Map of five regions. Select a destination." width="1200" height="960"></canvas><div class="map-key"><span>● Power cell</span><span>▣ Guardian</span><span>⌂ Home</span></div><div class="region-list">${REGIONS.map((reg,r)=>`<button class="region-row" data-region="${r}" ${r>region?'disabled':''}><span>${s.bosses.includes(r)?'✓':r>region?'◇':'ϟ'}</span><div><b>${reg.name}</b><small>${s.bosses.includes(r)?'Relay restored · more treasures to find':r>region?'Bridge asleep':`${cellsIn(s,r)} / ${requiredCells(r)} power cells · ${reg.boss}`}</small></div><em>${r<=region?'Go ↗':'Locked'}</em></button>`).join('')}</div></div>`);
   const key=panel.querySelector('.map-key');key.insertAdjacentHTML('beforeend','<span>＋ Charging station</span>');
   const stations=game.world.stations.filter(st=>s.discovered.includes(st.id));
   panel.querySelector('.region-list').insertAdjacentHTML('afterbegin',stations.map(st=>`<button class="region-row station-row" data-station="${st.id}"><span>＋</span><div><b>Charging station</b><small>${REGIONS[st.r].name} · 2 scrap · safe zone</small></div><em>Go ↗</em></button>`).join(''));
@@ -94,7 +94,7 @@ function adventureMap(){
 }
 function goRegion(r){
   const sites=game.world.sites.filter(s=>s.r===r&&!game.save.cleared.includes(s.id)).sort((a,b)=>distance(a,game.player)-distance(b,game.player));
-  const o=regionOrigin(r),goal=cellsIn(game.save,r)>=REQUIRED_CELLS&&!game.save.bosses.includes(r)?relayFor(r):sites[0]||{x:o.x+18.5,y:o.y+22.5};
+  const o=regionOrigin(r),goal=cellsIn(game.save,r)>=requiredCells(r)&&!game.save.bosses.includes(r)?relayFor(r):sites[0]||{x:o.x+18.5,y:o.y+22.5};
   closePanel();game.moveTo(goal);
 }
 function pauseMenu(){
@@ -159,9 +159,9 @@ function hud(){
   $('regionName').textContent=REGIONS[r].name;$('scrapCount').textContent=s.scrap;$('healthText').textContent=`${current} / ${max}`;$('healthFill').style.width=`${Math.max(0,game.player.hp/max*100)}%`;$('healthFill').style.background=game.player.hp/max<.3?'#f49b7d':'#94e5b1';$('weaponLabel').textContent=item('weapon',s.build.weapon).name;
   $('healthText').parentElement.classList.toggle('critical',game.player.hp/max<=.18);
   if(game.charging)$('weaponLabel').textContent='Charging…';else if(game.player.hp/max<=.18)$('weaponLabel').textContent='Needs repairs!';else if(game.player.hp/max<=.5)$('weaponLabel').textContent='Damaged';
-  const goal=unlockedRegion(s),cells=cellsIn(s,goal);
-  $('questTitle').textContent=s.completed?'The valley is shining':cells>=REQUIRED_CELLS?REGIONS[goal].boss:`Wake the ${['first','second','third','fourth','last'][goal]} relay`;
-  $('questDetail').textContent=s.completed?`${s.cleared.length} / 50 cells · ${s.chests.length} / 35 treasures`:cells>=REQUIRED_CELLS?`Guardian ready · ${REGIONS[goal].name}`:`${Math.min(REQUIRED_CELLS,cells)} / ${REQUIRED_CELLS} power cells · ${REGIONS[goal].name}`;
+  const goal=unlockedRegion(s),cells=cellsIn(s,goal),required=requiredCells(goal);
+  $('questTitle').textContent=s.completed?'The valley is shining':cells>=required?REGIONS[goal].boss:`Wake the ${['first','second','third','fourth','last'][goal]} relay`;
+  $('questDetail').textContent=s.completed?`${s.cleared.length} / ${TOTAL_CELLS} cells · ${s.chests.length} / 35 treasures`:cells>=required?`Guardian ready · ${REGIONS[goal].name}`:`${Math.min(required,cells)} / ${required} power cells · ${REGIONS[goal].name}`;
   $('boostLabel').textContent=game.boostTime>0?'SUPER!':game.boostCd>0?`${Math.ceil(game.boostCd)}s`:'Power';$('boost').classList.toggle('cooldown',game.boostCd>0&&game.boostTime<=0);$('boost').disabled=game.boostCd>0;
   $('soundLabel').textContent=s.sound?'Sound on':'Sound off';$('sound').setAttribute('aria-label',s.sound?'Turn sound off':'Turn sound on');
   const bosses=game.enemies.filter(e=>e.type==='boss'&&e.r===r&&e.hp>0&&game.bossAwake(r)&&distance(e,game.player)<7);

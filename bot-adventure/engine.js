@@ -1,12 +1,12 @@
-import { HOME, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, pathfind, canWalk, available, REQUIRED_CELLS } from './data.js?v=world60';
+import { HOME, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, pathfind, canWalk, available, requiredCells, migrateSiteProgress } from './data.js?v=world61';
 
 export const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export class Adventure {
   constructor(save=freshSave(),onEvent=()=>{}) {
-    this.save=save;this.onEvent=onEvent;this.world=makeWorld();
+    this.save=migrateSiteProgress(save);this.onEvent=onEvent;this.world=makeWorld();
     this.player={...save.position,hp:Math.max(1,Math.min(save.hp,stats(save).hp)),angle:0,cd:0,hit:0,swing:0,invincible:2};
-    this.enemies=this.world.enemies.filter(e=>!save.kills.includes(e.id)&&!(e.type==='boss'&&save.bosses.includes(e.r)));
+    this.enemies=this.world.enemies.filter(e=>!save.kills.includes(e.id)&&!save.cleared.includes(e.site)&&!(e.type==='boss'&&save.bosses.includes(e.r)));
     for(const e of this.enemies)if(e.dormant&&!this.enemies.some(n=>n.site===e.site&&n.wave===0&&n.hp>0))e.dormant=false;
     this.route=[];this.loot=[];this.projectiles=[];this.effects=[];this.telegraphs=[];this.target=null;this.waypoint=null;
     this.time=0;this.boostTime=0;this.boostCd=0;this.shieldCd=0;this.shake=0;this.paused=false;this.reducedMotion=false;this.routeTimer=0;this.charging=null;this.headingHome=false;
@@ -15,7 +15,7 @@ export class Adventure {
   emit(type,data={}){this.onEvent({type,...data});}
   snapshot(){this.save.position={x:this.player.x,y:this.player.y};this.save.hp=this.player.hp;return this.save;}
   maxHp(){return stats(this.save).hp;}
-  bossAwake(r){return !this.save.bosses.includes(r)&&cellsIn(this.save,r)>=REQUIRED_CELLS&&r<=unlockedRegion(this.save);}
+  bossAwake(r){return !this.save.bosses.includes(r)&&cellsIn(this.save,r)>=requiredCells(r)&&r<=unlockedRegion(this.save);}
   isHome(){return distance(this.player,HOME)<2.6;}
   stationNear(radius=1.1){return this.world.stations.find(s=>s.r<=unlockedRegion(this.save)&&distance(this.player,s)<radius);}
   safeAt(pos){return distance(pos,HOME)<2.6||this.world.stations.some(s=>s.r<=unlockedRegion(this.save)&&distance(pos,s)<2.25);}
@@ -29,7 +29,7 @@ export class Adventure {
     }
     this.route=pathfind(this.world,this.save,this.player,to);this.waypoint=to;this.target=null;this.charging=null;this.headingHome=false;return this.route.length>0;
   }
-  focusEnemy(enemy){if(enemy.dormant)return;if(enemy.type==='boss'&&!this.bossAwake(enemy.r)){this.emit('toast',{text:`${Math.max(0,REQUIRED_CELLS-cellsIn(this.save,enemy.r))} more power cells will wake this guardian.`});return;}this.target=enemy.id;this.moveTo(enemy);this.target=enemy.id;}
+  focusEnemy(enemy){if(enemy.dormant)return;if(enemy.type==='boss'&&!this.bossAwake(enemy.r)){this.emit('toast',{text:`${Math.max(0,requiredCells(enemy.r)-cellsIn(this.save,enemy.r))} more power cells will wake this guardian.`});return;}this.target=enemy.id;this.moveTo(enemy);this.target=enemy.id;}
   goHome(){
     this.moveTo(HOME);this.headingHome=this.route.length>0;return this.headingHome;
   }
@@ -143,7 +143,7 @@ export class Adventure {
       }
       if(!this.enemies.some(e=>e.site===site.id&&e.hp>0)){
         this.save.cleared.push(site.id);this.save.gears+=2;this.save.scrap+=12+site.r*4;this.burst(site.x,site.y,.9);this.emit('cell',{r:site.r,count:cellsIn(this.save,site.r)});
-        if(cellsIn(this.save,site.r)===REQUIRED_CELLS)this.emit('awake',{r:site.r});
+        if(cellsIn(this.save,site.r)===requiredCells(site.r))this.emit('awake',{r:site.r});
       }
     }
     for(const chest of this.world.chests){if(chest.r<=unlockedRegion(this.save)&&!this.save.chests.includes(chest.id)&&distance(p,chest)<(this.save.build.gadget==='magnet'?2.5:.85)){this.save.chests.push(chest.id);const bonus=8+chest.r*4;this.save.scrap+=bonus;this.save.gears++;this.burst(chest.x,chest.y,.5);this.emit('chest',{scrap:bonus});}}

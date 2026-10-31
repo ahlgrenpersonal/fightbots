@@ -1,10 +1,12 @@
-export const BUILD = 'world60';
+export const BUILD = 'world61';
 export const REGION_W = 36;
 export const REGION_H = 44;
 export const WORLD_W = REGION_W * 3;
 export const WORLD_H = REGION_H * 3;
 export const MAIN_Y = 66.5;
 export const REQUIRED_CELLS = 5;
+export const requiredCells = r => r===0?8:REQUIRED_CELLS;
+export const TOTAL_CELLS = [0,1,2,3,4].reduce((sum,r)=>sum+requiredCells(r),0);
 export const HOME = { x: 54.5, y: MAIN_Y };
 export const REGION_LAYOUT = [[1,1],[0,1],[1,0],[2,1],[2,2]];
 export const regionOrigin = r => ({x:REGION_LAYOUT[r][0]*REGION_W,y:REGION_LAYOUT[r][1]*REGION_H});
@@ -55,7 +57,23 @@ export function stats(save) {
   return { hp: armor.hp + (wheels.hp || 0), defense: armor.defense, speed: wheels.speed, weapon: item('weapon', save.build.weapon) };
 }
 export function freshSave() {
-  return { schema: 1, worldLayout: 2, scrap: 0, gears: 0, build: { ...STARTERS }, color: COLORS[0], owned: Object.values(STARTERS), cleared: [], bosses: [], kills: [], chests: [], discovered: [], visited: [], position: { ...HOME }, hp: 70, totalBots: 0, playSeconds: 0, sound: false, gentle: true, completed: false, intro: false };
+  return { schema: 1, worldLayout: 2, siteLayout: 3, scrap: 0, gears: 0, build: { ...STARTERS }, color: COLORS[0], owned: Object.values(STARTERS), cleared: [], bosses: [], kills: [], chests: [], discovered: [], visited: [], position: { ...HOME }, hp: 70, totalBots: 0, playSeconds: 0, sound: false, gentle: true, completed: false, intro: false };
+}
+export function migrateSiteProgress(save){
+  if(save.siteLayout===3)return save;
+  const cleared=[];
+  for(let r=0;r<5;r++){
+    const old=[...new Set(save.cleared.filter(id=>new RegExp(`^site-${r}-[0-9]$`).test(id)))];
+    const count=save.bosses.includes(r)?requiredCells(r):Math.min(old.length,requiredCells(r));
+    const mapping=r===0?[1,4,0,2,0,4,3,5,6,7]:[1,1,0,2,0,4,3,3,4,4];
+    const credited=new Set(old.map(id=>mapping[Number(id.split('-')[2])]));
+    for(let i=0;credited.size<count;i++)credited.add(i);
+    for(const i of credited)cleared.push(`site-${r}-${i}`);
+  }
+  save.cleared=cleared;
+  // Rebuild unfinished patrols at their new locations, without paying completed sites twice.
+  save.kills=save.kills.filter(id=>typeof id==='string'&&!id.startsWith('site-'));
+  save.siteLayout=3;return save;
 }
 export function hash(x, y, seed = 17) {
   let n = Math.imul(x + seed, 374761393) ^ Math.imul(y + seed, 668265263);
@@ -76,13 +94,13 @@ export function isRoad(x,y) {
 }
 export function makeWorld() {
   const sites = [], enemies = [], chests = [], stations = [], props = [], blocks = new Set(), water = new Set();
-  const offsets = [[7,6],[20,7],[8,15],[26,16],[10,25],[25,27],[7,35],[18,37],[29,39],[29,32]];
+  const offsets = [[10,25],[6,6],[29,17],[7,38],[29,39]];
   for (let r = 0; r < 5; r++) {
     const origin=regionOrigin(r);
     for(const [i,[x,y]] of [[4.5,23.5],r===0?[29.5,74.5]:[32.5,25.5]].entries())stations.push({id:`station-${r}-${i}`,r,x:origin.x+x,y:origin.y+y});
-    offsets.forEach(([ox,oy], i) => {
-      const south=r===0&&i>=7?[[12,60],[25,65],[17,78]][i-7]:null;
-      const x = origin.x + (south?south[0]:ox), y=origin.y+(south?south[1]:oy), id = `site-${r}-${i}`;
+    const positions=r===0?[...offsets,[10,60],[28,70],[14,85]]:offsets;
+    positions.forEach(([ox,oy], i) => {
+      const x = origin.x + ox, y=origin.y+oy, id = `site-${r}-${i}`;
       const site = { id, r, x: x + .5, y: y + .5, index: i };
       sites.push(site);
       const n = r === 0 ? 4 : 5;
@@ -118,7 +136,7 @@ export function makeWorld() {
   return { sites, enemies, chests, stations, props, blocks, water };
 }
 export function unlockedRegion(save) { return Math.min(4, save.bosses.length); }
-export function cellsIn(save,r) { return save.cleared.filter(id => id.startsWith(`site-${r}-`)).length; }
+export function cellsIn(save,r) { return new Set(save.cleared.filter(id => new RegExp(`^site-${r}-[0-${requiredCells(r)-1}]$`).test(id))).size; }
 export function available(save,part) { return part.unlock < 0 || save.bosses.includes(part.unlock); }
 export function canWalk(world,save,x,y) {
   const r=regionAt(x,y);
