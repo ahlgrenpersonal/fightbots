@@ -1,9 +1,9 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, canWalk, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells } from './data.js?v=world64';
-import { Adventure, distance } from './engine.js?v=world64';
-import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon } from './art.js?v=world64';
-import { mountAtlas } from './atlas.js?v=world64';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, canWalk, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells } from './data.js?v=world65';
+import { Adventure, distance } from './engine.js?v=world65';
+import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon } from './art.js?v=world65';
+import { mountAtlas } from './atlas.js?v=world65';
 
-const buildVersion = 'world64';
+const buildVersion = 'world65';
 const SAVE_KEY='bot-adventure-save-v1';
 const $=id=>document.getElementById(id);
 $('buildLabel').textContent=buildVersion;
@@ -88,7 +88,7 @@ function adventureMap(){
   const status=document.createElement('p');status.className='atlas-status';status.setAttribute('role','status');stage.after(status);
   const source=document.createElement('canvas');source.width=map.width;source.height=map.height;source.getContext('2d').drawImage(map,0,0);
   const layout=atlasLayout();
-  atlasController=mountAtlas(map,{source,initialZoom:3,maxZoom:10,initialFocus:{x:layout.ox+game.player.x*layout.scale,y:layout.oy+game.player.y*layout.scale},onChange:zoom=>{$('mapZoom').value=`${Math.round(zoom*100)}%`;$('mapZoomOut').disabled=zoom<=1;$('mapZoomIn').disabled=zoom>=10;},onSelect:p=>{
+  atlasController=mountAtlas(map,{source,initialZoom:3,maxZoom:10,contentBounds:{x:layout.ox,y:layout.oy,width:WORLD_W*layout.scale,height:WORLD_H*layout.scale},initialFocus:{x:layout.ox+game.player.x*layout.scale,y:layout.oy+game.player.y*layout.scale},onChange:zoom=>{$('mapZoom').value=`${Math.round(zoom*100)}%`;$('mapZoomOut').disabled=zoom<=1;$('mapZoomIn').disabled=zoom>=10;},onSelect:p=>{
     const {scale,ox,oy}=atlasLayout(),x=(p.x-ox)/scale,y=(p.y-oy)/scale,r=regionAt(x,y);
     if(x<0||x>=WORLD_W||y<0||y>=WORLD_H||r<0)return;
     if(r>unlockedRegion(s)){status.textContent=`Restore the ${REGIONS[r-1].name} relay to open this trail.`;return;}

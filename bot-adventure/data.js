@@ -1,6 +1,6 @@
-import { MORE_REGIONS, MORE_TILES, NEW_EQUIPMENT, WORKSHOPS, RETURNS } from './content.js?v=world64';
+import { MORE_REGIONS, MORE_TILES, NEW_EQUIPMENT, WORKSHOPS, RETURNS } from './content.js?v=world65';
 export { WORKSHOPS, RETURNS };
-export const BUILD = 'world64';
+export const BUILD = 'world65';
 export const REGION_W = 36;
 export const REGION_H = 44;
 export const WORLD_W = REGION_W * 9;
