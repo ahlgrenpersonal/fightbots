@@ -1,11 +1,11 @@
 /* Reserve the mission and controls outside the moving world. */
 #game{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;height:100dvh}
-.topbar{position:static;min-height:62px;padding-top:calc(9px + env(safe-area-inset-top));padding-bottom:9px;box-shadow:none}
+.topbar{position:static;min-height:67px;padding-top:calc(14px + var(--safe-top,env(safe-area-inset-top,0px)));padding-bottom:9px;box-shadow:none}
 .quest{position:static;width:100%;max-width:none;min-height:55px;margin:0;padding:7px 18px;border:0;border-bottom:1px solid #426355;border-radius:0;background:#dce9d8;box-shadow:none}
 .quest-icon{font-size:25px}.quest div>span{margin-top:2px}.quest button{flex-shrink:0}
 #playfield{position:relative;min-height:0;overflow:hidden;background:#85b979}
 #world{height:100%;width:100%}
-.console{position:static;transform:none;width:100%;max-width:none;border-radius:0;padding-top:9px;padding-bottom:calc(7px + env(safe-area-inset-bottom));box-shadow:none}
+.console{position:static;transform:none;width:100%;max-width:none;border-radius:0;padding-top:9px;padding-bottom:calc(7px + max(0px,var(--safe-bottom,env(safe-area-inset-bottom,0px)) - 15px));box-shadow:none}
 .console .tools{max-width:530px;margin:auto}.health-row{max-width:530px;margin:0 auto 6px}
 .boss-hud{top:10px;left:12px;right:12px;max-width:360px}
 .toast{top:10px}.toast.boss-active{top:78px}

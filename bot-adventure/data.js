@@ -1,10 +1,10 @@
-export const BUILD = 'world51';
+export const BUILD = 'world52';
 export const REGION_W = 36;
 export const REGION_H = 44;
 export const WORLD_W = REGION_W * 3;
 export const WORLD_H = REGION_H * 3;
 export const MAIN_Y = 66.5;
-export const REQUIRED_CELLS = 8;
+export const REQUIRED_CELLS = 5;
 export const HOME = { x: 54.5, y: MAIN_Y };
 export const REGION_LAYOUT = [[1,1],[0,1],[1,0],[2,1],[2,2]];
 export const regionOrigin = r => ({x:REGION_LAYOUT[r][0]*REGION_W,y:REGION_LAYOUT[r][1]*REGION_H});
