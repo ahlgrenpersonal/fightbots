@@ -1,6 +1,6 @@
-import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout } from './data.js?v=world70';
-import { bossProfile } from './content.js?v=world70';
-import { ReturningPatrols } from './patrols.js?v=world70';
+import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout } from './data.js?v=world71';
+import { bossProfile } from './content.js?v=world71';
+import { ReturningPatrols } from './patrols.js?v=world71';
 
 export const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -29,6 +29,14 @@ export class Adventure {
   snapshot(){this.patrols.snapshot();this.save.position={x:this.player.x,y:this.player.y};this.save.hp=this.player.hp;return this.save;}
   maxHp(){return stats(this.save).hp;}
   bossAwake(r){return !this.save.bosses.includes(r)&&cellsIn(this.save,r)>=requiredCells(r)&&r<=unlockedRegion(this.save);}
+  bossFight(){
+    const r=regionAt(this.player.x,this.player.y),key=e=>e.encounterId||e.returnId||`guardian-${e.r}`;
+    const nearby=this.enemies.filter(e=>e.type==='boss'&&e.r===r&&e.hp>0&&!e.dormant&&this.enemyAwake(e)&&distance(e,this.player)<7).sort((a,b)=>distance(a,this.player)-distance(b,this.player));
+    const first=nearby[0];if(!first)return null;
+    const group=key(first),members=this.enemies.filter(e=>e.type==='boss'&&key(e)===group);
+    const maxHp=this.world.enemies.filter(e=>e.type==='boss'&&key(e)===group).reduce((sum,e)=>sum+e.maxHp,0);
+    return {name:ENCOUNTERS.find(e=>e.id===first.encounterId)?.name||RETURNS.find(m=>m.id===first.returnId)?.boss||REGIONS[r].boss,health:members.reduce((sum,e)=>sum+Math.max(0,e.hp),0)/maxHp};
+  }
   homes(){return WORKSHOPS.filter(h=>h.r<=unlockedRegion(this.save));}
   homeNear(){return this.homes().find(h=>distance(this.player,h)<2.6);}
   isHome(){return !!this.homeNear();}
@@ -372,5 +380,9 @@ export class Adventure {
   }
   nearestSite(){const r=unlockedRegion(this.save);return this.world.sites.filter(s=>!s.returnId&&s.r===r&&!this.save.cleared.includes(s.id)).sort((a,b)=>distance(a,this.player)-distance(b,this.player))[0];}
   nextObjective(){const m=RETURNS.find(m=>returnActive(this.save,m));if(m)return this.world.sites.find(s=>s.returnId===m.id&&!this.save.cleared.includes(s.id))||m;const r=unlockedRegion(this.save);return this.nearestSite()||relayFor(r);}
+  guideRoute(){
+    const route=this.route.length?this.route:this.save.completed?[]:pathfind(this.world,this.save,this.player,this.nextObjective());
+    return route.length?[this.player,...route]:[];
+  }
   goNext(){return this.moveTo(this.nextObjective());}
 }

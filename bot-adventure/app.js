@@ -1,9 +1,9 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world70';
-import { Adventure, distance } from './engine.js?v=world70';
-import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon } from './art.js?v=world70';
-import { mountAtlas } from './atlas.js?v=world70';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world71';
+import { Adventure, distance } from './engine.js?v=world71';
+import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon } from './art.js?v=world71';
+import { mountAtlas } from './atlas.js?v=world71';
 
-const buildVersion = 'world70';
+const buildVersion = 'world71';
 const SAVE_KEY='bot-adventure-save-v1';
 const $=id=>document.getElementById(id);
 $('buildLabel').textContent=buildVersion;
@@ -54,7 +54,7 @@ game.onEvent=e=>{
   if(e.type==='awake'){banner('The guardian is awake!',REGIONS[e.r].boss);}
   if(e.type==='region'){banner(REGIONS[e.r].name,REGIONS[e.r].subtitle);persist();}
   if(e.type==='guardian'){persist();setTimeout(()=>showGuardian(e.r),600);}
-  if(e.type==='return-complete'){persist();tone(700,.4,'triangle',.04,1400);banner('Trail restored!',REGIONS[unlockedRegion(game.save)].name);}
+  if(e.type==='return-complete'){persist();tone(700,.4,'triangle',.04,1400);setTimeout(()=>showReturnComplete(),600);}
   if(e.type==='home'){persist();}
   if(e.type==='home-arrived'){workshop();}
   if(e.type==='rescue'){persist();showRescue();}
@@ -84,7 +84,7 @@ function adventureMap(){
   panel.querySelector('.region-list').insertAdjacentHTML('afterbegin',stations.map(st=>`<button class="region-row station-row" data-station="${st.id}"><span>＋</span><div><b>Charging station</b><small>${REGIONS[st.r].name} · 2 scrap · safe zone</small></div><em>Go ↗</em></button>`).join(''));
   panel.querySelector('.region-list').insertAdjacentHTML('afterbegin',game.homes().map(h=>`<button class="region-row workshop-row" data-home="${h.id}"><span>⌂</span><div><b>${h.name}</b><small>Free repairs · walk home</small></div><em>Go ↗</em></button>`).join('')+RETURNS.filter(m=>returnActive(s,m)).map(m=>`<button class="region-row return-row" data-return="${m.id}"><span>⚑</span><div><b>${m.boss}</b><small>${REGIONS[m.r].name} · ${m.sites.filter((_,i)=>s.cleared.includes(`${m.sitePrefix}-${i}`)).length} / 3 camps</small></div><em>Go ↗</em></button>`).join(''));
   const map=$('atlas'),stage=document.createElement('div');stage.className='atlas-stage';map.before(stage);stage.append(map);
-  stage.insertAdjacentHTML('afterbegin','<div class="atlas-tools" role="group" aria-label="Map zoom"><output id="mapZoom" class="atlas-zoom" aria-label="Map zoom level">100%</output><button id="mapZoomOut" aria-label="Zoom out" title="Zoom out">−</button><button id="mapZoomIn" aria-label="Zoom in" title="Zoom in">+</button><button id="mapFit" aria-label="Show whole map" title="Show whole map">⛶</button></div>');
+  stage.insertAdjacentHTML('afterbegin',`<div class="atlas-tools" role="group" aria-label="Map zoom"><output id="mapZoom" class="atlas-zoom" aria-label="Map zoom level">100%</output><button id="mapZoomOut" aria-label="Zoom out" title="Zoom out">−</button><button id="mapZoomIn" aria-label="Zoom in" title="Zoom in">+</button><button id="mapFit" aria-label="Show whole map" title="Show whole map">⛶</button>${s.completed?'':'<button id="mapGo" class="atlas-go" aria-label="Follow highlighted trail" title="Follow highlighted trail">➜</button>'}</div>`);
   const status=document.createElement('p');status.className='atlas-status';status.setAttribute('role','status');stage.after(status);
   const source=document.createElement('canvas');source.width=map.width;source.height=map.height;source.getContext('2d').drawImage(map,0,0);
   const layout=atlasLayout();
@@ -96,6 +96,7 @@ function adventureMap(){
     closePanel();if(mission)goReturn(mission);else game.moveTo(home||{x,y});
   }});
   $('mapZoomIn').onclick=()=>atlasController.zoomBy(1.35);$('mapZoomOut').onclick=()=>atlasController.zoomBy(1/1.35);$('mapFit').onclick=()=>atlasController.reset();
+  if($('mapGo'))$('mapGo').onclick=()=>{const walking=game.route.length>0;closePanel();if(!walking)game.goNext();};
 }
 function goRegion(r){
   const sites=game.world.sites.filter(s=>!s.returnId&&s.r===r&&!game.save.cleared.includes(s.id)).sort((a,b)=>distance(a,game.player)-distance(b,game.player));
@@ -116,6 +117,10 @@ function displayDetails(){
   $('displayReport').textContent=Object.entries(report).map(([key,value])=>`${key}: ${JSON.stringify(value)}`).join('\n');
 }
 function showRescue(){openPanel('rescue',`${head('A little rescue','Every good explorer gets a helping hand.','BACK HOME')}<div class="panel-body"><canvas class="celebration" id="rewardBot" width="700" height="280"></canvas><p class="dialog-copy">Your bot is fully repaired. All your equipment, parts and discoveries are safe. The rescue cost at most 1 scrap.</p><button class="primary" data-action="home">Back to the workshop ⌂</button></div>`);}
+function showReturnComplete(){
+  const next=REGIONS[unlockedRegion(game.save)];
+  openPanel('trail',`${head(next.name,'A new trail is open.','TRAIL RESTORED')}<div class="panel-body"><canvas class="celebration" id="rewardBot" width="700" height="280"></canvas><div class="pause-actions"><button class="primary pictorial-action" data-action="next" aria-label="Explore ${next.name}"><span>➜</span><small>Explore</small></button><button class="secondary pictorial-action" data-action="home" aria-label="Build at the nearest workshop"><span>⚙</span><small>Build</small></button></div></div>`);
+}
 function showGuardian(r){
   const pair=Object.entries(EQUIPMENT).flatMap(([type,parts])=>parts.filter(p=>p.unlock===r).map(p=>({type,p}))).find(({p})=>p.id===REGIONS[r].reward)||Object.entries(EQUIPMENT).flatMap(([type,parts])=>parts.filter(p=>p.unlock===r).map(p=>({type,p})))[0];
   const discovery=pair?`<canvas id="rewardWeapon" class="celebration" width="700" height="280" data-reward="${pair.p.id}" data-type="${pair.type}"></canvas><h2 style="font-size:21px;margin:8px 0">${pair.p.name} blueprint</h2><p class="dialog-copy">${pair.p.desc} Your new blueprint is waiting at the workshop.</p>`:'<canvas class="celebration" id="rewardBot" width="700" height="280"></canvas>';
@@ -174,9 +179,9 @@ function hud(){
   if(game.charging)$('weaponLabel').textContent='Charging…';else if(game.player.hp/max<=.18)$('weaponLabel').textContent='Needs repairs!';else if(game.player.hp/max<=.5)$('weaponLabel').textContent='Damaged';
   $('boostLabel').textContent=game.boostTime>0?'SUPER!':game.boostCd>0?`${Math.ceil(game.boostCd)}s`:'Power';$('boost').classList.toggle('cooldown',game.boostCd>0&&game.boostTime<=0);$('boost').disabled=game.boostCd>0;
   $('soundLabel').textContent=s.sound?'Sound on':'Sound off';$('sound').setAttribute('aria-label',s.sound?'Turn sound off':'Turn sound on');
-  const bosses=game.enemies.filter(e=>e.type==='boss'&&e.r===r&&e.hp>0&&game.enemyAwake(e)&&distance(e,game.player)<7);
-  $('toast').classList.toggle('boss-active',bosses.length>0);
-  $('bossHud').hidden=!bosses.length;if(bosses.length){$('bossName').textContent=RETURNS.find(m=>m.id===bosses[0].returnId)?.boss||REGIONS[r].boss;$('bossHealth').style.width=`${bosses.reduce((v,e)=>v+e.hp,0)/bosses.reduce((v,e)=>v+e.maxHp,0)*100}%`;}
+  const fight=game.bossFight();
+  $('toast').classList.toggle('boss-active',!!fight);
+  $('bossHud').hidden=!fight;if(fight){$('bossName').textContent=fight.name;$('bossHealth').style.width=`${fight.health*100}%`;}
   interaction='';
   if(game.isHome())interaction='home';
   else if(game.stationNear()&&game.player.hp<max-1&&!game.charging)interaction='repair';

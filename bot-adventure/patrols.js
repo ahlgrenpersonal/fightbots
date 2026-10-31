@@ -1,13 +1,14 @@
-import { WORKSHOPS, RETURNS, returnActive, regionAt, canWalk } from './data.js?v=world70';
+import { WORKSHOPS, RETURNS, returnActive, regionAt, canWalk } from './data.js?v=world71';
 
 export const PATROL_DELAY=300;
 export const WORKSHOP_REFUGE=12;
+const GROUPS_PER_CHECK=2;
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 
 // Repeat patrols own their bounded save records; campaign kills and cells stay permanent.
 export class ReturningPatrols {
   constructor(game){
-    this.game=game;this.checkIn=0;this.loaded=new Set();
+    this.game=game;this.checkIn=0;this.loaded=new Set();this.restoring=new Set();
     const saved=game.save.patrols,bootstrap=(!saved||typeof saved!=='object'||Array.isArray(saved))&&game.save.completed;
     game.save.patrols={};
     this.sites=game.world.sites.filter(s=>!s.returnId&&s.r>0&&WORKSHOPS.every(h=>distance(s,h)>WORKSHOP_REFUGE+3));
@@ -17,12 +18,13 @@ export class ReturningPatrols {
       const old=saved?.[site.id];
       if(old&&Number.isFinite(old.round)&&Number.isFinite(old.due)){
         const record={round:Math.max(0,Math.floor(old.round)%1000000),due:Math.max(0,old.due)};
+        if(old.suspended===true)record.suspended=true;
         if(Array.isArray(old.mobs)){
           const ids=new Set();record.mobs=old.mobs.filter(m=>Number.isInteger(m.i)&&m.i>=0&&m.i<this.templates.get(site.id).length&&Number.isFinite(m.x)&&Number.isFinite(m.y)&&Number.isFinite(m.hp)&&m.hp>0&&!ids.has(m.i)&&ids.add(m.i)).map(m=>({i:m.i,x:m.x,y:m.y,hp:m.hp}));
           if(!record.mobs.length){delete record.mobs;record.due=game.save.playSeconds+PATROL_DELAY;}
         }
         game.save.patrols[site.id]=record;
-        if(record.mobs&&this.eligible(site))this.restore(site,record);
+        if(record.mobs){if(!this.eligible(site))record.suspended=true;else if(!record.suspended)this.restoring.add(site.id);}
       }else if(game.save.bosses.includes(site.r))game.save.patrols[site.id]={round:0,due:game.save.playSeconds+(bootstrap?0:PATROL_DELAY)};
     }
   }
@@ -46,6 +48,8 @@ export class ReturningPatrols {
       e.hp=Math.min(e.maxHp,mob.hp);g.enemies.push(e);
     }
     this.loaded.add(site.id);
+    this.restoring.delete(site.id);
+    delete record.suspended;
   }
   capture(siteId){
     const record=this.game.save.patrols[siteId];
@@ -68,20 +72,32 @@ export class ReturningPatrols {
     this.checkIn-=dt;if(this.checkIn>0)return;this.checkIn=.5;
     const g=this.game;
     g.enemies=g.enemies.filter(e=>!e.patrolSite||e.hp>0);
+    const pending=[];
     for(const site of this.sites){
       let record=g.save.patrols[site.id];
       if(!this.eligible(site)){
+        this.restoring.delete(site.id);
+        if(record?.mobs)record.suspended=true;
         if(this.loaded.has(site.id)){this.capture(site.id);this.loaded.delete(site.id);g.enemies=g.enemies.filter(e=>e.patrolSite!==site.id);}
         continue;
       }
       if(!record){record={round:0,due:g.save.playSeconds+PATROL_DELAY};g.save.patrols[site.id]=record;}
       if(this.loaded.has(site.id))continue;
-      if(record.mobs){if(this.canAppear(record.mobs))this.restore(site,record);continue;}
-      if(record.due>g.save.playSeconds)continue;
+      if(record.mobs||record.due<=g.save.playSeconds)pending.push(site);
+    }
+    pending.sort((a,b)=>distance(a,g.player)-distance(b,g.player));
+    let budget=GROUPS_PER_CHECK;
+    const fighting=g.enemies.some(e=>e.hp>0&&e.active);
+    for(const site of pending){
+      if(!budget)break;
+      const record=g.save.patrols[site.id];
+      // Restore a saved view on load; quest-suspended groups must wait for departure.
+      if(record.mobs){if(this.restoring.has(site.id)||this.canAppear(record.mobs)){this.restore(site,record);budget--;}continue;}
+      if(fighting)continue;
       const round=record.round%1000000+1,group=this.templates.get(site.id).map((_,i)=>this.enemy(site,round,i));
-      if(!this.canAppear(group)||g.enemies.some(e=>e.hp>0&&e.active))continue;
+      if(!this.canAppear(group))continue;
       record.round=round;record.mobs=group.map(e=>({i:e.patrolIndex,x:e.x,y:e.y,hp:e.hp}));
-      g.enemies.push(...group);this.loaded.add(site.id);
+      g.enemies.push(...group);this.loaded.add(site.id);budget--;
     }
   }
 }

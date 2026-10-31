@@ -27,6 +27,8 @@ dialog[data-mode="map"] .panel-head{padding:14px 16px;margin-bottom:8px}
 .atlas-tools{display:flex;align-items:center;gap:4px;padding:5px 6px;background:#19393c;border-bottom:1px solid #8aac9a33}
 .atlas-tools button{width:44px;height:44px;border-radius:6px;background:#20373a;color:#eff7e9;border:1px solid #a4cfb970;font-size:25px;line-height:1}
 .atlas-tools button:disabled{opacity:1;color:#79958a;background:#243e3e}
+.atlas-tools .atlas-go{background:#94e5b1;color:#173d48;border-color:#c5f5d4;font-size:28px}
+dialog[data-mode="trail"] .celebration{height:auto;aspect-ratio:5/2}
 .atlas-zoom{flex:1;margin-left:6px;font-size:12px;color:#e0f0da;pointer-events:none}
 .atlas-status{margin:0;color:var(--gold);font-size:12px;line-height:1.5}.atlas-status:not(:empty){margin:8px 4px}
 .console{position:static;transform:none;width:100%;max-width:none;border-radius:0;padding-top:6px;padding-bottom:calc(4px + max(0px,var(--safe-bottom,env(safe-area-inset-bottom,0px)) - 20px));background:var(--ink);box-shadow:none}

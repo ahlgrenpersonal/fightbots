@@ -1,5 +1,5 @@
-import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world70';
-import * as worldData from './data.js?v=world70';
+import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world71';
+import * as worldData from './data.js?v=world71';
 
 export function rounded(c,x,y,w,h,r,fill,stroke,line=2) {
   c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=line;c.stroke();}
@@ -810,8 +810,21 @@ export class Painter {
     for(const p of g.world.props)if(p.r===1&&p.type==='tree'&&hash(Math.floor(p.x),Math.floor(p.y),9)<.09){text(c,'▲',ox+p.x*s,oy+p.y*s,8,p.seed<.085?'#dbac76':'#345e52');}
     for(let r=0;r<REGIONS.length;r++){
       const tiles=REGION_TILES[r];if(r>unlockedRegion(g.save)){c.fillStyle='#20323dba';for(const [x,y] of tiles)c.fillRect(ox+x*REGION_W*s,oy+y*REGION_H*s,REGION_W*s,REGION_H*s);}
-      const x=tiles.reduce((sum,p)=>sum+p[0]+.5,0)/tiles.length*REGION_W,y=Math.min(...tiles.map(p=>p[1]))*REGION_H+2;
-      text(c,REGIONS[r].name,ox+x*s,oy+y*s,14*markerScale,r>unlockedRegion(g.save)?'#d3ddda':'#244f49');
+    }
+    const route=g.guideRoute();
+    if(route.length){
+      c.save();c.lineJoin='round';c.lineCap='round';c.beginPath();
+      route.forEach((p,i)=>i?c.lineTo(ox+p.x*s,oy+p.y*s):c.moveTo(ox+p.x*s,oy+p.y*s));
+      c.strokeStyle='#173d68';c.lineWidth=5*markerScale;c.stroke();
+      c.setLineDash([5*markerScale,5*markerScale]);c.strokeStyle='#d9ffe3';c.lineWidth=2.5*markerScale;c.stroke();c.setLineDash([]);
+      for(let i=12;i<route.length;i+=24){const p=route[i],before=route[i-1];c.save();c.translate(ox+p.x*s,oy+p.y*s);c.rotate(Math.atan2(p.y-before.y,p.x-before.x));polygon(c,[[-3,-3],[2,0],[-3,3]],'#ffe28c','#173d68',1.2);c.restore();}
+      const goal=route.at(-1);ring(c,ox+goal.x*s,oy+goal.y*s,10*markerScale,'#173d68',4*markerScale);ring(c,ox+goal.x*s,oy+goal.y*s,10*markerScale,'#ffe28c',2*markerScale);c.restore();
+    }
+    for(let r=0;r<REGIONS.length;r++){
+      const tiles=REGION_TILES[r],x=tiles.reduce((sum,p)=>sum+p[0]+.5,0)/tiles.length*REGION_W,y=Math.min(...tiles.map(p=>p[1]))*REGION_H;
+      c.save();c.font='800 10.5px system-ui';c.textAlign='center';c.lineJoin='round';c.lineWidth=1.8;
+      c.strokeStyle=r>unlockedRegion(g.save)?'#20323ddd':'#dceccadd';c.fillStyle=r>unlockedRegion(g.save)?'#eff6ee':'#244f49';
+      REGIONS[r].name.split(' ').forEach((word,i)=>{c.strokeText(word,ox+x*s,oy+y*s+12+i*11);c.fillText(word,ox+x*s,oy+y*s+12+i*11);});c.restore();
     }
     const returning=new Set(g.enemies.filter(e=>e.patrolSite&&e.hp>0).map(e=>e.patrolSite));
     for(const site of g.world.sites){if(site.r>unlockedRegion(g.save)||!returnVisible(g.save,site))continue;const done=g.save.cleared.includes(site.id),patrol=returning.has(site.id),x=ox+site.x*s,y=oy+site.y*s;ellipse(c,x,y,(patrol?5.2:3.8)*markerScale,(patrol?5.2:3.8)*markerScale,patrol?'#ed917b':done?'#d8f0b5':site.returnId?'#e8d3ff':'#ffdc7d');c.strokeStyle=site.returnId?'#8550c2':'#203b38';c.lineWidth=(site.returnId?2.5:1.5)*markerScale;c.stroke();if(patrol)for(const dx of [-1.7,1.7])ellipse(c,x+dx*markerScale,y-.7*markerScale,.8*markerScale,.8*markerScale,'#203b38');}

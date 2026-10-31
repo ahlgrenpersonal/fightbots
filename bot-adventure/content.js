@@ -1,5 +1,17 @@
-import {relocateEntity,relocateMission} from './topology.js?v=world70';
-const region=(name,theme,ground,path,water,accent,boss,hp,reward,pattern)=>({name,theme,subtitle:boss,ground,path,water,accent,dark:'#466675',boss,hp,reward,pattern,damage:20+Math.round((hp-2500)/650)});
+import {relocateEntity,relocateMission} from './topology.js?v=world71';
+const REGION_GUIDES={
+  coast:['Salt air and bright harbor trails','Watch the blade fly out and come back. Keep rolling.'],
+  scrapyard:['Giant magnets and mountains of spare parts','Move out of the glowing magnetic circle before the blast.'],
+  jungle:['Rainy paths beneath giant leaves','Roll sideways out of the flame warning.'],
+  storm:['A mighty dam full of bottled lightning','The bright line shows the next shot. Step aside.'],
+  fortress:['A great fortress on rolling wheels','Back away from the glowing circle before the mighty slam.'],
+  aurora:['Quiet snow beneath dancing lights','Ice lands on the marked spot. Keep moving.'],
+  lunar:['Moon dust and sparkling meteor craters','Watch the falling star. Roll out of its marked circle.'],
+  garden:['A glowing forest of curious machines','Move away from the drone landing marks, then fire back.'],
+  orbital:['Launch pads among the stars','Step off the bright beam line. Fire while the cannon recharges.'],
+  ancient:['Forgotten towers filled with starlight','Roll clear of the glowing circle, then fire at the giant.']
+};
+const region=(name,theme,ground,path,water,accent,boss,hp,reward,pattern)=>({name,theme,subtitle:REGION_GUIDES[theme][0],hint:REGION_GUIDES[theme][1],ground,path,water,accent,dark:'#466675',boss,hp,reward,pattern,damage:20+Math.round((hp-2500)/650)});
 export const MORE_REGIONS=[
   region('Harbor Reach','coast','#a9c9b8','#e1d7ad','#579bb6','#ffdb8f','The Anchor Crab',2500,'frost','rings'),
   region('Magnet Yard','scrapyard','#9da491','#c8c5a5','#526d78','#f4ba79','The Scrap Magnet',2800,'boomerang','cross'),
