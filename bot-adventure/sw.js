@@ -1,5 +1,5 @@
-const CACHE_NAME='bot-adventure-world52';
-const ASSETS=['./','./index.html','./styles.css?v=world52','./layout.css?v=world52','./app.js?v=world52','./data.js?v=world52','./engine.js?v=world52','./art.js?v=world52','./manifest.webmanifest','./version.json','./assets/icon.svg','./assets/icon-192.png','./assets/icon-512.png','./refresh.html'];
+const CACHE_NAME='bot-adventure-world53';
+const ASSETS=['./','./index.html','./styles.css?v=world53','./layout.css?v=world53','./app.js?v=world53','./data.js?v=world53','./engine.js?v=world53','./art.js?v=world53','./manifest.webmanifest','./version.json','./assets/icon.svg','./assets/icon-192.png','./assets/icon-512.png','./refresh.html'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('bot-adventure-')&&key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{

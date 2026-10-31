@@ -1,4 +1,4 @@
-import { HOME, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, pathfind, canWalk, available, REQUIRED_CELLS } from './data.js?v=world52';
+import { HOME, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, pathfind, canWalk, available, REQUIRED_CELLS } from './data.js?v=world53';
 
 export const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
