@@ -1,5 +1,5 @@
-import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress } from './data.js?v=world67';
-import { bossProfile } from './content.js?v=world67';
+import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress } from './data.js?v=world68';
+import { bossProfile } from './content.js?v=world68';
 
 export const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -8,7 +8,7 @@ function segmentDistance(p,a,b){
   const dx=b.x-a.x,dy=b.y-a.y,t=clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1),0,1);
   return distance(p,{x:a.x+dx*t,y:a.y+dy*t});
 }
-const MUZZLE_LENGTHS={rail:60,flame:49,drone:30,boomerang:40,lightning:49,rocket:50};
+const MUZZLE_LENGTHS={rail:60,sunbeam:60,swarm:45,supernova:53,flame:49,drone:30,boomerang:40,lightning:49,rocket:50};
 function weaponMuzzle(p,id,size=1.17){
   const scale=size/80,c=Math.cos(p.angle),s=Math.sin(p.angle),length=MUZZLE_LENGTHS[id]??53;
   return {x:p.x+((c<0?-24:24)+length*c)*scale,y:p.y+(10+length*s)*scale};
@@ -112,7 +112,7 @@ export class Adventure {
   burst(x,y,radius=1,type='burst'){this.effects.push({type,x,y,radius,life:.6,max:.6});}
   number(x,y,text,color){this.effects.push({type:'number',x,y,text,color,life:.9,max:.9});}
   hitEnemy(e,damage,kind=''){
-    if(e.hp<=0||e.dormant||e.spawnUntil>this.time||!this.enemyAwake(e))return;const amount=Math.max(1,Math.round(damage*(e.type==='shield'&&!e.frozen&&!['rail','gravity','tractor'].includes(kind)?.7:1)));e.hp=Math.max(0,e.hp-amount);e.aggroUntil=this.time+6;e.hit=.15;this.number(e.x,e.y-.5,`${amount}`,'#fff3b5');
+    if(e.hp<=0||e.dormant||e.spawnUntil>this.time||!this.enemyAwake(e))return;const amount=Math.max(1,Math.round(damage*(e.type==='shield'&&!e.frozen&&!['rail','sunbeam','gravity','tractor'].includes(kind)?.7:1)));e.hp=Math.max(0,e.hp-amount);e.aggroUntil=this.time+6;e.hit=.15;this.number(e.x,e.y-.5,`${amount}`,'#fff3b5');
     if(e.hp<=0){
       this.burst(e.x,e.y,e.type==='boss'?1.4:.45,e.type==='boss'?'explosion':'burst');this.save.kills.push(e.id);this.save.totalBots++;
       const reward=e.encounterId?8:e.type==='boss'?35*(e.r+1):2+e.r;this.save.scrap+=reward;this.number(e.x,e.y,`+${reward} ◆`,'#ffe28c');this.emit('defeat',{boss:e.type==='boss'});
@@ -164,9 +164,32 @@ export class Adventure {
       for(const n of foes.filter(n=>distance(n,e)<2.6)){const a=Math.atan2(e.y-n.y,e.x-n.x),step=Math.min(.8,distance(n,e)),x=n.x+Math.cos(a)*step,y=n.y+Math.sin(a)*step;if(n.type!=='boss'&&canWalk(this.world,this.save,Math.floor(x),Math.floor(y))){n.x=x;n.y=y;}this.hitEnemy(n,damage,w.id);}
       if(w.id==='gravity'){this.effects.push({type:'slam',x:e.x,y:e.y,life:.55,max:.55});this.shake=4;}return;
     }
-    if(w.id==='rail'){
-      const tx=muzzle.x+Math.cos(p.angle)*w.range,ty=muzzle.y+Math.sin(p.angle)*w.range;this.effects.push({type:'rail',x:muzzle.x,y:muzzle.y,tx,ty,life:.3,max:.3});
-      for(const n of foes){const dx=n.x-p.x,dy=n.y-p.y,along=dx*Math.cos(p.angle)+dy*Math.sin(p.angle),across=Math.abs(dx*Math.sin(p.angle)-dy*Math.cos(p.angle));if(along>=0&&along<=w.range&&across<.65)this.hitEnemy(n,damage,w.id);}return;
+    if(w.id==='rail'||w.id==='sunbeam'){
+      const targetForward=(e.x-muzzle.x)*Math.cos(p.angle)+(e.y-muzzle.y)*Math.sin(p.angle);
+      const closeDischarge=w.id==='sunbeam'&&targetForward<=.1;
+      const beamAngle=w.id==='sunbeam'&&!closeDischarge?Math.atan2(e.y-muzzle.y,e.x-muzzle.x):p.angle;
+      const flareRadius=closeDischarge?Math.min(1.2,distance(e,muzzle)+.1):0;
+      const tx=muzzle.x+Math.cos(beamAngle)*w.range,ty=muzzle.y+Math.sin(beamAngle)*w.range;
+      this.effects.push({type:w.id==='sunbeam'?'sunbeam':'rail',x:muzzle.x,y:muzzle.y,tx,ty,flareRadius,life:.3,max:.3});
+      for(const n of foes){
+        if(w.id==='sunbeam'){
+          // The beam halo plus a bot's body radius defines the same visible hit corridor.
+          if(distance(n,p)<=w.range&&(segmentDistance(n,muzzle,{x:tx,y:ty})<.65||flareRadius&&distance(n,muzzle)<flareRadius+.35))this.hitEnemy(n,damage,w.id);
+        }else{
+          const dx=n.x-p.x,dy=n.y-p.y,along=dx*Math.cos(p.angle)+dy*Math.sin(p.angle),across=Math.abs(dx*Math.sin(p.angle)-dy*Math.cos(p.angle));
+          if(along>=0&&along<=w.range&&across<.65)this.hitEnemy(n,damage,w.id);
+        }
+      }return;
+    }
+    if(w.id==='swarm'||w.id==='supernova'){
+      const targets=[e,...foes.filter(n=>n!==e&&distance(n,p)<=w.range).sort((a,b)=>distance(a,e)-distance(b,e))].slice(0,3);
+      for(let i=0;i<3;i++){
+        const target=targets[i%targets.length],side=(i-1)*.24;
+        this.projectiles.push({x:muzzle.x-Math.sin(p.angle)*side,y:muzzle.y+Math.cos(p.angle)*side,
+          tx:target.x,ty:target.y,target:target.id,angle:p.angle,speed:w.id==='swarm'?8.5:6.5,
+          damage,kind:w.id==='swarm'?'drone':'rocket',style:w.id,launch:.18,launchAngle:p.angle+(i-1)*.65,life:4});
+      }
+      return;
     }
     if(['frost','boomerang','drone','meteor'].includes(w.id)){
       const kind={frost:'ice',boomerang:'blade',drone:'drone',meteor:'meteor'}[w.id];
@@ -221,6 +244,10 @@ export class Adventure {
       const target=shot.target&&this.enemies.find(e=>e.id===shot.target&&e.hp>0&&!e.dormant);
       if(shot.returning&&shot.kind==='blade'){const endpoint=shot.enemy?source:p;if(!endpoint){shot.life=0;continue;}shot.tx=endpoint.x;shot.ty=endpoint.y;}
       else if(target){shot.tx=target.x;shot.ty=target.y;}
+      if(shot.launch>0){
+        const launchStep=Math.min(dt,shot.launch);shot.launch=Math.max(0,shot.launch-dt);
+        shot.angle=shot.launchAngle;shot.x+=Math.cos(shot.angle)*shot.speed*launchStep;shot.y+=Math.sin(shot.angle)*shot.speed*launchStep;shot.life-=dt;continue;
+      }
       const from={x:shot.x,y:shot.y},to={x:shot.tx,y:shot.ty},d=distance(from,to),step=shot.speed*dt;
       const arrived=d<=step+.15;
       shot.angle=Math.atan2(to.y-from.y,to.x-from.x);shot.life-=dt;if(shot.life<=0)continue;
@@ -242,8 +269,10 @@ export class Adventure {
         if(shot.kind==='ice')this.burst(shot.x,shot.y,radius,'frost');
         if(distance(p,shot)<radius)this.hurt(shot.damage);
       }else if(shot.kind==='rocket'||shot.kind==='meteor'){
-        this.burst(shot.x,shot.y,shot.kind==='meteor'?2.3:1.4,'explosion');this.shake=5;
-        for(const e of this.enemies)if(e.hp>0&&distance(e,shot)<(shot.kind==='meteor'?2.8:2)&&this.enemyAwake(e))this.hitEnemy(e,shot.damage);
+        const nova=shot.style==='supernova',radius=nova?2.4:shot.kind==='meteor'?2.8:2;
+        if(nova)this.effects.push({type:'nova',x:shot.x,y:shot.y,radius,life:.65,max:.65});
+        else this.burst(shot.x,shot.y,shot.kind==='meteor'?2.3:1.4,'explosion');this.shake=5;
+        for(const e of this.enemies)if(e.hp>0&&distance(e,shot)<radius&&this.enemyAwake(e))this.hitEnemy(e,shot.damage);
         this.emit('explosion');
       }else if(shot.kind==='ice'){
         for(const e of this.enemies)if(e.hp>0&&distance(e,shot)<1.2&&this.enemyAwake(e)&&this.clearShot(shot,e)){e.frozen=e.type==='boss'?.4:1.1;this.hitEnemy(e,shot.damage,'frost');}

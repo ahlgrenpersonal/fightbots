@@ -1,9 +1,9 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells } from './data.js?v=world67';
-import { Adventure, distance } from './engine.js?v=world67';
-import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon } from './art.js?v=world67';
-import { mountAtlas } from './atlas.js?v=world67';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells } from './data.js?v=world68';
+import { Adventure, distance } from './engine.js?v=world68';
+import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon } from './art.js?v=world68';
+import { mountAtlas } from './atlas.js?v=world68';
 
-const buildVersion = 'world67';
+const buildVersion = 'world68';
 const SAVE_KEY='bot-adventure-save-v1';
 const $=id=>document.getElementById(id);
 $('buildLabel').textContent=buildVersion;
@@ -45,7 +45,7 @@ function toast(message){$('toast').textContent=message;$('toast').classList.add(
 function banner(title,detail=''){const n=$('announcement');n.replaceChildren();const main=document.createElement('div');main.textContent=title;n.append(main);if(detail){const sub=document.createElement('small');sub.textContent=detail;n.append(sub);}n.hidden=false;clearTimeout(bannerTimer);bannerTimer=setTimeout(()=>n.hidden=true,3500);}
 function persist(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(game.snapshot()));}catch{if(storageOK){storageOK=false;const note=document.createElement('div');note.className='storage-warning';note.textContent='Saving is unavailable in this browser. Keep this page open to keep your adventure.';$('game').append(note);}}}
 game.onEvent=e=>{
-  if(e.type==='attack'){const f={bumper:110,blaster:700,saw:170,hammer:80,lightning:900,rocket:150,flame:140,frost:850,boomerang:400,tractor:240,drone:650,rail:1000,meteor:120,gravity:60}[e.weapon]||400;tone(f,.07,e.weapon==='saw'||e.weapon==='flame'?'sawtooth':'triangle',.018,f*.5);}
+  if(e.type==='attack'){const f={bumper:110,blaster:700,saw:170,hammer:80,lightning:900,rocket:150,flame:140,frost:850,boomerang:400,tractor:240,drone:650,rail:1000,meteor:120,gravity:60,sunbeam:1200,swarm:760,supernova:95}[e.weapon]||400;tone(f,.07,e.weapon==='saw'||e.weapon==='flame'?'sawtooth':'triangle',.018,f*.5);}
   if(e.type==='toast')toast(e.text);
   if(e.type==='defeat'){tone(e.boss?130:320,.12,'triangle',.03,75);}
   if(e.type==='explosion')tone(90,.35,'sawtooth',.035,30);
@@ -116,10 +116,11 @@ function displayDetails(){
 }
 function showRescue(){openPanel('rescue',`${head('A little rescue','Every good explorer gets a helping hand.','BACK HOME')}<div class="panel-body"><canvas class="celebration" id="rewardBot" width="700" height="280"></canvas><p class="dialog-copy">Your bot is fully repaired. All your equipment, parts and discoveries are safe. The rescue cost at most 1 scrap.</p><button class="primary" data-action="home">Back to the workshop ⌂</button></div>`);}
 function showGuardian(r){
-  if(r===REGIONS.length-1){openPanel('victory',`${head('You lit up the whole world!','Fifteen relays. One extraordinary little bot.','ADVENTURE COMPLETE')}<div class="panel-body"><canvas class="celebration" id="rewardBot" width="700" height="280"></canvas><div class="completed-stats"><div><b>${game.save.totalBots}</b><span>bots defeated</span></div><div><b>${game.save.cleared.length}</b><span>cells discovered</span></div><div><b>${game.save.owned.length}</b><span>parts built</span></div></div><p class="dialog-copy">The bridges are bright, the workshops are warm, and the world is yours to explore.</p><button class="primary pictorial-action" data-action="close" aria-label="Keep adventuring"><span>▶</span></button></div>`);return;}
   const pair=Object.entries(EQUIPMENT).flatMap(([type,parts])=>parts.filter(p=>p.unlock===r).map(p=>({type,p}))).find(({p})=>p.id===REGIONS[r].reward)||Object.entries(EQUIPMENT).flatMap(([type,parts])=>parts.filter(p=>p.unlock===r).map(p=>({type,p})))[0];
+  const discovery=pair?`<canvas id="rewardWeapon" class="celebration" width="700" height="280" data-reward="${pair.p.id}" data-type="${pair.type}"></canvas><h2 style="font-size:21px;margin:8px 0">${pair.p.name} blueprint</h2><p class="dialog-copy">${pair.p.desc} Your new blueprint is waiting at the workshop.</p>`:'<canvas class="celebration" id="rewardBot" width="700" height="280"></canvas>';
+  if(r===REGIONS.length-1){openPanel('victory',`${head('You lit up the whole world!','Fifteen relays. One extraordinary little bot.','ADVENTURE COMPLETE')}<div class="panel-body">${discovery}<div class="completed-stats"><div><b>${game.save.totalBots}</b><span>bots defeated</span></div><div><b>${game.save.cleared.length}</b><span>cells discovered</span></div><div><b>${game.save.owned.length}</b><span>parts built</span></div></div><p class="dialog-copy">The bridges are bright, the workshops are warm, and the world is yours to explore.</p><div class="pause-actions"><button class="primary pictorial-action" data-action="home" aria-label="Build at the nearest workshop"><span>⚙</span><small>Build</small></button><button class="secondary pictorial-action" data-action="close" aria-label="Keep adventuring"><span>▶</span><small>Explore</small></button></div></div>`);return;}
   const mission=RETURNS.find(m=>returnActive(game.save,m)),next=mission?`${mission.boss} has appeared in ${REGIONS[mission.r].name}`:`${REGIONS[r+1].name} is now open`;
-  openPanel('guardian',`${head('A relay comes to life!',next,'BIG DISCOVERY')}<div class="panel-body">${pair?`<canvas id="rewardWeapon" class="celebration" width="700" height="280" data-reward="${pair.p.id}" data-type="${pair.type}"></canvas><h2 style="font-size:21px;margin:8px 0">${pair.p.name} blueprint</h2><p class="dialog-copy">${pair.p.desc} Your new blueprint is waiting at the workshop.</p>`:'<canvas class="celebration" id="rewardBot" width="700" height="280"></canvas>'}<div class="pause-actions"><button class="primary pictorial-action" data-action="home" aria-label="Build at the nearest workshop"><span>⚙</span><small>Build</small></button><button class="secondary pictorial-action" data-action="next" aria-label="Explore the next trail"><span>${mission?'⚑':'▶'}</span><small>Explore</small></button></div></div>`);
+  openPanel('guardian',`${head('A relay comes to life!',next,'BIG DISCOVERY')}<div class="panel-body">${discovery}<div class="pause-actions"><button class="primary pictorial-action" data-action="home" aria-label="Build at the nearest workshop"><span>⚙</span><small>Build</small></button><button class="secondary pictorial-action" data-action="next" aria-label="Explore the next trail"><span>${mission?'⚑':'▶'}</span><small>Explore</small></button></div></div>`);
   tone(500,.5,'triangle',.04,1500);
 }
 panel.addEventListener('cancel',e=>{e.preventDefault();closePanel();});
@@ -149,7 +150,7 @@ function drawPanels(){
   document.querySelectorAll('canvas[data-item]').forEach(canvas=>{const c=canvas.getContext('2d');c.clearRect(0,0,136,136);c.save();c.scale(2,2);equipmentIcon(c,workTab,canvas.dataset.item,t);c.restore();});
   document.querySelectorAll('canvas[data-category]').forEach(canvas=>{const c=canvas.getContext('2d');c.clearRect(0,0,88,72);c.save();c.scale(2,2);categoryIcon(c,canvas.dataset.category,t);c.restore();});
   const atlas=$('atlas');if(atlas&&!atlasController)painter.map(atlas,game);
-  const reward=$('rewardWeapon');if(reward){const c=reward.getContext('2d');c.clearRect(0,0,700,280);c.save();c.translate(214,4);c.scale(4,4);equipmentIcon(c,reward.dataset.type,reward.dataset.reward,t);c.restore();}
+  const reward=$('rewardWeapon');if(reward){const c=reward.getContext('2d');c.clearRect(0,0,700,280);c.save();if(reward.dataset.type==='weapon'){const scale=['sunbeam','swarm','supernova'].includes(reward.dataset.reward)?7:5;c.translate(350-30*scale,140);c.scale(scale,scale);weapon(c,reward.dataset.reward,t);}else{c.translate(214,4);c.scale(4,4);equipmentIcon(c,reward.dataset.type,reward.dataset.reward,t);}c.restore();}
   const rb=$('rewardBot');if(rb){const c=rb.getContext('2d');c.clearRect(0,0,700,280);bot(c,350,140,170,{color:game.save.color,armor:game.save.build.armor,wheels:game.save.build.wheels,gun:game.save.build.weapon},t);}
 }
 $('pause').onclick=pauseMenu;$('map').onclick=adventureMap;
