@@ -1,8 +1,8 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, canWalk, WORLD_W, WORLD_H, REGION_W, MAIN_Y, REQUIRED_CELLS } from './data.js?v=world49';
-import { Adventure, distance } from './engine.js?v=world49';
-import { Painter, bot, weapon, rounded } from './art.js?v=world49';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, canWalk, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, REQUIRED_CELLS } from './data.js?v=world51';
+import { Adventure, distance } from './engine.js?v=world51';
+import { Painter, bot, weapon, rounded } from './art.js?v=world51';
 
-const buildVersion = 'world49';
+const buildVersion = 'world51';
 const SAVE_KEY='bot-adventure-save-v1';
 const $=id=>document.getElementById(id);
 let storageOK=true;
@@ -17,7 +17,8 @@ function load(){
     s.owned=[...new Set([...base.owned,...s.owned.filter(id=>Object.values(EQUIPMENT).flat().some(p=>p.id===id))])];
     s.build={...base.build,...s.build};for(const type of Object.keys(EQUIPMENT))if(!s.owned.includes(s.build[type])||!EQUIPMENT[type].some(p=>p.id===s.build[type]))s.build[type]=base.build[type];
     if(!COLORS.includes(s.color))s.color=base.color;
-    if(!Number.isFinite(s.position?.x)||!Number.isFinite(s.position?.y)||s.position.x<1||s.position.x>WORLD_W-2||s.position.y<1||s.position.y>WORLD_H-2||regionAt(s.position.x)>unlockedRegion(s))s.position={...HOME};
+    if(raw.worldLayout!==2){s.position={...HOME};s.worldLayout=2;s.visited=[];s.discovered=[];s.hp=stats(s).hp;}
+    if(!Number.isFinite(s.position?.x)||!Number.isFinite(s.position?.y)||s.position.x<1||s.position.x>WORLD_W-2||s.position.y<1||s.position.y>WORLD_H-2||regionAt(s.position.x,s.position.y)<0||regionAt(s.position.x,s.position.y)>unlockedRegion(s))s.position={...HOME};
     if(!Number.isFinite(s.hp)||s.hp<=0)s.hp=stats(s).hp;
     return s;
   }catch{return base;}
@@ -46,6 +47,7 @@ game.onEvent=e=>{
   if(e.type==='region'){banner(REGIONS[e.r].name,REGIONS[e.r].subtitle);persist();}
   if(e.type==='guardian'){persist();setTimeout(()=>showGuardian(e.r),600);}
   if(e.type==='home'){persist();}
+  if(e.type==='home-arrived'){workshop();}
   if(e.type==='rescue'){persist();showRescue();}
   if(e.type==='crafted'){tone(500,.3,'triangle',.05,1400);toast(`${e.part.name} assembled!`);persist();}
   if(e.type==='equip'){tone(350,.08,'triangle',.025,500);persist();}
@@ -56,22 +58,26 @@ function openPanel(mode,html){game.paused=true;panelMode=mode;$('panelContent').
 function head(title,sub,eyebrow='BOT ADVENTURE'){return `<div class="panel-head"><div><div class="eyebrow">${eyebrow}</div><h1 id="panelTitle">${title}</h1>${sub?`<p>${sub}</p>`:''}</div><button class="close" data-action="close" aria-label="Close" title="Close">×</button></div>`;}
 function workbenchHTML(){const s=stats(game.save);return `<div class="workbench"><canvas id="botPreview" width="440" height="350" aria-label="Your bot"></canvas><div class="bot-stats"><div>Health <strong>${s.hp}</strong></div><div>Power <strong>${s.weapon.damage}</strong></div><div>Reach <strong>${s.weapon.range>2?'Long':'Close'}</strong></div><div class="swatches">${COLORS.map((color,i)=>`<button class="swatch ${game.save.color===color?'selected':''}" style="--swatch:${color}" data-color="${color}" aria-label="${['Coral','Blue','Green','Yellow','Orange','Purple'][i]}" title="${['Coral','Blue','Green','Yellow','Orange','Purple'][i]}"></button>`).join('')}</div></div></div>`;}
 function workshop(){
-  if(!game.isHome())game.goHome();
+  if(!game.isHome()){closePanel();game.goHome();toast('Heading to the workshop. Free repairs at home.');return;}
+  game.repair();
   const tabs=Object.keys(EQUIPMENT);const s=game.save;
   openPanel('workshop',`${head('Home workshop','Fully repaired. Ready for something new.','SAFE & SOUND')}${workbenchHTML()}<div class="inventory-line"><span>Scrap <b>◆ ${s.scrap}</b></span><span>Parts <b>⚙ ${s.gears}</b></span><span>${s.bosses.length} / 5 relays</span></div><div class="tabs" role="tablist">${tabs.map(type=>`<button role="tab" aria-selected="${type===workTab}" class="${type===workTab?'active':''}" data-tab="${type}">${{weapon:'Weapons',armor:'Armor',wheels:'Wheels',gadget:'Gadgets'}[type]}</button>`).join('')}</div><div class="items">${EQUIPMENT[workTab].map(p=>{
     const owned=s.owned.includes(p.id),equipped=s.build[workTab]===p.id,can=available(s,p),afford=s.scrap>=p.cost&&s.gears>=p.gears;
     const lock=p.unlock>=0?`Blueprint: ${REGIONS[p.unlock].boss}`:'Find gears at salvage sites';
     return `<article class="item ${equipped?'equipped':''} ${can?'':'locked'}"><canvas width="136" height="136" data-item="${p.id}" aria-label="${p.name}"></canvas><div><h3>${p.name}</h3><p>${p.desc}</p><small>${!can?lock:owned?equipped?'Equipped · yours forever':'Built · yours forever':`◆ ${p.cost} scrap + ⚙ ${p.gears} gears`}</small></div><button data-part="${p.id}" ${!can||equipped||(!owned&&!afford)?'disabled':''}>${equipped?'✓':!can?'Locked':owned?'Equip':'Build'}</button></article>`;
-  }).join('')}</div><div class="panel-foot"><button class="primary" data-action="depart">${game.returnPosition?'Back to adventure':'Adventure awaits'} ↗</button></div>`);
+  }).join('')}</div><div class="panel-foot"><button class="primary" data-action="depart">Adventure awaits ↗</button></div>`);
 }
 function adventureMap(){
   const s=game.save,region=unlockedRegion(s);
   openPanel('map',`${head('The little big world',`${s.bosses.length} relays restored · ${s.cleared.length} power cells found`,'VALLEY ATLAS')}<div class="panel-body"><canvas id="atlas" class="map-canvas" aria-label="Map of five regions. Select a destination." width="1200" height="960"></canvas><div class="map-key"><span>● Power cell</span><span>▣ Guardian</span><span>⌂ Home</span></div><div class="region-list">${REGIONS.map((reg,r)=>`<button class="region-row" data-region="${r}" ${r>region?'disabled':''}><span>${s.bosses.includes(r)?'✓':r>region?'◇':'ϟ'}</span><div><b>${reg.name}</b><small>${s.bosses.includes(r)?'Relay restored · more treasures to find':r>region?'Bridge asleep':`${cellsIn(s,r)} / ${REQUIRED_CELLS} power cells · ${reg.boss}`}</small></div><em>${r<=region?'Go ↗':'Locked'}</em></button>`).join('')}</div></div>`);
-  const map=$('atlas');map.addEventListener('click',e=>{const r=map.getBoundingClientRect(),x=((e.clientX-r.left)/r.width*600-34)/3.8,y=((e.clientY-r.top)/r.height*480-27)/3.8;if(x<0||x>=WORLD_W||y<0||y>=WORLD_H)return;if(regionAt(x)>unlockedRegion(s)){toast('That bridge is still asleep.');return;}closePanel();game.moveTo({x,y});});
+  const key=panel.querySelector('.map-key');key.insertAdjacentHTML('beforeend','<span>＋ Charging station</span>');
+  const stations=game.world.stations.filter(st=>s.discovered.includes(st.id));
+  panel.querySelector('.region-list').insertAdjacentHTML('afterbegin',stations.map(st=>`<button class="region-row station-row" data-station="${st.id}"><span>＋</span><div><b>Charging station</b><small>${REGIONS[st.r].name} · 2 scrap · safe zone</small></div><em>Go ↗</em></button>`).join(''));
+  const map=$('atlas');map.addEventListener('click',e=>{const rect=map.getBoundingClientRect(),{scale,ox,oy}=atlasLayout(),x=((e.clientX-rect.left)/rect.width*600-ox)/scale,y=((e.clientY-rect.top)/rect.height*760-oy)/scale;if(x<0||x>=WORLD_W||y<0||y>=WORLD_H||regionAt(x,y)<0)return;if(regionAt(x,y)>unlockedRegion(s)){toast('That trail is still asleep.');return;}closePanel();game.moveTo({x,y});});
 }
 function goRegion(r){
   const sites=game.world.sites.filter(s=>s.r===r&&!game.save.cleared.includes(s.id)).sort((a,b)=>distance(a,game.player)-distance(b,game.player));
-  const goal=cellsIn(game.save,r)>=REQUIRED_CELLS&&!game.save.bosses.includes(r)?{x:r*REGION_W+24.5,y:MAIN_Y}:sites[0]||{x:r*REGION_W+14.5,y:MAIN_Y};
+  const o=regionOrigin(r),goal=cellsIn(game.save,r)>=REQUIRED_CELLS&&!game.save.bosses.includes(r)?relayFor(r):sites[0]||{x:o.x+18.5,y:o.y+22.5};
   closePanel();game.moveTo(goal);
 }
 function pauseMenu(){
@@ -91,6 +97,7 @@ panel.addEventListener('click',e=>{
   if(button.dataset.color){game.save.color=button.dataset.color;persist();workshop();}
   if(button.dataset.part){const id=button.dataset.part,scroll=panel.scrollTop;if(game.save.owned.includes(id))game.equip(workTab,id);else game.craft(workTab,id);workshop();panel.scrollTop=scroll;}
   if(button.dataset.region!==undefined)goRegion(Number(button.dataset.region));
+  if(button.dataset.station){const station=game.world.stations.find(s=>s.id===button.dataset.station);closePanel();if(station)game.moveTo(station);}
   const action=button.dataset.action;
   if(action==='close')closePanel();
   if(action==='home')workshop();
@@ -111,9 +118,9 @@ $('pause').onclick=pauseMenu;$('map').onclick=adventureMap;$('questRoute').oncli
 $('home').onclick=workshop;$('workshop').onclick=workshop;$('boost').onclick=()=>game.boost();
 $('sound').onclick=()=>{game.save.sound=!game.save.sound;tone(700);persist();};
 let interaction='';
-$('interact').onclick=()=>{if(interaction==='home')workshop();else if(interaction==='repair')openPanel('repair',`${head('A quick tune-up','Field repair station')}<div class="panel-body"><p class="dialog-copy">Restore 55% health for 2 scrap. Home repairs are always free.</p><button class="primary" data-action="repair" ${game.save.scrap<2?'disabled':''}>Repair · ◆ 2</button></div>`);else if(interaction==='guardian'){const r=regionAt(game.player.x);toast(REGIONS[r].hint);game.moveTo({x:r*REGION_W+23.5,y:MAIN_Y});}};
+$('interact').onclick=()=>{if(interaction==='home')workshop();else if(interaction==='repair')game.repair();else if(interaction==='guardian'){const r=regionAt(game.player.x,game.player.y);toast(REGIONS[r].hint);game.moveTo(relayFor(r));}};
 let pressed=false,pressPoint;
-$('world').addEventListener('pointerdown',e=>{if(game.paused)return;pressed=true;pressPoint={x:e.clientX,y:e.clientY};const rect=$('world').getBoundingClientRect(),pos=painter.screenToWorld(e.clientX-rect.left,e.clientY-rect.top);const enemy=game.enemies.filter(n=>n.hp>0&&!n.dormant&&distance(n,pos)<.7).sort((a,b)=>distance(a,pos)-distance(b,pos))[0];if(enemy)game.focusEnemy(enemy);else game.moveTo(pos);$('world').setPointerCapture(e.pointerId);});
+$('world').addEventListener('pointerdown',e=>{if(game.paused)return;pressed=true;pressPoint={x:e.clientX,y:e.clientY};const rect=$('world').getBoundingClientRect(),pos=painter.screenToWorld(e.clientX-rect.left,e.clientY-rect.top);const enemy=game.enemies.filter(n=>n.hp>0&&!n.dormant&&distance(n,pos)<.7).sort((a,b)=>distance(a,pos)-distance(b,pos))[0],station=game.world.stations.find(s=>s.r<=unlockedRegion(game.save)&&distance(s,pos)<1.8);if(station)game.moveTo(station);else if(enemy)game.focusEnemy(enemy);else game.moveTo(pos);$('world').setPointerCapture(e.pointerId);});
 $('world').addEventListener('pointermove',e=>{if(!pressed||game.paused||Math.hypot(e.clientX-pressPoint.x,e.clientY-pressPoint.y)<20)return;const rect=$('world').getBoundingClientRect();game.moveTo(painter.screenToWorld(e.clientX-rect.left,e.clientY-rect.top));pressPoint={x:e.clientX,y:e.clientY};});
 for(const event of ['pointerup','pointercancel'])$('world').addEventListener(event,()=>pressed=false);
 window.addEventListener('keydown',e=>{if(panel.open)return;const directions={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],w:[0,-1],s:[0,1],a:[-1,0],d:[1,0]};if(directions[e.key]){e.preventDefault();const [dx,dy]=directions[e.key];game.moveTo({x:Math.floor(game.player.x)+dx+.5,y:Math.floor(game.player.y)+dy+.5});}if(e.code==='Space'){e.preventDefault();game.boost();}if(e.key==='Escape')pauseMenu();});
@@ -121,8 +128,10 @@ window.addEventListener('resize',()=>painter.resize());
 document.addEventListener('visibilitychange',()=>{if(document.hidden){wasPaused=game.paused;game.paused=true;persist();}else{game.paused=panel.open||wasPaused;last=performance.now();}});
 window.addEventListener('pagehide',persist);
 function hud(){
-  const s=game.save,r=regionAt(game.player.x),max=game.maxHp(),current=Math.ceil(game.player.hp);
+  const s=game.save,r=regionAt(game.player.x,game.player.y),max=game.maxHp(),current=Math.ceil(game.player.hp);
   $('regionName').textContent=REGIONS[r].name;$('scrapCount').textContent=s.scrap;$('healthText').textContent=`${current} / ${max}`;$('healthFill').style.width=`${Math.max(0,game.player.hp/max*100)}%`;$('healthFill').style.background=game.player.hp/max<.3?'#f49b7d':'#94e5b1';$('weaponLabel').textContent=item('weapon',s.build.weapon).name;
+  $('healthText').parentElement.classList.toggle('critical',game.player.hp/max<=.18);
+  if(game.charging)$('weaponLabel').textContent='Charging…';else if(game.player.hp/max<=.18)$('weaponLabel').textContent='Needs repairs!';else if(game.player.hp/max<=.5)$('weaponLabel').textContent='Damaged';
   const goal=unlockedRegion(s),cells=cellsIn(s,goal);
   $('questTitle').textContent=s.completed?'The valley is shining':cells>=REQUIRED_CELLS?REGIONS[goal].boss:`Wake the ${['first','second','third','fourth','last'][goal]} relay`;
   $('questDetail').textContent=s.completed?`${s.cleared.length} / 50 cells · ${s.chests.length} / 35 treasures`:cells>=REQUIRED_CELLS?`Guardian ready · ${REGIONS[goal].name}`:`${Math.min(REQUIRED_CELLS,cells)} / ${REQUIRED_CELLS} power cells · ${REGIONS[goal].name}`;
@@ -133,13 +142,13 @@ function hud(){
   $('bossHud').hidden=!bosses.length;if(bosses.length){$('bossName').textContent=REGIONS[r].boss;$('bossHealth').style.width=`${bosses.reduce((v,e)=>v+e.hp,0)/REGIONS[r].hp*100}%`;}
   interaction='';
   if(game.isHome())interaction='home';
-  else if(game.world.sites.some(site=>s.cleared.includes(site.id)&&distance(game.player,site)<1.6)&&game.player.hp<max-5)interaction='repair';
-  else if(distance(game.player,{x:r*REGION_W+24.5,y:MAIN_Y})>4&&distance(game.player,{x:r*REGION_W+24.5,y:MAIN_Y})<6&&game.bossAwake(r))interaction='guardian';
-  $('interact').hidden=!interaction;$('interact').textContent={home:'⌂ Home workshop · free repairs',repair:'＋ Field repair · ◆ 2',guardian:'ϟ Guardian ahead'}[interaction]||'';
+  else if(game.stationNear()&&game.player.hp<max-1&&!game.charging)interaction='repair';
+  else if(distance(game.player,relayFor(r))>4&&distance(game.player,relayFor(r))<6&&game.bossAwake(r))interaction='guardian';
+  $('interact').hidden=!interaction;$('interact').textContent={home:'⌂ Home workshop · free repairs',repair:'＋ Recharge · ◆ 2',guardian:'ϟ Guardian ahead'}[interaction]||'';
 }
 function loop(now){const dt=Math.min(.06,(now-last)/1000);last=now;game.tick(dt);painter.draw(game,game.time,dt);if(frame++%5===0)hud();if(panel.open&&frame%3===0)drawPanels();if(now-lastSave>2200){persist();lastSave=now;}requestAnimationFrame(loop);}
 hud();requestAnimationFrame(loop);
-if(!game.save.intro){game.save.intro=true;setTimeout(()=>{if(!game.enemies.some(e=>e.type==='boss'&&e.hp>0&&game.bossAwake(e.r)&&distance(e,game.player)<7))banner('A little bot. A big adventure.',REGIONS[regionAt(game.player.x)].name);},500);persist();}
+if(!game.save.intro){game.save.intro=true;setTimeout(()=>{if(!game.enemies.some(e=>e.type==='boss'&&e.hp>0&&game.bossAwake(e.r)&&distance(e,game.player)<7))banner('A little bot. A big adventure.',REGIONS[regionAt(game.player.x,game.player.y)].name);},500);persist();}
 if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'}).catch(()=>{});}
 async function checkVersion(){try{const res=await fetch(`./version.json?check=${Date.now()}`,{cache:'no-store'});if(!res.ok)return;const live=await res.json();if(live.build!==buildVersion&&!game.enemies.some(e=>e.active&&e.hp>0)&&!panel.open){persist();const regs=await navigator.serviceWorker?.getRegistrations();for(const reg of regs||[])if(reg.scope===new URL('./',location.href).href)await reg.unregister();for(const key of await caches.keys())if(key.startsWith('bot-adventure-'))await caches.delete(key);location.replace(`./index.html?fresh=${Date.now()}`);}}catch{}}
 window.addEventListener('online',checkVersion);window.addEventListener('focus',checkVersion);setTimeout(checkVersion,2500);

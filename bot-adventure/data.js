@@ -1,10 +1,15 @@
-export const BUILD = 'world49';
-export const REGION_W = 28;
-export const WORLD_W = REGION_W * 5;
-export const WORLD_H = 112;
-export const MAIN_Y = 56.5;
+export const BUILD = 'world51';
+export const REGION_W = 36;
+export const REGION_H = 44;
+export const WORLD_W = REGION_W * 3;
+export const WORLD_H = REGION_H * 3;
+export const MAIN_Y = 66.5;
 export const REQUIRED_CELLS = 8;
-export const HOME = { x: 6.5, y: MAIN_Y };
+export const HOME = { x: 54.5, y: MAIN_Y };
+export const REGION_LAYOUT = [[1,1],[0,1],[1,0],[2,1],[2,2]];
+export const regionOrigin = r => ({x:REGION_LAYOUT[r][0]*REGION_W,y:REGION_LAYOUT[r][1]*REGION_H});
+export const relayFor = r => {const p=regionOrigin(r);return {x:p.x+30.5,y:p.y+6.5};};
+export const atlasLayout = () => {const scale=Math.min(552/WORLD_W,712/WORLD_H);return {scale,ox:(600-WORLD_W*scale)/2,oy:(760-WORLD_H*scale)/2};};
 export const COLORS = ['#ee6954', '#459de0', '#57bd85', '#f4c54b', '#f28d42', '#ac7fe0'];
 export const REGIONS = [
   { name: 'Clover Fields', subtitle: 'A little spark of adventure', ground: '#85b979', dark: '#477d58', path: '#c6c59a', water: '#61b8b8', accent: '#ffe17b', boss: 'The Rusty Rambler', hint: 'A heavy stomp. Keep moving when the ground turns red.', reward: 'saw', hp: 150, damage: 8 },
@@ -39,7 +44,7 @@ export const EQUIPMENT = {
   gadget: [
     { id: 'none', name: 'Tool Pocket', desc: 'Ready for something wonderful.', cost: 0, gears: 0, unlock: -1 },
     { id: 'magnet', name: 'Loot Magnet', desc: 'Pulls in scrap and parts from far away.', cost: 22, gears: 2, unlock: -1 },
-    { id: 'repair', name: 'Repair Buddy', desc: 'Slowly restores health between battles.', cost: 50, gears: 3, unlock: 0 },
+    { id: 'repair', name: 'Charge Coupler', desc: 'Recharges twice as fast when parked at a charging station.', cost: 50, gears: 3, unlock: 0 },
     { id: 'shield', name: 'Bubble Shield', desc: 'Blocks one hit every eight seconds.', cost: 80, gears: 5, unlock: 2 }
   ]
 };
@@ -50,20 +55,34 @@ export function stats(save) {
   return { hp: armor.hp + (wheels.hp || 0), defense: armor.defense, speed: wheels.speed, weapon: item('weapon', save.build.weapon) };
 }
 export function freshSave() {
-  return { schema: 1, scrap: 0, gears: 0, build: { ...STARTERS }, color: COLORS[0], owned: Object.values(STARTERS), cleared: [], bosses: [], kills: [], chests: [], discovered: [], visited: [], position: { ...HOME }, hp: 70, totalBots: 0, playSeconds: 0, sound: false, gentle: true, completed: false, intro: false };
+  return { schema: 1, worldLayout: 2, scrap: 0, gears: 0, build: { ...STARTERS }, color: COLORS[0], owned: Object.values(STARTERS), cleared: [], bosses: [], kills: [], chests: [], discovered: [], visited: [], position: { ...HOME }, hp: 70, totalBots: 0, playSeconds: 0, sound: false, gentle: true, completed: false, intro: false };
 }
 export function hash(x, y, seed = 17) {
   let n = Math.imul(x + seed, 374761393) ^ Math.imul(y + seed, 668265263);
   n = Math.imul(n ^ (n >>> 13), 1274126177);
   return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
 }
-export function regionAt(x) { return Math.max(0, Math.min(4, Math.floor(x / REGION_W))); }
+export function regionAt(x,y) {
+  const sx=Math.floor(x/REGION_W),sy=Math.floor(y/REGION_H);
+  // The southern lakeshore is a quiet extension of the central home region.
+  if(sx===1&&sy===2)return 0;
+  return REGION_LAYOUT.findIndex(([rx,ry])=>rx===sx&&ry===sy);
+}
+export function isRoad(x,y) {
+  const r=regionAt(x,y);if(r<0)return false;
+  if(r===0&&y>=REGION_H*2)return Math.abs(x-HOME.x)<1.2||([105.5,118.5].some(v=>Math.abs(y-v)<1.2)&&x>43&&x<68);
+  const p=regionOrigin(r);
+  return Math.abs(y-(p.y+22.5))<1.2||Math.abs(x-(p.x+18.5))<1.2;
+}
 export function makeWorld() {
-  const sites = [], enemies = [], chests = [], props = [], blocks = new Set(), water = new Set();
-  const offsets = [[5,8],[21,17],[7,28],[21,38],[6,48],[21,65],[6,76],[21,87],[7,98],[21,105]];
+  const sites = [], enemies = [], chests = [], stations = [], props = [], blocks = new Set(), water = new Set();
+  const offsets = [[7,6],[20,7],[8,15],[26,16],[10,25],[25,27],[7,35],[18,37],[29,39],[29,32]];
   for (let r = 0; r < 5; r++) {
-    offsets.forEach(([ox,y], i) => {
-      const x = r * REGION_W + ox, id = `site-${r}-${i}`;
+    const origin=regionOrigin(r);
+    for(const [i,[x,y]] of [[4.5,23.5],r===0?[29.5,74.5]:[32.5,25.5]].entries())stations.push({id:`station-${r}-${i}`,r,x:origin.x+x,y:origin.y+y});
+    offsets.forEach(([ox,oy], i) => {
+      const south=r===0&&i>=7?[[12,60],[25,65],[17,78]][i-7]:null;
+      const x = origin.x + (south?south[0]:ox), y=origin.y+(south?south[1]:oy), id = `site-${r}-${i}`;
       const site = { id, r, x: x + .5, y: y + .5, index: i };
       sites.push(site);
       const n = r === 0 ? 4 : 5;
@@ -75,32 +94,35 @@ export function makeWorld() {
         enemies.push({ id: `${id}-${wave}-${j}`, site: id, wave, dormant: wave > 0, r, x: ex, y: ey, homeX: ex, homeY: ey, hp, maxHp: hp, type, damage: [2,3,4,5,6][r], cd: hash(i,j,r) * 2, hit: 0, swing: 0, angle: 0 });
       }
     });
-    const bx = r * REGION_W + 24.5, by = MAIN_Y;
+    const {x:bx,y:by} = relayFor(r);
     const count = r === 1 ? 2 : 1;
     for (let j = 0; j < count; j++) {
       const hp = REGIONS[r].hp / count;
       enemies.push({ id: `boss-${r}-${j}`, r, x: bx + (count === 2 ? j * 2 - 1 : 0), y: by, homeX: bx, homeY: by, hp, maxHp: hp, type: 'boss', damage: REGIONS[r].damage, cd: 2.5 + j, hit: 0, swing: 0, angle: 0 });
     }
-    for (let i = 0; i < 7; i++) chests.push({ id: `chest-${r}-${i}`, r, x: r * REGION_W + 3.5 + (i % 3) * 9, y: [4.5,23.5,44.5,61.5,82.5,94.5,108.5][i] });
+    for (const [i,[x,y]] of [[3.5,4.5],[15.5,12.5],[32.5,21.5],[3.5,29.5],[14.5,33.5],[23.5,41.5],[32.5,42.5]].entries()){const south=r===0&&i>=4?[[10.5,55.5],[28.5,72.5],[18.5,85.5]][i-4]:null;chests.push({id:`chest-${r}-${i}`,r,x:origin.x+(south?south[0]:x),y:origin.y+(south?south[1]:y)});}
   }
-  const reserved = (x,y) => Math.abs(y - Math.floor(MAIN_Y)) < 3 || sites.some(s => Math.abs(x+.5-s.x) < 2.8 && Math.abs(y+.5-s.y) < 2.8) || chests.some(s => Math.abs(x+.5-s.x)<1.8 && Math.abs(y+.5-s.y)<1.8) || Math.abs(x%REGION_W - 14) < 1.8 || (Math.abs(x-HOME.x)<4 && Math.abs(y-HOME.y)<5);
+  const reserved = (x,y) => isRoad(x+.5,y+.5) || sites.some(s => Math.abs(x+.5-s.x) < 2.8 && Math.abs(y+.5-s.y) < 2.8) || chests.some(s => Math.abs(x+.5-s.x)<1.8 && Math.abs(y+.5-s.y)<1.8) || stations.some(s=>Math.hypot(x+.5-s.x,y+.5-s.y)<3.8) || REGIONS.some((_,r)=>Math.hypot(x+.5-relayFor(r).x,y+.5-relayFor(r).y)<4) || (Math.abs(x-HOME.x)<4 && Math.abs(y-HOME.y)<5);
   for (let y=1;y<WORLD_H-1;y++) for(let x=1;x<WORLD_W-1;x++) {
+    const r=regionAt(x,y);
+    if(r<0){blocks.add(`${x},${y}`);if(x<REGION_W)water.add(`${x},${y}`);else if(hash(x,y)<.36)props.push({x:x+.5,y:y+.5,type:'mountain',r:4,seed:hash(x,y)});continue;}
     if (reserved(x,y)) continue;
-    const lx=x%REGION_W;
-    const pond=[[10,62,3.3,4.1],[17,22,4.6,3.2],[11,91,3.5,5]].some(([px,py,rx,ry])=>((lx-px)/rx)**2+((y-py)/ry)**2<1);
+    const lx=x%REGION_W,ly=y%REGION_H;
+    const pond=[[14,17,3.3,4.1],[25,33,3.6,3.2],[12,40,3.5,3]].some(([px,py,rx,ry])=>((lx-px)/rx)**2+((ly-py)/ry)**2<1) || (y>96&&r===0&&Math.abs(x-54)>5&&hash(Math.floor(x/3),Math.floor(y/4))<.75);
     if(pond){water.add(`${x},${y}`);blocks.add(`${x},${y}`);continue;}
     const n = hash(x,y);
-    if (n < .16) { blocks.add(`${x},${y}`); props.push({x:x+.5,y:y+.5,type:n<.065?'tree':n<.11?'rock':'scrap',r:regionAt(x),seed:n}); }
-    else if(n>.92) props.push({x:x+.5,y:y+.5,type:'flower',r:regionAt(x),seed:n});
+    if (n < .14) { blocks.add(`${x},${y}`); props.push({x:x+.5,y:y+.5,type:n<.065?'tree':n<.11?'rock':'scrap',r,seed:n}); }
+    else if(n>.92) props.push({x:x+.5,y:y+.5,type:'flower',r,seed:n});
   }
-  for(let r=0;r<5;r++)for(const [lx,y] of [[12,34],[16,72],[9,101]])props.push({x:r*REGION_W+lx,y,type:'landmark',r,seed:hash(lx,y,r)});
-  return { sites, enemies, chests, props, blocks, water };
+  for(let r=0;r<5;r++)for(const [lx,ly] of [[13,10],[17,31],[3,40]]){const o=regionOrigin(r);props.push({x:o.x+lx,y:o.y+ly,type:'landmark',r,seed:hash(lx,ly,r)});}
+  return { sites, enemies, chests, stations, props, blocks, water };
 }
 export function unlockedRegion(save) { return Math.min(4, save.bosses.length); }
 export function cellsIn(save,r) { return save.cleared.filter(id => id.startsWith(`site-${r}-`)).length; }
 export function available(save,part) { return part.unlock < 0 || save.bosses.includes(part.unlock); }
 export function canWalk(world,save,x,y) {
-  return x>=1 && y>=1 && x<WORLD_W-1 && y<WORLD_H-1 && regionAt(x)<=unlockedRegion(save) && !world.blocks.has(`${x},${y}`);
+  const r=regionAt(x,y);
+  return x>=1 && y>=1 && x<WORLD_W-1 && y<WORLD_H-1 && r>=0 && r<=unlockedRegion(save) && !world.blocks.has(`${x},${y}`);
 }
 // A breadth-first grid search keeps every destination predictable on touch screens.
 export function pathfind(world,save,from,to) {
