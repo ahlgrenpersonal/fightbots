@@ -1,7 +1,7 @@
-import { MORE_REGIONS, MORE_TILES, NEW_EQUIPMENT, WORKSHOPS, RETURNS, ENCOUNTERS } from './content.js?v=world68';
+import { MORE_REGIONS, MORE_TILES, NEW_EQUIPMENT, WORKSHOPS, RETURNS, ENCOUNTERS } from './content.js?v=world69';
 export { WORKSHOPS, RETURNS, ENCOUNTERS };
-export { bossProfile } from './content.js?v=world68';
-export const BUILD = 'world68';
+export { bossProfile } from './content.js?v=world69';
+export const BUILD = 'world69';
 export const REGION_W = 36;
 export const REGION_H = 44;
 export const WORLD_W = REGION_W * 9;

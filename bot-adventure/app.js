@@ -1,9 +1,9 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells } from './data.js?v=world68';
-import { Adventure, distance } from './engine.js?v=world68';
-import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon } from './art.js?v=world68';
-import { mountAtlas } from './atlas.js?v=world68';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells } from './data.js?v=world69';
+import { Adventure, distance } from './engine.js?v=world69';
+import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon } from './art.js?v=world69';
+import { mountAtlas } from './atlas.js?v=world69';
 
-const buildVersion = 'world68';
+const buildVersion = 'world69';
 const SAVE_KEY='bot-adventure-save-v1';
 const $=id=>document.getElementById(id);
 $('buildLabel').textContent=buildVersion;
@@ -79,7 +79,7 @@ function workshop(){
 function adventureMap(){
   const s=game.save,region=unlockedRegion(s);
   openPanel('map',`${head('The little big world',`${s.bosses.length} / ${REGIONS.length} relays restored · ${s.cleared.filter(id=>id.startsWith('site-')).length} power cells found`,'ADVENTURE ATLAS')}<div class="panel-body"><canvas id="atlas" class="map-canvas" aria-label="Map of fifteen regions. Select a destination." width="1200" height="960"></canvas><div class="map-key"><span>● Power cell</span><span>▣ Guardian</span><span>⌂ Workshop</span></div><div class="region-list">${REGIONS.map((reg,r)=>`<button class="region-row" data-region="${r}" ${r>region?'disabled':''}><span>${s.bosses.includes(r)?'✓':r>region?'◇':'ϟ'}</span><div><b>${reg.name}</b><small>${s.bosses.includes(r)?'Relay restored · more treasures to find':r>region?'Bridge asleep':`${cellsIn(s,r)} / ${requiredCells(r)} power cells · ${reg.boss}`}</small></div><em>${r<=region?'Go ↗':'Locked'}</em></button>`).join('')}</div></div>`);
-  const key=panel.querySelector('.map-key');key.insertAdjacentHTML('afterbegin','<span class="player-key">You</span>');key.insertAdjacentHTML('beforeend','<span>＋ Charging station</span>');
+  const key=panel.querySelector('.map-key');key.insertAdjacentHTML('afterbegin','<span class="player-key">You</span>');key.insertAdjacentHTML('beforeend','<span>＋ Charging station</span><span style="color:#ed917b">● Patrol</span>');
   const stations=game.world.stations.filter(st=>s.discovered.includes(st.id));
   panel.querySelector('.region-list').insertAdjacentHTML('afterbegin',stations.map(st=>`<button class="region-row station-row" data-station="${st.id}"><span>＋</span><div><b>Charging station</b><small>${REGIONS[st.r].name} · 2 scrap · safe zone</small></div><em>Go ↗</em></button>`).join(''));
   panel.querySelector('.region-list').insertAdjacentHTML('afterbegin',game.homes().map(h=>`<button class="region-row workshop-row" data-home="${h.id}"><span>⌂</span><div><b>${h.name}</b><small>Free repairs · walk home</small></div><em>Go ↗</em></button>`).join('')+RETURNS.filter(m=>returnActive(s,m)).map(m=>`<button class="region-row return-row" data-return="${m.id}"><span>⚑</span><div><b>${m.boss}</b><small>${REGIONS[m.r].name} · ${m.sites.filter((_,i)=>s.cleared.includes(`${m.sitePrefix}-${i}`)).length} / 3 camps</small></div><em>Go ↗</em></button>`).join(''));
@@ -99,7 +99,8 @@ function adventureMap(){
 }
 function goRegion(r){
   const sites=game.world.sites.filter(s=>!s.returnId&&s.r===r&&!game.save.cleared.includes(s.id)).sort((a,b)=>distance(a,game.player)-distance(b,game.player));
-  const o=regionOrigin(r),goal=cellsIn(game.save,r)>=requiredCells(r)&&!game.save.bosses.includes(r)?relayFor(r):sites[0]||{x:o.x+18.5,y:o.y+22.5};
+  const patrol=game.enemies.filter(e=>e.patrolSite&&e.r===r&&e.hp>0).sort((a,b)=>distance(a,game.player)-distance(b,game.player))[0];
+  const o=regionOrigin(r),goal=cellsIn(game.save,r)>=requiredCells(r)&&!game.save.bosses.includes(r)?relayFor(r):sites[0]||patrol||{x:o.x+18.5,y:o.y+22.5};
   closePanel();game.moveTo(goal);
 }
 function goReturn(mission){const goal=game.world.sites.find(s=>s.returnId===mission.id&&!game.save.cleared.includes(s.id))||mission;closePanel();game.moveTo(goal);}
@@ -182,7 +183,7 @@ function hud(){
   else if(distance(game.player,relayFor(r))>4&&distance(game.player,relayFor(r))<6&&game.bossAwake(r))interaction='guardian';
   $('interact').hidden=!interaction;$('interact').textContent={home:'⌂ Home workshop · free repairs',repair:'＋ Recharge · ◆ 2',guardian:'ϟ Guardian ahead'}[interaction]||'';
 }
-function loop(now){const dt=Math.min(.06,(now-last)/1000);last=now;game.tick(dt);painter.draw(game,game.time,dt);if(frame++%5===0)hud();if(panel.open&&frame%3===0)drawPanels();if(now-lastSave>2200){persist();lastSave=now;}requestAnimationFrame(loop);}
+function loop(now){const dt=Math.min(.06,(now-last)/1000);last=now;game.viewBounds={left:painter.camera.x-painter.w/painter.tile/2,right:painter.camera.x+painter.w/painter.tile/2,top:painter.camera.y-painter.h/painter.tile*.51,bottom:painter.camera.y+painter.h/painter.tile*.49};game.tick(dt);painter.draw(game,game.time,dt);if(frame++%5===0)hud();if(panel.open&&frame%3===0)drawPanels();if(now-lastSave>2200){persist();lastSave=now;}requestAnimationFrame(loop);}
 hud();requestAnimationFrame(loop);
 if(!game.save.intro){game.save.intro=true;setTimeout(()=>{if(!game.enemies.some(e=>e.type==='boss'&&e.hp>0&&game.bossAwake(e.r)&&distance(e,game.player)<7))banner('A little bot. A big adventure.',REGIONS[regionAt(game.player.x,game.player.y)].name);},500);persist();}
 if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'}).catch(()=>{});}

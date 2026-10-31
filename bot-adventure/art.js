@@ -1,5 +1,5 @@
-import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells } from './data.js?v=world68';
-import * as worldData from './data.js?v=world68';
+import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells } from './data.js?v=world69';
+import * as worldData from './data.js?v=world69';
 
 export function rounded(c,x,y,w,h,r,fill,stroke,line=2) {
   c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=line;c.stroke();}
@@ -813,7 +813,8 @@ export class Painter {
       const x=tiles.reduce((sum,p)=>sum+p[0]+.5,0)/tiles.length*REGION_W,y=Math.min(...tiles.map(p=>p[1]))*REGION_H+2;
       text(c,REGIONS[r].name,ox+x*s,oy+y*s,14*markerScale,r>unlockedRegion(g.save)?'#d3ddda':'#244f49');
     }
-    for(const site of g.world.sites){if(site.r>unlockedRegion(g.save)||!returnVisible(g.save,site))continue;const done=g.save.cleared.includes(site.id);ellipse(c,ox+site.x*s,oy+site.y*s,3.8*markerScale,3.8*markerScale,done?'#d8f0b5':site.returnId?'#e8d3ff':'#ffdc7d');c.strokeStyle=site.returnId?'#8550c2':'#203b38';c.lineWidth=(site.returnId?2.5:1.5)*markerScale;c.stroke();}
+    const returning=new Set(g.enemies.filter(e=>e.patrolSite&&e.hp>0).map(e=>e.patrolSite));
+    for(const site of g.world.sites){if(site.r>unlockedRegion(g.save)||!returnVisible(g.save,site))continue;const done=g.save.cleared.includes(site.id),patrol=returning.has(site.id),x=ox+site.x*s,y=oy+site.y*s;ellipse(c,x,y,(patrol?5.2:3.8)*markerScale,(patrol?5.2:3.8)*markerScale,patrol?'#ed917b':done?'#d8f0b5':site.returnId?'#e8d3ff':'#ffdc7d');c.strokeStyle=site.returnId?'#8550c2':'#203b38';c.lineWidth=(site.returnId?2.5:1.5)*markerScale;c.stroke();if(patrol)for(const dx of [-1.7,1.7])ellipse(c,x+dx*markerScale,y-.7*markerScale,.8*markerScale,.8*markerScale,'#203b38');}
     for(let r=0;r<REGIONS.length;r++){
       if(r>unlockedRegion(g.save)){
         const o=regionOrigin(r),x=ox+(o.x+18)*s,y=oy+(o.y+23)*s;

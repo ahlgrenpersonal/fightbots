@@ -1,5 +1,6 @@
-import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress } from './data.js?v=world68';
-import { bossProfile } from './content.js?v=world68';
+import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress } from './data.js?v=world69';
+import { bossProfile } from './content.js?v=world69';
+import { ReturningPatrols } from './patrols.js?v=world69';
 
 export const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -21,10 +22,11 @@ export class Adventure {
     for(const e of this.enemies)if(e.dormant&&(e.spawnParent?save.kills.includes(e.spawnParent):!this.enemies.some(n=>n.site===e.site&&n.wave===0&&n.hp>0)))e.dormant=false;
     this.route=[];this.loot=[];this.projectiles=[];this.effects=[];this.telegraphs=[];this.target=null;this.waypoint=null;
     this.time=0;this.boostTime=0;this.boostCd=0;this.shieldCd=0;this.buddyCd=0;this.shake=0;this.paused=false;this.reducedMotion=false;this.routeTimer=0;this.charging=null;this.headingHome=false;
+    this.patrols=new ReturningPatrols(this);
     this.discover();
   }
   emit(type,data={}){this.onEvent({type,...data});}
-  snapshot(){this.save.position={x:this.player.x,y:this.player.y};this.save.hp=this.player.hp;return this.save;}
+  snapshot(){this.patrols.snapshot();this.save.position={x:this.player.x,y:this.player.y};this.save.hp=this.player.hp;return this.save;}
   maxHp(){return stats(this.save).hp;}
   bossAwake(r){return !this.save.bosses.includes(r)&&cellsIn(this.save,r)>=requiredCells(r)&&r<=unlockedRegion(this.save);}
   homes(){return WORKSHOPS.filter(h=>h.r<=unlockedRegion(this.save));}
@@ -32,7 +34,7 @@ export class Adventure {
   isHome(){return !!this.homeNear();}
   homeRoutes(){return this.homes().map(home=>({home,route:pathfind(this.world,this.save,this.player,home)})).filter(p=>p.route.length||(Math.floor(this.player.x)===Math.floor(p.home.x)&&Math.floor(this.player.y)===Math.floor(p.home.y))).sort((a,b)=>a.route.length-b.route.length);}
   nearestHome(){return this.homeRoutes()[0]?.home||this.homes()[0];}
-  enemyAwake(e){if(e.r>unlockedRegion(this.save))return false;if(e.encounterId)return true;if(!e.returnId)return e.type!=='boss'||this.bossAwake(e.r);const m=RETURNS.find(m=>m.id===e.returnId);return returnActive(this.save,m)&&(e.type!=='boss'||m.sites.every((_,i)=>this.save.cleared.includes(`${m.sitePrefix}-${i}`)));}
+  enemyAwake(e){if(e.r>unlockedRegion(this.save))return false;if(e.patrolSite)return this.patrols.awake(e);if(e.encounterId)return true;if(!e.returnId)return e.type!=='boss'||this.bossAwake(e.r);const m=RETURNS.find(m=>m.id===e.returnId);return returnActive(this.save,m)&&(e.type!=='boss'||m.sites.every((_,i)=>this.save.cleared.includes(`${m.sitePrefix}-${i}`)));}
   stationNear(radius=1.1){return this.world.stations.find(s=>s.r<=unlockedRegion(this.save)&&distance(this.player,s)<radius);}
   safeAt(pos){return this.homes().some(h=>distance(pos,h)<2.6)||this.world.stations.some(s=>s.r<=unlockedRegion(this.save)&&distance(pos,s)<2.25);}
   clearShot(from,to){
@@ -65,7 +67,7 @@ export class Adventure {
     const d=distance(e,to);if(!d||step<=0)return false;
     const next={x:e.x+(to.x-e.x)*Math.min(1,step/d),y:e.y+(to.y-e.y)*Math.min(1,step/d)};
     const home={x:e.homeX,y:e.homeY},before=distance(e,home),after=distance(next,home);
-    if(after>7&&after>=before||!canWalk(this.world,this.save,Math.floor(next.x),Math.floor(next.y))||!this.clearShot(e,next)||this.safeAt(next))return false;
+    if(after>7&&after>=before||!canWalk(this.world,this.save,Math.floor(next.x),Math.floor(next.y))||!this.clearShot(e,next)||this.safeAt(next)||e.patrolSite&&this.patrols.protectedAt(next))return false;
     Object.assign(e,next);return true;
   }
   discover(){const r=regionAt(this.player.x,this.player.y);if(r>=0&&!this.save.visited.includes(r)){this.save.visited.push(r);this.emit('region',{r});}for(const s of this.world.stations)if(s.r<=unlockedRegion(this.save)&&distance(this.player,s)<6&&!this.save.discovered.includes(s.id)){this.save.discovered.push(s.id);this.emit('toast',{text:'Charging station discovered!'});}}
@@ -114,7 +116,9 @@ export class Adventure {
   hitEnemy(e,damage,kind=''){
     if(e.hp<=0||e.dormant||e.spawnUntil>this.time||!this.enemyAwake(e))return;const amount=Math.max(1,Math.round(damage*(e.type==='shield'&&!e.frozen&&!['rail','sunbeam','gravity','tractor'].includes(kind)?.7:1)));e.hp=Math.max(0,e.hp-amount);e.aggroUntil=this.time+6;e.hit=.15;this.number(e.x,e.y-.5,`${amount}`,'#fff3b5');
     if(e.hp<=0){
-      this.burst(e.x,e.y,e.type==='boss'?1.4:.45,e.type==='boss'?'explosion':'burst');this.save.kills.push(e.id);this.save.totalBots++;
+      this.burst(e.x,e.y,e.type==='boss'?1.4:.45,e.type==='boss'?'explosion':'burst');
+      if(e.patrolSite){this.patrols.defeated(e);this.emit('defeat',{boss:false});return;}
+      this.save.kills.push(e.id);this.save.totalBots++;
       const reward=e.encounterId?8:e.type==='boss'?35*(e.r+1):2+e.r;this.save.scrap+=reward;this.number(e.x,e.y,`+${reward} ◆`,'#ffe28c');this.emit('defeat',{boss:e.type==='boss'});
       if(e.encounterId){
         const children=this.enemies.filter(n=>n.spawnParent===e.id&&n.hp>0);
@@ -364,6 +368,7 @@ export class Adventure {
     if(this.isHome())p.hp=Math.min(st.hp,p.hp+dt*25);
     if(this.charging){const station=this.stationNear();if(!station||station.id!==this.charging||this.route.length)this.charging=null;else{p.hp=Math.min(st.hp,p.hp+dt*st.hp/8*(this.save.build.gadget==='repair'?2:1));if(p.hp>=st.hp){this.charging=null;this.emit('toast',{text:'Fully charged. Ready to roll!'});}}}
     this.effects.forEach(e=>e.life-=dt);this.effects=this.effects.filter(e=>e.life>0);
+    this.patrols.tick(dt);
   }
   nearestSite(){const r=unlockedRegion(this.save);return this.world.sites.filter(s=>!s.returnId&&s.r===r&&!this.save.cleared.includes(s.id)).sort((a,b)=>distance(a,this.player)-distance(b,this.player))[0];}
   nextObjective(){const m=RETURNS.find(m=>returnActive(this.save,m));if(m)return this.world.sites.find(s=>s.returnId===m.id&&!this.save.cleared.includes(s.id))||m;const r=unlockedRegion(this.save);return this.nearestSite()||relayFor(r);}
