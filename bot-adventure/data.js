@@ -1,4 +1,4 @@
-export const BUILD = 'world53';
+export const BUILD = 'world54';
 export const REGION_W = 36;
 export const REGION_H = 44;
 export const WORLD_W = REGION_W * 3;
