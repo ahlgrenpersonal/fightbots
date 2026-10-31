@@ -1,5 +1,5 @@
-import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells } from './data.js?v=world66';
-import * as worldData from './data.js?v=world66';
+import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells } from './data.js?v=world67';
+import * as worldData from './data.js?v=world67';
 
 export function rounded(c,x,y,w,h,r,fill,stroke,line=2) {
   c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=line;c.stroke();}
@@ -63,6 +63,41 @@ function enemyEquipment(enemy){
   }
   if(boss&&worldData.bossProfile)Object.assign(look,bossEquipment(enemy));
   return look;
+}
+function encounterRole(enemy){
+  return enemy.encounterId==='harbor-duo'||enemy.encounterId==='scrap-split'?enemy.encounterRole||'':'';
+}
+function encounterShell(c,role,color){
+  const ink='#20363a';
+  if(role==='bruiser'){
+    for(const side of [-1,1]){
+      rounded(c,side<0?-35:23,-25,12,43,4,color,ink,3);
+      for(const y of [-17,9])rounded(c,side*29-4,y,8,5,1,'#ffe2a2',ink,1.5);
+    }
+    rounded(c,-21,19,42,8,2,'#f3cd80',ink,2);
+    for(const x of [-12,0,12])line(c,x-3,20,x+2,25,ink,3);
+  }else if(role==='skirmisher'){
+    for(const side of [-1,1]){
+      polygon(c,[[side*22,0],[side*31,11],[side*26,23],[side*20,18]],color,ink,2);
+      line(c,side*24,11,side*27,15,'#d9faff',2);
+    }
+    rounded(c,-18,-28,36,6,2,'#c6efff',ink,2);
+    line(c,-16,22,-5,22,'#d9faff',3);line(c,5,22,16,22,'#d9faff',3);
+  }else if(role==='splitter'){
+    // Three interlocked shell courses leave the eye and mouth bands unobstructed.
+    for(const y of [-23,0,22]){
+      rounded(c,-28,y-3,56,6,2,ink);
+      line(c,-24,y-1,24,y-1,'#ead6ff',2);
+      for(const x of [-19,19])rounded(c,x-3,y-4,6,9,1,'#bda0de',ink,1.5);
+    }
+    for(const side of [-1,1])polygon(c,[[side*23,-19],[side*31,-15],[side*31,-4],[side*23,-1]],color,ink,2);
+  }else if(role==='fragment'){
+    for(const side of [-1,1]){
+      polygon(c,[[side*20,-23],[side*29,-29],[side*32,-18],[side*25,-13]],color,ink,2);
+      rounded(c,side*23-3,17,6,7,1,'#ead6ff',ink,1.5);
+    }
+    line(c,-17,23,17,23,'#ead6ff',3);
+  }
 }
 function workshopMarker(c,x,y){
   c.save();c.translate(x,y);ellipse(c,0,1,15,15,'#fff7d7');polygon(c,[[-12,-3],[0,-13],[12,-3]],'#1c3e64','#fff7d7',2);rounded(c,-10,-3,20,15,2,'#1c3e64','#fff7d7',2);rounded(c,-3,3,6,9,1,'#fff7d7');for(const side of [-1,1])rounded(c,side*6-2,1,4,4,1,'#fff7d7');c.restore();
@@ -305,7 +340,7 @@ export function weapon(c,id,t=0,action=0) {
 }
 
 export function bot(c,x,y,size,options={},t=0) {
-  const { color='#ee6954',armor='light',wheels='basic',gun='bumper',gadget='none',type='',region=0,theme='',angle=0,hit=0,swing=0,moving=false,boss=false,shield=false,health=1,reducedMotion=false }=options;
+  const { color='#ee6954',armor='light',wheels='basic',gun='bumper',gadget='none',type='',region=0,theme='',encounterRole='',angle=0,hit=0,swing=0,moving=false,boss=false,shield=false,health=1,reducedMotion=false }=options;
   if(reducedMotion){t=0;}
   const damaged=health<=.5,critical=health<=.18;
   c.save();c.translate(x,y);c.scale(size/80,size/80);
@@ -323,10 +358,11 @@ export function bot(c,x,y,size,options={},t=0) {
   rounded(c,-26,-28,52,56,11,'#21383d','#172f33',3);
   rounded(c,-22,-25,44,48,8,grad);rounded(c,-19,-22,38,7,4,'#ffffff35');rounded(c,-20,16,40,7,3,'#102d372c');
   rounded(c,-21,-19,5,31,2,'#ffffff15');rounded(c,17,-17,4,31,2,'#12343e20');
-  if(armor==='steel'||armor==='heavy'||boss) {
-    const thick=armor==='heavy'||boss?6:3;
+  const heavyBoss=boss&&(!encounterRole||encounterRole==='bruiser'||encounterRole==='splitter');
+  if(armor==='steel'||armor==='heavy'||heavyBoss) {
+    const thick=armor==='heavy'||heavyBoss?6:3;
     for(const side of [-1,1]){rounded(c,side<0?-29:23,-23,thick+2,48,3,'#587075','#243b40',2);for(const y of [-18,18])ellipse(c,side*26,y,2,2,'#e9c969');}
-    if(armor==='heavy'||boss){rounded(c,-26,-30,52,9,3,'#f4d16a','#23393d',2);for(let i=0;i<5;i++)line(c,-20+i*10,-29,-23+i*10,-23,'#35494c',4);}
+    if(armor==='heavy'||heavyBoss){rounded(c,-26,-30,52,9,3,'#f4d16a','#23393d',2);for(let i=0;i<5;i++)line(c,-20+i*10,-29,-23+i*10,-23,'#35494c',4);}
   }
   if(armor==='reflect') {
     c.save();rounded(c,-25,-28,50,54,10,null,'#d7fcff',3);
@@ -339,7 +375,8 @@ export function bot(c,x,y,size,options={},t=0) {
     if(armor==='polar')for(const side of [-1,1])polygon(c,[[side*24,-26],[side*31,-39],[side*33,-20]],'#c4f5ff');
     if(armor==='star')for(const side of [-1,1])ellipse(c,side*27,-20,3,3,'#fff6c0');
   }
-  if(boss&&region>=5){
+  if(encounterRole)encounterShell(c,encounterRole,color);
+  else if(boss&&region>=5){
     bossOutline(c,theme);
   }
   for(const side of [-1,1]){ellipse(c,side*10,-8,6,7,'#20373c');ellipse(c,side*10,-9,4.8,5.5,'#fffbe6');ellipse(c,side*10+Math.cos(angle)*1.6,-9+Math.sin(angle),2.2,2.6,'#233c41');ellipse(c,side*10-1,-11,1.4,1.4,'#fff');}
@@ -438,8 +475,8 @@ export class Painter {
         const covering=tall?units.filter(unit=>obj.y>=unit.y-.1&&obj.y-unit.y<height&&Math.abs(obj.x-unit.x)<width):[];
         c.save();
         for(const unit of covering){
-          const boss=unit.type==='boss',rx=boss?1.15:unit.kind==='player'?.8:.55,ry=boss?1.5:unit.kind==='player'?.9:.65;
-          const cy=unit.y-(boss?.35:.1);c.beginPath();c.rect(x0-4,y0-4,x1-x0+8,y1-y0+8);c.moveTo(unit.x+rx,cy);c.ellipse(unit.x,cy,rx,ry,0,0,Math.PI*2);c.clip('evenodd');
+          const boss=unit.type==='boss',scale=boss?(unit.size??1.7)/1.7:1,rx=boss?1.15*scale:unit.kind==='player'?.8:.55,ry=boss?1.5*scale:unit.kind==='player'?.9:.65;
+          const cy=unit.y-(boss?.35*scale:.1);c.beginPath();c.rect(x0-4,y0-4,x1-x0+8,y1-y0+8);c.moveTo(unit.x+rx,cy);c.ellipse(unit.x,cy,rx,ry,0,0,Math.PI*2);c.clip('evenodd');
         }
         this.prop(obj,t);c.restore();
       }
@@ -449,10 +486,11 @@ export class Painter {
         bot(c,obj.x,obj.y,1.17,{color:g.save.color,armor:g.save.build.armor,wheels:g.save.build.wheels,gun:g.save.build.weapon,gadget:g.save.build.gadget,angle:g.player.angle,hit:g.player.hit,swing:g.player.swing,moving:g.route.length>0,shield:g.player.invincible>0||g.boostTime>0,health:g.player.hp/g.maxHp(),reducedMotion:g.reducedMotion},t);
       }else{
         const boss=obj.type==='boss',reg=REGIONS[obj.r]||REGIONS[0];
-        const awake=g.enemyAwake?g.enemyAwake(obj):g.bossAwake(obj.r),look={...enemyEquipment(obj),boss,region:obj.r,theme:reg.theme,type:obj.type,reducedMotion:g.reducedMotion};
-        if(boss&&!awake){ellipse(c,obj.x,obj.y+.2,.8,.4,'#263d4828');bot(c,obj.x,obj.y,1.2,{...look,...(!obj.returnId?{...(obj.r<5?{armor:'heavy',gun:'bumper'}:{}),color:'#748482'}:{})},t*.1);text(c,'Z z z',obj.x,obj.y-1,.2,'#e8f1d5');}
-        else {bot(c,obj.x,obj.y,boss?1.7:obj.type==='carrier'?1:obj.type==='tank'?.85:.72,{...look,angle:obj.angle,hit:obj.hit,swing:obj.swing,moving:obj.active},t);
-          if(obj.hp<obj.maxHp||boss&&awake){const width=boss?1.1:.55;rounded(c,obj.x-width/2,obj.y-(boss?1.1:.6),width,.09,.03,'#24393a');rounded(c,obj.x-width/2,obj.y-(boss?1.1:.6),width*Math.max(0,obj.hp/obj.maxHp),.09,.03,boss?'#f39a71':'#f6d787');}
+        const role=encounterRole(obj),size=boss?(obj.size??1.7):obj.type==='carrier'?1:obj.type==='tank'?.85:.72;
+        const awake=g.enemyAwake?g.enemyAwake(obj):g.bossAwake(obj.r),look={...enemyEquipment(obj),boss,region:obj.r,theme:reg.theme,encounterRole:role,type:obj.type,reducedMotion:g.reducedMotion};
+        if(boss&&!awake){ellipse(c,obj.x,obj.y+.2,.8,.4,'#263d4828');bot(c,obj.x,obj.y,role?size:1.2,{...look,...(!obj.returnId&&!role?{...(obj.r<5?{armor:'heavy',gun:'bumper'}:{}),color:'#748482'}:{})},t*.1);text(c,'Z z z',obj.x,obj.y-(role?size*1.1/1.7:1),.2,'#e8f1d5');}
+        else {bot(c,obj.x,obj.y,size,{...look,angle:obj.angle,hit:obj.hit,swing:obj.swing,moving:obj.active},t);
+          if(obj.hp<obj.maxHp||boss&&awake){const scale=boss?size/1.7:1,width=boss?1.1*scale:.55,y=obj.y-(boss?1.1*scale:.6);rounded(c,obj.x-width/2,y,width,.09,.03,'#24393a');rounded(c,obj.x-width/2,y,width*Math.max(0,Math.min(1,obj.hp/obj.maxHp)),.09,.03,boss?'#f39a71':'#f6d787');}
         }
       }
     }
@@ -667,6 +705,20 @@ export class Painter {
       const tx=f.tx??f.x,ty=f.ty??f.y;
       // The projectile owns the flying drone; this is only its target lock.
       for(const side of [-1,1]){line(c,tx+side*.25,ty-.24,tx+side*.25,ty-.1,'#527c86',.035);line(c,tx+side*.25,ty-.24,tx+side*.1,ty-.24,'#527c86',.035);}
+    }else if(f.type==='split'){
+      const radius=f.radius??1.5,travel=radius*(.18+p*.7),fade=1-p;
+      c.translate(f.x,f.y);c.globalAlpha*=fade;
+      ring(c,0,0,radius*(.25+p*.75),'#ead6ff',.045);
+      ellipse(c,0,0,.32*fade,.26*fade,'#fff5d9');
+      for(let i=0;i<6;i++){
+        const a=i*Math.PI/3,x=Math.cos(a)*travel,y=Math.sin(a)*travel*.7;
+        c.save();c.translate(x,y);c.rotate(a+(reducedMotion?0:p*.8));
+        polygon(c,[[-.17,-.09],[.13,-.13],[.2,.04],[-.1,.12]],i%2?'#aa7cc8':'#d5b4ee','#5b4774',.025);
+        line(c,-.1,-.07,.1,-.09,'#f8eaff',.025);c.restore();
+        const d=radius*(.3+p*.65),sx=Math.cos(a+.3)*d,sy=Math.sin(a+.3)*d;
+        line(c,sx-.045,sy,sx+.045,sy,'#fff0b7',.025);
+        line(c,sx,sy-.045,sx,sy+.045,'#fff0b7',.025);
+      }
     }else if(f.type==='burst'||f.type==='explosion'||f.type==='blast'){
       const big=f.type!=='burst',rad=(f.radius||.5)*(.4+p);
       c.beginPath();c.arc(f.x,f.y,rad,0,Math.PI*2);c.strokeStyle=big?'#fff1b1':'#fff0ae';c.lineWidth=.07*(1-p);c.stroke();

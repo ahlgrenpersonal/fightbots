@@ -1,5 +1,5 @@
-import { HOME, WORKSHOPS, RETURNS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress } from './data.js?v=world66';
-import { bossProfile } from './content.js?v=world66';
+import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress } from './data.js?v=world67';
+import { bossProfile } from './content.js?v=world67';
 
 export const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -17,7 +17,7 @@ export class Adventure {
   constructor(save=freshSave(),onEvent=()=>{}) {
     this.save=migrateSiteProgress(save);this.onEvent=onEvent;this.world=makeWorld();
     this.player={...save.position,hp:Math.max(1,Math.min(save.hp,stats(save).hp)),angle:0,cd:0,hit:0,swing:0,invincible:2};
-    this.enemies=this.world.enemies.filter(e=>!save.kills.includes(e.id)&&!save.cleared.includes(e.site)&&!(e.returnId?save.returns.includes(e.returnId):e.type==='boss'&&save.bosses.includes(e.r)));
+    this.enemies=this.world.enemies.filter(e=>!save.kills.includes(e.id)&&!save.cleared.includes(e.site)&&!(e.returnId?save.returns.includes(e.returnId):!e.encounterId&&e.type==='boss'&&save.bosses.includes(e.r)));
     for(const e of this.enemies)if(e.dormant&&(e.spawnParent?save.kills.includes(e.spawnParent):!this.enemies.some(n=>n.site===e.site&&n.wave===0&&n.hp>0)))e.dormant=false;
     this.route=[];this.loot=[];this.projectiles=[];this.effects=[];this.telegraphs=[];this.target=null;this.waypoint=null;
     this.time=0;this.boostTime=0;this.boostCd=0;this.shieldCd=0;this.buddyCd=0;this.shake=0;this.paused=false;this.reducedMotion=false;this.routeTimer=0;this.charging=null;this.headingHome=false;
@@ -32,7 +32,7 @@ export class Adventure {
   isHome(){return !!this.homeNear();}
   homeRoutes(){return this.homes().map(home=>({home,route:pathfind(this.world,this.save,this.player,home)})).filter(p=>p.route.length||(Math.floor(this.player.x)===Math.floor(p.home.x)&&Math.floor(this.player.y)===Math.floor(p.home.y))).sort((a,b)=>a.route.length-b.route.length);}
   nearestHome(){return this.homeRoutes()[0]?.home||this.homes()[0];}
-  enemyAwake(e){if(e.r>unlockedRegion(this.save))return false;if(!e.returnId)return e.type!=='boss'||this.bossAwake(e.r);const m=RETURNS.find(m=>m.id===e.returnId);return returnActive(this.save,m)&&(e.type!=='boss'||m.sites.every((_,i)=>this.save.cleared.includes(`${m.sitePrefix}-${i}`)));}
+  enemyAwake(e){if(e.r>unlockedRegion(this.save))return false;if(e.encounterId)return true;if(!e.returnId)return e.type!=='boss'||this.bossAwake(e.r);const m=RETURNS.find(m=>m.id===e.returnId);return returnActive(this.save,m)&&(e.type!=='boss'||m.sites.every((_,i)=>this.save.cleared.includes(`${m.sitePrefix}-${i}`)));}
   stationNear(radius=1.1){return this.world.stations.find(s=>s.r<=unlockedRegion(this.save)&&distance(this.player,s)<radius);}
   safeAt(pos){return this.homes().some(h=>distance(pos,h)<2.6)||this.world.stations.some(s=>s.r<=unlockedRegion(this.save)&&distance(pos,s)<2.25);}
   clearShot(from,to){
@@ -112,11 +112,29 @@ export class Adventure {
   burst(x,y,radius=1,type='burst'){this.effects.push({type,x,y,radius,life:.6,max:.6});}
   number(x,y,text,color){this.effects.push({type:'number',x,y,text,color,life:.9,max:.9});}
   hitEnemy(e,damage,kind=''){
-    if(e.hp<=0||e.dormant||!this.enemyAwake(e))return;const amount=Math.max(1,Math.round(damage*(e.type==='shield'&&!e.frozen&&!['rail','gravity','tractor'].includes(kind)?.7:1)));e.hp=Math.max(0,e.hp-amount);e.aggroUntil=this.time+6;e.hit=.15;this.number(e.x,e.y-.5,`${amount}`,'#fff3b5');
+    if(e.hp<=0||e.dormant||e.spawnUntil>this.time||!this.enemyAwake(e))return;const amount=Math.max(1,Math.round(damage*(e.type==='shield'&&!e.frozen&&!['rail','gravity','tractor'].includes(kind)?.7:1)));e.hp=Math.max(0,e.hp-amount);e.aggroUntil=this.time+6;e.hit=.15;this.number(e.x,e.y-.5,`${amount}`,'#fff3b5');
     if(e.hp<=0){
       this.burst(e.x,e.y,e.type==='boss'?1.4:.45,e.type==='boss'?'explosion':'burst');this.save.kills.push(e.id);this.save.totalBots++;
-      const reward=e.type==='boss'?35*(e.r+1):2+e.r;this.save.scrap+=reward;this.number(e.x,e.y,`+${reward} ◆`,'#ffe28c');this.emit('defeat',{boss:e.type==='boss'});
-      if(e.type==='boss'&&!this.enemies.some(b=>b.type==='boss'&&b.r===e.r&&b.returnId===e.returnId&&b.hp>0)){
+      const reward=e.encounterId?8:e.type==='boss'?35*(e.r+1):2+e.r;this.save.scrap+=reward;this.number(e.x,e.y,`+${reward} ◆`,'#ffe28c');this.emit('defeat',{boss:e.type==='boss'});
+      if(e.encounterId){
+        const children=this.enemies.filter(n=>n.spawnParent===e.id&&n.hp>0);
+        for(const child of children){
+          const side=child.x<child.homeX?-1:1;
+          const desired={x:e.x+side*.85,y:e.y};
+          const candidates=[desired,{x:e.x,y:e.y+side*.85},{x:e.x,y:e.y}];
+          const spot=candidates.find(p=>canWalk(this.world,this.save,Math.floor(p.x),Math.floor(p.y))&&!this.safeAt(p)&&distance(p,{x:child.homeX,y:child.homeY})<7);
+          if(spot)Object.assign(child,spot);
+          child.dormant=false;child.cd=2.8;child.spawnUntil=this.time+1;child.aggroUntil=this.time+6;
+        }
+        if(children.length){this.effects.push({type:'split',x:e.x,y:e.y,radius:1.5,life:1,max:1});this.emit('toast',{text:'It split into two little bots!'});}
+        if(!this.enemies.some(n=>n.encounterId===e.encounterId&&n.hp>0)){
+          const encounter=ENCOUNTERS.find(n=>n.id===e.encounterId);
+          this.save.scrap+=encounter.reward;this.save.gears+=2;this.burst(e.x,e.y,1.5);
+          this.emit('toast',{text:`${encounter.name} defeated! +${encounter.reward} scrap`});
+        }
+        return;
+      }
+      if(e.type==='boss'&&!this.enemies.some(b=>b.type==='boss'&&!b.encounterId&&b.r===e.r&&b.returnId===e.returnId&&b.hp>0)){
         if(e.returnId){this.save.returns.push(e.returnId);this.save.gears+=6;this.save.scrap+=120;this.emit('return-complete',{id:e.returnId});return;}
         this.save.bosses.push(e.r);this.save.gears+=4+e.r;this.save.scrap+=30+e.r*15;this.shake=5;this.projectiles=[];this.telegraphs=[];
         if(e.r===REGIONS.length-1)this.save.completed=true;
@@ -167,7 +185,7 @@ export class Adventure {
   warnBoss(e){
     const profile=bossProfile(e),p=this.player,angle=Math.atan2(p.y-e.y,p.x-e.x);
     e.cd=4;e.swing=0;e.angle=angle;
-    const muzzle=this.firingMuzzle(e,profile.weapon,p,1.7);
+    const muzzle=this.firingMuzzle(e,profile.weapon,p,e.size??1.7);
     const warningAngle=profile.weapon==='rail'?Math.atan2(p.y-muzzle.y,p.x-muzzle.x):angle;
     this.telegraphs.push({x:p.x,y:p.y,ox:muzzle.x,oy:muzzle.y,angle:warningAngle,bodyAngle:angle,radius:profile.weapon==='rail'?.5:1.1,damage:Math.min(e.damage,24),duration:2,life:2,bossSource:e.id,weapon:profile.weapon,pattern:profile.pattern});
     this.emit('warning');
@@ -176,8 +194,8 @@ export class Adventure {
     e.swing=.5;
     const from={x:a.ox,y:a.oy},to={x:a.x,y:a.y},w=a.weapon;
     const fx=(type,extra={})=>this.effects.push({type,x:from.x,y:from.y,tx:to.x,ty:to.y,angle:a.angle,radius:a.radius,life:.6,max:.6,enemy:true,weapon:w,...extra});
-    if(['rocket','frost','boomerang','meteor','drone'].includes(w)){
-      const kind={rocket:'rocket',frost:'ice',boomerang:'blade',meteor:'meteor',drone:'drone'}[w];
+    if(['blaster','rocket','frost','boomerang','meteor','drone'].includes(w)){
+      const kind={blaster:'bolt',rocket:'rocket',frost:'ice',boomerang:'blade',meteor:'meteor',drone:'drone'}[w];
       this.projectiles.push({x:w==='meteor'?to.x-1:from.x,y:w==='meteor'?to.y-5:from.y,tx:to.x,ty:to.y,angle:a.angle,speed:w==='meteor'?6:4,damage:a.damage,kind,enemy:true,bossSource:e.id,weapon:w,radius:a.radius,life:5});
       if(w==='drone')fx('drone');return;
     }
@@ -263,8 +281,15 @@ export class Adventure {
         continue;
       }
       const winding=!!windup;
+      const skirmisher=e.encounterRole==='skirmisher';
+      // A short, cooldown-limited retreat creates contrast without endless kiting.
+      if(skirmisher&&!winding&&!e.frozen&&d<2.6&&this.time>=(e.retreatReady||0)){
+        e.retreatUntil=this.time+.65;e.retreatReady=this.time+5;
+      }
+      const retreating=skirmisher&&!winding&&!e.frozen&&this.time<(e.retreatUntil||0);
+      if(retreating)this.enemyStep(e,{x:e.x+(e.x-p.x),y:e.y+(e.y-p.y)},dt*1.7);
       const blocked=boss?!this.canAttack(e,p,profile.weapon):!this.clearShot(e,p);
-      if(!winding&&(d>range||blocked)){const speed=(e.frozen?(boss?.25:0):1)*(boss?.7:e.type==='tank'||e.type==='carrier'?.72:e.type==='hopper'?1.55:1.05);
+      if(!winding&&!retreating&&(d>range||blocked)){const speed=(e.frozen?(boss?.25:0):1)*(skirmisher?1.55:boss?.7:e.type==='tank'||e.type==='carrier'?.72:e.type==='hopper'?1.55:1.05);
         if(!this.enemyStep(e,p,speed*dt)){
           // Follow a grid route around scenery instead of getting stuck behind it.
           if(!e.path||e.pathTime<this.time){e.path=pathfind(this.world,this.save,e,p);e.pathTime=this.time+1.2;}
@@ -272,7 +297,7 @@ export class Adventure {
         }
       }
       if(e.cd<=0&&!e.frozen){
-        if(boss){if(!winding&&d<=range+.6&&this.canAttack(e,p,profile.weapon))this.warnBoss(e);}
+        if(boss){if(!winding&&!retreating&&d<=range+.6&&this.canAttack(e,p,profile.weapon))this.warnBoss(e);}
         else if(e.type==='medic'){e.cd=4;for(const n of threats)if(n.hp>0&&n!==e&&n.type!=='boss'&&distance(e,n)<2.5)n.hp=Math.min(n.maxHp,n.hp+18);this.effects.push({type:'frost',x:e.x,y:e.y,radius:1,life:.4,max:.4});}
         else if(d<=range&&this.clearShot(e,p)){e.cd=ranged?2.4:1.8;e.swing=.3;if(ranged){const muzzle=this.firingMuzzle(e,e.type==='sentry'?'rail':'blaster',p,.72,true);this.projectiles.push({x:muzzle.x,y:muzzle.y,tx:p.x,ty:p.y,angle:e.angle,damage:e.damage,kind:'bolt',speed:4,enemy:true,sourceId:e.id,life:3});}else{this.hurt(e.damage);if(item('armor',this.save.build.armor).reflect)this.hitEnemy(e,4);}}
       }

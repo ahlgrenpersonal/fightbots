@@ -1,7 +1,7 @@
-import { MORE_REGIONS, MORE_TILES, NEW_EQUIPMENT, WORKSHOPS, RETURNS } from './content.js?v=world66';
-export { WORKSHOPS, RETURNS };
-export { bossProfile } from './content.js?v=world66';
-export const BUILD = 'world66';
+import { MORE_REGIONS, MORE_TILES, NEW_EQUIPMENT, WORKSHOPS, RETURNS, ENCOUNTERS } from './content.js?v=world67';
+export { WORKSHOPS, RETURNS, ENCOUNTERS };
+export { bossProfile } from './content.js?v=world67';
+export const BUILD = 'world67';
 export const REGION_W = 36;
 export const REGION_H = 44;
 export const WORLD_W = REGION_W * 9;
@@ -160,6 +160,22 @@ export function makeWorld() {
       for(let j=0;j<4;j++){const a=j*Math.PI/2,hp=mission.unlock===8?170:340;enemies.push({id:`${site.id}-bot-${j}`,site:site.id,wave:0,dormant:false,r:mission.r,x:x+Math.cos(a)*1.3,y:y+Math.sin(a)*1.3,homeX:x+Math.cos(a)*1.3,homeY:y+Math.sin(a)*1.3,hp,maxHp:hp,type:j%2?'shield':'sentry',damage:8,cd:j*.3,hit:0,swing:0,angle:0,returnId:mission.id,unlock:mission.unlock});}
     }
     enemies.push({id:`${mission.id}-boss`,r:mission.r,x:mission.x,y:mission.y,homeX:mission.x,homeY:mission.y,hp:mission.hp,maxHp:mission.hp,type:'boss',damage:16,cd:2,hit:0,swing:0,angle:0,returnId:mission.id,unlock:mission.unlock});
+  }
+  for(const encounter of ENCOUNTERS){
+    arenas.push({...encounter,radius:3.8,encounterId:encounter.id});
+    const add=(role,dx,dy,hp,size,extra={})=>enemies.push({
+      id:`${encounter.id}-${role}`,encounterId:encounter.id,encounterRole:role,r:encounter.r,
+      x:encounter.x+dx,y:encounter.y+dy,homeX:encounter.x,homeY:encounter.y,
+      hp,maxHp:hp,type:'boss',damage:role==='skirmisher'?9:role==='fragment'?7:13,
+      size,cd:2.5,hit:0,swing:0,angle:0,...extra
+    });
+    if(encounter.id==='harbor-duo'){
+      add('bruiser',-.8,.8,560,1.65);
+      add('skirmisher',1.3,-1.1,270,1.12);
+    }else{
+      add('splitter',0,0,720,1.85);
+      for(let i=0;i<2;i++)add('fragment',(i-.5)*2.2,0,210,1.05,{id:`${encounter.id}-fragment-${i}`,spawnParent:`${encounter.id}-splitter`,dormant:true});
+    }
   }
   const spurs=[...sites,...chests,...stations].map(p=>{
     const tx=Math.floor(p.x/REGION_W)*REGION_W+18.5,ty=Math.floor(p.y/REGION_H)*REGION_H+22.5;

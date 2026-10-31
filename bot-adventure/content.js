@@ -13,15 +13,27 @@ export const MORE_REGIONS=[
 ];
 export const MORE_TILES=[[[3,2],[3,1]],[[4,2],[5,2]],[[4,1],[5,1]],[[4,0]],[[5,0]],[[6,0],[7,0]],[[8,0],[8,1]],[[7,1],[7,2]],[[6,1]],[[6,2]]];
 export function bossProfile(enemyOrRegion){
-  const {r,returnId}=typeof enemyOrRegion==='number'?{r:enemyOrRegion}:enemyOrRegion;
+  const {r,returnId,encounterRole}=typeof enemyOrRegion==='number'?{r:enemyOrRegion}:enemyOrRegion;
   const theme=MORE_REGIONS[r-5]?.theme;
   const guns={coast:'boomerang',scrapyard:'tractor',jungle:'flame',storm:'rail',fortress:'gravity',aurora:'frost',lunar:'meteor',garden:'drone',orbital:'rail',ancient:'gravity'};
   const profile={weapon:r<5?['bumper','hammer','lightning','rocket','rocket'][r]:guns[theme]||'rail',armor:r===2?'reflect':r<5?'heavy':['aurora','lunar'].includes(theme)?'polar':['orbital','ancient'].includes(theme)?'star':'bastion',wheels:r>=5&&['lunar','orbital','storm'].includes(theme)?'hover':r>=5?'rover':'basic'};
   if(returnId==='copper-return')Object.assign(profile,{weapon:'tractor',armor:'bastion',wheels:'rover',color:'#ce7258'});
   if(returnId==='crystal-return')Object.assign(profile,{weapon:'frost',armor:'polar',wheels:'hover',color:'#82cddd'});
-  profile.pattern={bumper:'stomp',hammer:'slam',lightning:'arc',rocket:'salvo',boomerang:'return',tractor:'vortex',flame:'cone',rail:'beam',gravity:'slam',frost:'ice',meteor:'impact',drone:'drone'}[profile.weapon];
+  const surprise={
+    bruiser:{weapon:'hammer',armor:'heavy',wheels:'treads',color:'#e5a14c'},
+    skirmisher:{weapon:'blaster',armor:'light',wheels:'speed',color:'#70b6de'},
+    splitter:{weapon:'hammer',armor:'bastion',wheels:'rover',color:'#bd8edb'},
+    fragment:{weapon:'bumper',armor:'steel',wheels:'speed',color:'#c6a1e5'}
+  }[encounterRole];
+  if(surprise)Object.assign(profile,surprise);
+  profile.pattern={bumper:'stomp',hammer:'slam',blaster:'salvo',lightning:'arc',rocket:'salvo',boomerang:'return',tractor:'vortex',flame:'cone',rail:'beam',gravity:'slam',frost:'ice',meteor:'impact',drone:'drone'}[profile.weapon];
   return profile;
 }
+// Optional road encounters have their own identities; they never replace a relay guardian.
+export const ENCOUNTERS=[
+  {id:'harbor-duo',r:5,x:120.5,y:105.5,name:'Clank & Zip',reward:70},
+  {id:'scrap-split',r:6,x:162.5,y:110.5,name:'The Splitstack',reward:90}
+];
 export const WORKSHOPS=[
   {id:'valley',name:'Valley Workshop',r:0,x:54.5,y:66.5},
   {id:'harbor',name:'Harbor Workshop',r:5,x:126.5,y:110.5},
