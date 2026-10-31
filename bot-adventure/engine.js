@@ -1,10 +1,16 @@
-import { HOME, WORKSHOPS, RETURNS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress } from './data.js?v=world65';
+import { HOME, WORKSHOPS, RETURNS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress } from './data.js?v=world66';
+import { bossProfile } from './content.js?v=world66';
 
 export const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const DIRECT_WEAPONS=new Set(['bumper','blaster','saw','hammer','flame','frost']);
+function segmentDistance(p,a,b){
+  const dx=b.x-a.x,dy=b.y-a.y,t=clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1),0,1);
+  return distance(p,{x:a.x+dx*t,y:a.y+dy*t});
+}
 const MUZZLE_LENGTHS={rail:60,flame:49,drone:30,boomerang:40,lightning:49,rocket:50};
-function weaponMuzzle(p,id){
-  const scale=1.17/80,c=Math.cos(p.angle),s=Math.sin(p.angle),length=MUZZLE_LENGTHS[id]??53;
+function weaponMuzzle(p,id,size=1.17){
+  const scale=size/80,c=Math.cos(p.angle),s=Math.sin(p.angle),length=MUZZLE_LENGTHS[id]??53;
   return {x:p.x+((c<0?-24:24)+length*c)*scale,y:p.y+(10+length*s)*scale};
 }
 export class Adventure {
@@ -29,6 +35,39 @@ export class Adventure {
   enemyAwake(e){if(e.r>unlockedRegion(this.save))return false;if(!e.returnId)return e.type!=='boss'||this.bossAwake(e.r);const m=RETURNS.find(m=>m.id===e.returnId);return returnActive(this.save,m)&&(e.type!=='boss'||m.sites.every((_,i)=>this.save.cleared.includes(`${m.sitePrefix}-${i}`)));}
   stationNear(radius=1.1){return this.world.stations.find(s=>s.r<=unlockedRegion(this.save)&&distance(this.player,s)<radius);}
   safeAt(pos){return this.homes().some(h=>distance(pos,h)<2.6)||this.world.stations.some(s=>s.r<=unlockedRegion(this.save)&&distance(pos,s)<2.25);}
+  clearShot(from,to){
+    let x=Math.floor(from.x),y=Math.floor(from.y);const tx=Math.floor(to.x),ty=Math.floor(to.y);
+    const dx=to.x-from.x,dy=to.y-from.y,sx=Math.sign(dx),sy=Math.sign(dy),ix=dx?Math.abs(1/dx):Infinity,iy=dy?Math.abs(1/dy):Infinity;
+    let nx=dx?Math.abs((x+(sx>0?1:0)-from.x)/dx):Infinity,ny=dy?Math.abs((y+(sy>0?1:0)-from.y)/dy):Infinity;
+    while(true){
+      if(this.world.blocks.has(`${x},${y}`))return false;
+      if(x===tx&&y===ty)return true;
+      if(Math.min(nx,ny)>=1)return !this.world.blocks.has(`${tx},${ty}`);
+      if(nx===ny){
+        if(this.world.blocks.has(`${x+sx},${y}`)||this.world.blocks.has(`${x},${y+sy}`))return false;
+        x+=sx;y+=sy;nx+=ix;ny+=iy;
+      }else if(nx<ny){x+=sx;nx+=ix;}else{y+=sy;ny+=iy;}
+    }
+  }
+  canAttack(from,to,weapon){return !DIRECT_WEAPONS.has(weapon)||this.clearShot(from,to);}
+  firingMuzzle(p,weapon,to,size=1.17,terrain=DIRECT_WEAPONS.has(weapon)){
+    const muzzle=weaponMuzzle(p,weapon,size);
+    if(!terrain||this.clearShot(p,muzzle)&&this.clearShot(muzzle,to))return muzzle;
+    // Keep the barrel offset where possible, but never spawn a direct shot in scenery.
+    let lo=0,hi=1;
+    for(let i=0;i<12;i++){
+      const t=(lo+hi)/2,point={x:p.x+(muzzle.x-p.x)*t,y:p.y+(muzzle.y-p.y)*t};
+      if(this.clearShot(p,point)&&this.clearShot(point,to))lo=t;else hi=t;
+    }
+    return {x:p.x+(muzzle.x-p.x)*lo,y:p.y+(muzzle.y-p.y)*lo};
+  }
+  enemyStep(e,to,step){
+    const d=distance(e,to);if(!d||step<=0)return false;
+    const next={x:e.x+(to.x-e.x)*Math.min(1,step/d),y:e.y+(to.y-e.y)*Math.min(1,step/d)};
+    const home={x:e.homeX,y:e.homeY},before=distance(e,home),after=distance(next,home);
+    if(after>7&&after>=before||!canWalk(this.world,this.save,Math.floor(next.x),Math.floor(next.y))||!this.clearShot(e,next)||this.safeAt(next))return false;
+    Object.assign(e,next);return true;
+  }
   discover(){const r=regionAt(this.player.x,this.player.y);if(r>=0&&!this.save.visited.includes(r)){this.save.visited.push(r);this.emit('region',{r});}for(const s of this.world.stations)if(s.r<=unlockedRegion(this.save)&&distance(this.player,s)<6&&!this.save.discovered.includes(s.id)){this.save.discovered.push(s.id);this.emit('toast',{text:'Charging station discovered!'});}}
   moveTo(pos){
     if(regionAt(pos.x,pos.y)>unlockedRegion(this.save)){this.emit('toast',{text:'Restore this region\'s relay to open the next trail.'});return false;}
@@ -73,7 +112,7 @@ export class Adventure {
   burst(x,y,radius=1,type='burst'){this.effects.push({type,x,y,radius,life:.6,max:.6});}
   number(x,y,text,color){this.effects.push({type:'number',x,y,text,color,life:.9,max:.9});}
   hitEnemy(e,damage,kind=''){
-    if(e.hp<=0||e.dormant||!this.enemyAwake(e))return;const amount=Math.max(1,Math.round(damage*(e.type==='shield'&&!e.frozen&&!['rail','gravity','tractor'].includes(kind)?.7:1)));e.hp=Math.max(0,e.hp-amount);e.hit=.15;this.number(e.x,e.y-.5,`${amount}`,'#fff3b5');
+    if(e.hp<=0||e.dormant||!this.enemyAwake(e))return;const amount=Math.max(1,Math.round(damage*(e.type==='shield'&&!e.frozen&&!['rail','gravity','tractor'].includes(kind)?.7:1)));e.hp=Math.max(0,e.hp-amount);e.aggroUntil=this.time+6;e.hit=.15;this.number(e.x,e.y-.5,`${amount}`,'#fff3b5');
     if(e.hp<=0){
       this.burst(e.x,e.y,e.type==='boss'?1.4:.45,e.type==='boss'?'explosion':'burst');this.save.kills.push(e.id);this.save.totalBots++;
       const reward=e.type==='boss'?35*(e.r+1):2+e.r;this.save.scrap+=reward;this.number(e.x,e.y,`+${reward} ◆`,'#ffe28c');this.emit('defeat',{boss:e.type==='boss'});
@@ -94,12 +133,13 @@ export class Adventure {
   }
   attack(e){
     const w=stats(this.save).weapon,p=this.player,damage=w.damage*(this.boostTime>0?1.65:1);
+    if(!this.canAttack(p,e,w.id))return;
     p.cd=w.rate*(this.boostTime>0?.7:1);p.swing=.42;p.angle=Math.atan2(e.y-p.y,e.x-p.x);
-    const muzzle=weaponMuzzle(p,w.id);
+    const muzzle=this.firingMuzzle(p,w.id,e);
     this.emit('attack',{weapon:w.id});
     const foes=this.enemies.filter(n=>n.hp>0&&!n.dormant&&this.enemyAwake(n));
     if(w.id==='flame'){
-      this.effects.push({type:'flame',x:muzzle.x,y:muzzle.y,angle:p.angle,radius:w.range,life:.24,max:.24});for(const n of foes){const angle=Math.atan2(n.y-p.y,n.x-p.x);if(distance(n,p)<=w.range&&Math.cos(angle-p.angle)>.65)this.hitEnemy(n,damage,w.id);}return;
+      this.effects.push({type:'flame',x:muzzle.x,y:muzzle.y,angle:p.angle,radius:w.range,life:.24,max:.24});for(const n of foes){const angle=Math.atan2(n.y-p.y,n.x-p.x);if(distance(n,p)<=w.range&&Math.cos(angle-p.angle)>.65&&this.clearShot(p,n))this.hitEnemy(n,damage,w.id);}return;
     }
     if(['tractor','gravity'].includes(w.id)){
       this.effects.push({type:'vortex',x:e.x,y:e.y,radius:2.6,life:.55,max:.55});
@@ -121,8 +161,78 @@ export class Adventure {
       for(const [i,n] of chain.entries()){this.effects.push({type:'arc',x:from.x,y:from.y,tx:n.x,ty:n.y,life:.24,max:.24});this.hitEnemy(n,damage*(i===0?1:.72));from=n;}
     }else if(w.id==='hammer'){
       this.effects.push({type:'slam',x:e.x,y:e.y,life:.55,max:.55});this.shake=4;
-      for(const n of foes.filter(n=>distance(n,e)<1.9))this.hitEnemy(n,damage);
+      for(const n of foes.filter(n=>distance(n,e)<1.9&&this.clearShot(p,n)))this.hitEnemy(n,damage);
     }else{this.hitEnemy(e,damage);this.burst(e.x,e.y,.25);if(w.id==='bumper'&&e.type!=='boss'){const a=Math.atan2(e.y-p.y,e.x-p.x),nx=e.x+Math.cos(a)*.25,ny=e.y+Math.sin(a)*.25;if(canWalk(this.world,this.save,Math.floor(nx),Math.floor(ny))){e.x=nx;e.y=ny;}}}
+  }
+  warnBoss(e){
+    const profile=bossProfile(e),p=this.player,angle=Math.atan2(p.y-e.y,p.x-e.x);
+    e.cd=4;e.swing=0;e.angle=angle;
+    const muzzle=this.firingMuzzle(e,profile.weapon,p,1.7);
+    const warningAngle=profile.weapon==='rail'?Math.atan2(p.y-muzzle.y,p.x-muzzle.x):angle;
+    this.telegraphs.push({x:p.x,y:p.y,ox:muzzle.x,oy:muzzle.y,angle:warningAngle,bodyAngle:angle,radius:profile.weapon==='rail'?.5:1.1,damage:Math.min(e.damage,24),duration:2,life:2,bossSource:e.id,weapon:profile.weapon,pattern:profile.pattern});
+    this.emit('warning');
+  }
+  releaseBoss(a,e){
+    e.swing=.5;
+    const from={x:a.ox,y:a.oy},to={x:a.x,y:a.y},w=a.weapon;
+    const fx=(type,extra={})=>this.effects.push({type,x:from.x,y:from.y,tx:to.x,ty:to.y,angle:a.angle,radius:a.radius,life:.6,max:.6,enemy:true,weapon:w,...extra});
+    if(['rocket','frost','boomerang','meteor','drone'].includes(w)){
+      const kind={rocket:'rocket',frost:'ice',boomerang:'blade',meteor:'meteor',drone:'drone'}[w];
+      this.projectiles.push({x:w==='meteor'?to.x-1:from.x,y:w==='meteor'?to.y-5:from.y,tx:to.x,ty:to.y,angle:a.angle,speed:w==='meteor'?6:4,damage:a.damage,kind,enemy:true,bossSource:e.id,weapon:w,radius:a.radius,life:5});
+      if(w==='drone')fx('drone');return;
+    }
+    if(w==='rail'){
+      fx('rail');if(segmentDistance(this.player,from,to)<a.radius)this.hurt(a.damage);
+    }else if(w==='flame'){
+      const reach=Math.min(7,distance(from,to)+.4);fx('flame',{radius:reach});
+      const angle=Math.atan2(this.player.y-from.y,this.player.x-from.x);
+      if(distance(this.player,from)<=reach&&Math.cos(angle-a.angle)>.9&&this.clearShot(from,this.player))this.hurt(a.damage);
+    }else{
+      if(w==='lightning')fx('arc');
+      else if(w==='tractor'||w==='gravity')fx('vortex',{x:to.x,y:to.y,radius:a.radius});
+      if(w!=='lightning'&&w!=='tractor')fx('slam',{x:to.x,y:to.y});
+      if(distance(this.player,to)<a.radius)this.hurt(a.damage);
+    }
+  }
+  stepProjectiles(dt){
+    const p=this.player;
+    for(const shot of this.projectiles){
+      const sourceId=shot.bossSource||shot.sourceId;
+      const source=sourceId&&this.enemies.find(e=>e.id===sourceId&&e.hp>0&&!e.dormant&&this.enemyAwake(e));
+      if(sourceId&&!source){shot.life=0;continue;}
+      const target=shot.target&&this.enemies.find(e=>e.id===shot.target&&e.hp>0&&!e.dormant);
+      if(shot.returning&&shot.kind==='blade'){const endpoint=shot.enemy?source:p;if(!endpoint){shot.life=0;continue;}shot.tx=endpoint.x;shot.ty=endpoint.y;}
+      else if(target){shot.tx=target.x;shot.ty=target.y;}
+      const from={x:shot.x,y:shot.y},to={x:shot.tx,y:shot.ty},d=distance(from,to),step=shot.speed*dt;
+      const arrived=d<=step+.15;
+      shot.angle=Math.atan2(to.y-from.y,to.x-from.x);shot.life-=dt;if(shot.life<=0)continue;
+      const next=arrived?to:{x:from.x+Math.cos(shot.angle)*step,y:from.y+Math.sin(shot.angle)*step};
+      if(['bolt','ice'].includes(shot.kind)&&!this.clearShot(from,next)){shot.life=0;continue;}
+      Object.assign(shot,next);
+      if(shot.kind==='blade'){
+        shot.hitIds ||= new Set();
+        if(shot.enemy){if(!shot.hitIds.has('player')&&segmentDistance(p,from,next)<.45){shot.hitIds.add('player');this.hurt(shot.damage);}}
+        else for(const e of this.enemies)if(e.hp>0&&!e.dormant&&this.enemyAwake(e)&&!shot.hitIds.has(e.id)&&segmentDistance(e,from,next)<.5){shot.hitIds.add(e.id);this.hitEnemy(e,shot.damage,'boomerang');}
+        if(arrived){if(shot.returning)shot.life=0;else{shot.returning=true;shot.target=null;shot.hitIds=new Set();shot.life=5;shot.damage*=.65;const endpoint=shot.enemy?source:p;shot.tx=endpoint.x;shot.ty=endpoint.y;}}
+        continue;
+      }
+      if(!arrived)continue;
+      shot.life=0;
+      if(shot.enemy){
+        const radius=shot.radius??.8;
+        if(['rocket','meteor'].includes(shot.kind))this.burst(shot.x,shot.y,radius,'explosion');
+        if(shot.kind==='ice')this.burst(shot.x,shot.y,radius,'frost');
+        if(distance(p,shot)<radius)this.hurt(shot.damage);
+      }else if(shot.kind==='rocket'||shot.kind==='meteor'){
+        this.burst(shot.x,shot.y,shot.kind==='meteor'?2.3:1.4,'explosion');this.shake=5;
+        for(const e of this.enemies)if(e.hp>0&&distance(e,shot)<(shot.kind==='meteor'?2.8:2)&&this.enemyAwake(e))this.hitEnemy(e,shot.damage);
+        this.emit('explosion');
+      }else if(shot.kind==='ice'){
+        for(const e of this.enemies)if(e.hp>0&&distance(e,shot)<1.2&&this.enemyAwake(e)&&this.clearShot(shot,e)){e.frozen=e.type==='boss'?.4:1.1;this.hitEnemy(e,shot.damage,'frost');}
+        this.burst(shot.x,shot.y,.7,'frost');
+      }else if(target)this.hitEnemy(target,shot.damage);
+    }
+    this.projectiles=this.projectiles.filter(s=>s.life>0);
   }
   tick(dt){
     if(this.paused)return;dt=Math.min(dt,.06);this.time+=dt;this.save.playSeconds+=dt;
@@ -130,59 +240,58 @@ export class Adventure {
     for(const key of ['cd','hit','swing','invincible'])p[key]=Math.max(0,p[key]-dt);
     this.boostCd=Math.max(0,this.boostCd-dt);this.boostTime=Math.max(0,this.boostTime-dt);this.shieldCd=Math.max(0,this.shieldCd-dt);this.buddyCd=Math.max(0,this.buddyCd-dt);this.shake=Math.max(0,this.shake-dt*18);
     const target=this.target&&this.enemies.find(e=>e.id===this.target&&e.hp>0);
-    if(target){if(distance(p,target)>st.weapon.range*.9&&this.routeTimer<=0){this.route=pathfind(this.world,this.save,p,target);this.routeTimer=.65;}else if(distance(p,target)<=st.weapon.range*.9)this.route=[];}
+    if(target){const ready=distance(p,target)<=st.weapon.range*.9&&this.canAttack(p,target,st.weapon.id);if(!ready&&this.routeTimer<=0){this.route=pathfind(this.world,this.save,p,target);this.routeTimer=.65;}else if(ready)this.route=[];}
     else if(this.target)this.target=null;
     if(this.route.length){const next=this.route[0],d=distance(p,next),step=st.speed*dt*(this.boostTime>0?1.25:1);if(d<=step){p.x=next.x;p.y=next.y;this.route.shift();}else{const a=Math.atan2(next.y-p.y,next.x-p.x);p.x+=Math.cos(a)*step;p.y+=Math.sin(a)*step;if(!target)p.angle=a;}if(!this.route.length)this.waypoint=null;}
     this.discover();
     if(this.headingHome&&this.isHome()&&!this.route.length){this.headingHome=false;this.player.hp=this.maxHp();this.emit('home-arrived');}
     for(const e of this.enemies)e.active=false;
-    const threats=this.enemies.filter(e=>e.hp>0&&!e.dormant&&e.r<=unlockedRegion(this.save)&&distance(p,e)<8&&this.enemyAwake(e));
-    const inRange=threats.filter(e=>distance(p,e)<=st.weapon.range).sort((a,b)=>distance(p,a)-distance(p,b));
+    const threats=this.enemies.filter(e=>e.hp>0&&!e.dormant&&e.r<=unlockedRegion(this.save)&&(distance(p,e)<8||e.aggroUntil>this.time)&&this.enemyAwake(e));
+    const inRange=threats.filter(e=>distance(p,e)<=st.weapon.range&&this.canAttack(p,e,st.weapon.id)).sort((a,b)=>distance(p,a)-distance(p,b));
     if(p.cd<=0&&inRange.length&&!this.safeAt(p))this.attack(inRange[0]);
     if(this.save.build.gadget==='buddy'&&this.buddyCd<=0&&inRange.length&&!this.safeAt(p)){const e=inRange[0];this.buddyCd=1;this.projectiles.push({x:p.x-.6,y:p.y-.6,tx:e.x,ty:e.y,target:e.id,angle:0,speed:11,damage:45,kind:'drone',life:3});this.effects.push({type:'drone',x:p.x,y:p.y,tx:e.x,ty:e.y,life:.7,max:.7});}
     for(const e of threats){
       if(e.hp<=0)continue;
       e.frozen=Math.max(0,(e.frozen||0)-dt);e.cd-=dt;e.hit=Math.max(0,e.hit-dt);e.swing=Math.max(0,e.swing-dt);const d=distance(p,e),boss=e.type==='boss';
-      e.active=d<(boss?6.5:3.4)&&!this.safeAt(p)&&distance(e,{x:e.homeX,y:e.homeY})<7;
-      if(!e.active){const home={x:e.homeX,y:e.homeY},back=distance(e,home);if(back>.12){const a=Math.atan2(home.y-e.y,home.x-e.x),nx=e.x+Math.cos(a)*dt,ny=e.y+Math.sin(a)*dt;if(canWalk(this.world,this.save,Math.floor(nx),Math.floor(ny))&&!this.safeAt({x:nx,y:ny})){e.x=nx;e.y=ny;}}continue;}
-      e.angle=Math.atan2(p.y-e.y,p.x-e.x);const ranged=['ranged','sentry'].includes(e.type),range=ranged?3.2:boss?1.6:.9;
+      e.active=(d<(boss?6.5:3.4)||e.aggroUntil>this.time)&&!this.safeAt(p)&&distance(e,{x:e.homeX,y:e.homeY})<=7;
+      if(!e.active){const home={x:e.homeX,y:e.homeY};if(distance(e,home)>.12)this.enemyStep(e,home,dt);continue;}
+      const windup=boss&&this.telegraphs.find(a=>a.bossSource===e.id);
+      e.angle=windup?(windup.bodyAngle??windup.angle):Math.atan2(p.y-e.y,p.x-e.x);const ranged=['ranged','sentry'].includes(e.type),profile=boss&&bossProfile(e),range=ranged?3.2:boss?(['bumper','hammer'].includes(profile.weapon)?1.6:5):.9;
       if(e.type==='burrow'){
         // The marked point stays fixed throughout the windup, so walking away avoids the hit.
-        if(e.cd<=0&&!e.frozen){e.cd=4.6;this.telegraphs.push({x:p.x,y:p.y,radius:.85,damage:e.damage,duration:1.6,life:1.6,burrowSource:e.id});e.swing=.4;this.emit('warning');}
+        if(e.cd<=0&&!e.frozen&&distance(p,{x:e.homeX,y:e.homeY})<=7){e.cd=4.6;this.telegraphs.push({x:p.x,y:p.y,radius:.85,damage:e.damage,duration:1.6,life:1.6,burrowSource:e.id});e.swing=.4;this.emit('warning');}
         continue;
       }
-      if(d>range){const speed=(e.frozen?(boss?.25:0):1)*(boss?.7:e.type==='tank'||e.type==='carrier'?.72:e.type==='hopper'?1.55:1.05),nx=e.x+Math.cos(e.angle)*speed*dt,ny=e.y+Math.sin(e.angle)*speed*dt;
-        if(canWalk(this.world,this.save,Math.floor(nx),Math.floor(ny))&&!this.safeAt({x:nx,y:ny})){e.x=nx;e.y=ny;}else{
+      const winding=!!windup;
+      const blocked=boss?!this.canAttack(e,p,profile.weapon):!this.clearShot(e,p);
+      if(!winding&&(d>range||blocked)){const speed=(e.frozen?(boss?.25:0):1)*(boss?.7:e.type==='tank'||e.type==='carrier'?.72:e.type==='hopper'?1.55:1.05);
+        if(!this.enemyStep(e,p,speed*dt)){
           // Follow a grid route around scenery instead of getting stuck behind it.
           if(!e.path||e.pathTime<this.time){e.path=pathfind(this.world,this.save,e,p);e.pathTime=this.time+1.2;}
-          const step=e.path?.[0];if(step){const a=Math.atan2(step.y-e.y,step.x-e.x),nx=e.x+Math.cos(a)*speed*dt,ny=e.y+Math.sin(a)*speed*dt;if(!this.safeAt({x:nx,y:ny})){e.x=nx;e.y=ny;}if(distance(e,step)<.15)e.path.shift();}
+          const step=e.path?.[0];if(step){this.enemyStep(e,step,speed*dt);if(distance(e,step)<.15)e.path.shift();}
         }
       }
       if(e.cd<=0&&!e.frozen){
-        if(boss){e.cd=3.2;const pattern=REGIONS[e.r].pattern,points=pattern==='cross'?[[0,0],[-1.8,0],[1.8,0],[0,-1.8],[0,1.8]]:pattern==='salvo'?[[0,0],[-1.5,-1.2],[1.5,1.2]]:[[0,0]];for(const [x,y] of points)this.telegraphs.push({x:p.x+x,y:p.y+y,radius:Math.min(1.8,1.25+e.r*.07),damage:e.damage,duration:1.8,life:1.8});e.swing=.5;this.emit('warning');}
+        if(boss){if(!winding&&d<=range+.6&&this.canAttack(e,p,profile.weapon))this.warnBoss(e);}
         else if(e.type==='medic'){e.cd=4;for(const n of threats)if(n.hp>0&&n!==e&&n.type!=='boss'&&distance(e,n)<2.5)n.hp=Math.min(n.maxHp,n.hp+18);this.effects.push({type:'frost',x:e.x,y:e.y,radius:1,life:.4,max:.4});}
-        else if(d<=range){e.cd=ranged?2.4:1.8;e.swing=.3;if(ranged)this.projectiles.push({x:e.x,y:e.y,tx:p.x,ty:p.y,angle:e.angle,damage:e.damage,kind:'bolt',speed:4,enemy:true,life:3});else{this.hurt(e.damage);if(item('armor',this.save.build.armor).reflect)this.hitEnemy(e,4);}}
+        else if(d<=range&&this.clearShot(e,p)){e.cd=ranged?2.4:1.8;e.swing=.3;if(ranged){const muzzle=this.firingMuzzle(e,e.type==='sentry'?'rail':'blaster',p,.72,true);this.projectiles.push({x:muzzle.x,y:muzzle.y,tx:p.x,ty:p.y,angle:e.angle,damage:e.damage,kind:'bolt',speed:4,enemy:true,sourceId:e.id,life:3});}else{this.hurt(e.damage);if(item('armor',this.save.build.armor).reflect)this.hitEnemy(e,4);}}
       }
     }
     for(const a of this.telegraphs){
+      if(a.bossSource){
+        const boss=this.enemies.find(e=>e.id===a.bossSource&&e.hp>0&&this.enemyAwake(e));
+        if(!boss||!boss.active||this.safeAt(p)||distance(boss,{x:boss.homeX,y:boss.homeY})>7){a.life=0;continue;}
+        a.life-=dt;if(a.life<=0&&!boss.frozen)this.releaseBoss(a,boss);continue;
+      }
       const burrower=a.burrowSource&&this.enemies.find(e=>e.id===a.burrowSource&&e.hp>0&&!e.dormant&&this.enemyAwake(e));
       if(a.burrowSource&&!burrower){a.life=0;continue;}
       a.life-=dt;if(a.life<=0){
-        if(burrower){if(burrower.frozen||!canWalk(this.world,this.save,Math.floor(a.x),Math.floor(a.y))||this.safeAt(a))continue;burrower.x=a.x;burrower.y=a.y;burrower.path=null;burrower.swing=.4;}
+        if(burrower){if(burrower.frozen||distance(a,{x:burrower.homeX,y:burrower.homeY})>7||!canWalk(this.world,this.save,Math.floor(a.x),Math.floor(a.y))||this.safeAt(a))continue;burrower.x=a.x;burrower.y=a.y;burrower.path=null;burrower.swing=.4;}
         this.burst(a.x,a.y,a.radius,'explosion');if(distance(p,a)<a.radius)this.hurt(a.damage);
       }
     }
     this.telegraphs=this.telegraphs.filter(a=>a.life>0);
-    for(const shot of this.projectiles){
-      const target=shot.target&&this.enemies.find(e=>e.id===shot.target&&e.hp>0);if(target){shot.tx=target.x;shot.ty=target.y;}
-      const d=Math.hypot(shot.tx-shot.x,shot.ty-shot.y);shot.angle=Math.atan2(shot.ty-shot.y,shot.tx-shot.x);const step=shot.speed*dt;shot.life-=dt;
-      if(d<step+.15){shot.life=0;if(shot.enemy){if(distance(p,{x:shot.tx,y:shot.ty})<.8)this.hurt(shot.damage);}else if(shot.kind==='rocket'||shot.kind==='meteor'){this.burst(shot.tx,shot.ty,shot.kind==='meteor'?2.3:1.4,'explosion');this.shake=5;for(const e of this.enemies.filter(e=>e.hp>0&&distance(e,{x:shot.tx,y:shot.ty})<(shot.kind==='meteor'?2.8:2)&&this.enemyAwake(e)))this.hitEnemy(e,shot.damage);this.emit('explosion');}else if(shot.kind==='ice'){for(const e of this.enemies.filter(e=>e.hp>0&&distance(e,shot)<1.2&&this.enemyAwake(e))){e.frozen=e.type==='boss'?.4:1.1;this.hitEnemy(e,shot.damage,'frost');}this.burst(shot.tx,shot.ty,.7,'frost');}else if(shot.kind==='blade'){
-        for(const e of this.enemies.filter(e=>e.hp>0&&distance(e,shot)<1.2&&this.enemyAwake(e)))this.hitEnemy(e,shot.damage,'boomerang');
-        if(!shot.returning){shot.returning=true;shot.target=null;shot.tx=p.x;shot.ty=p.y;shot.life=3;shot.damage*=.65;}
-      }else if(target)this.hitEnemy(target,shot.damage);}
-      else{shot.x+=Math.cos(shot.angle)*step;shot.y+=Math.sin(shot.angle)*step;}
-    }
-    this.projectiles=this.projectiles.filter(s=>s.life>0);
+    this.stepProjectiles(dt);
     for(const e of this.enemies)if(e.spawnParent&&e.dormant&&this.save.kills.includes(e.spawnParent))e.dormant=false;
     const aliveSites=new Map();for(const e of this.enemies)if(e.site&&e.hp>0){let entry=aliveSites.get(e.site);if(!entry)aliveSites.set(e.site,entry={alive:0,first:0,next:[]});entry.alive++;if(e.wave===0)entry.first++;if(e.dormant&&!e.spawnParent)entry.next.push(e);}
     for(const site of this.world.sites){

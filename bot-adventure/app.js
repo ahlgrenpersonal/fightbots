@@ -1,9 +1,9 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, canWalk, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells } from './data.js?v=world65';
-import { Adventure, distance } from './engine.js?v=world65';
-import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon } from './art.js?v=world65';
-import { mountAtlas } from './atlas.js?v=world65';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells } from './data.js?v=world66';
+import { Adventure, distance } from './engine.js?v=world66';
+import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon } from './art.js?v=world66';
+import { mountAtlas } from './atlas.js?v=world66';
 
-const buildVersion = 'world65';
+const buildVersion = 'world66';
 const SAVE_KEY='bot-adventure-save-v1';
 const $=id=>document.getElementById(id);
 $('buildLabel').textContent=buildVersion;
@@ -27,7 +27,7 @@ function load(){
   }catch{return base;}
 }
 const game=new Adventure(load());
-if(!canWalk(game.world,game.save,Math.floor(game.player.x),Math.floor(game.player.y))){game.player.x=HOME.x;game.player.y=HOME.y;}
+Object.assign(game.player,nearestWalkable(game.world,game.save,game.player));
 const painter=new Painter($('world'));painter.resize();painter.camera={x:game.player.x,y:game.player.y};
 const worldSizeObserver=new ResizeObserver(()=>painter.resize());
 worldSizeObserver.observe($('playfield'));

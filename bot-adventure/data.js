@@ -1,6 +1,7 @@
-import { MORE_REGIONS, MORE_TILES, NEW_EQUIPMENT, WORKSHOPS, RETURNS } from './content.js?v=world65';
+import { MORE_REGIONS, MORE_TILES, NEW_EQUIPMENT, WORKSHOPS, RETURNS } from './content.js?v=world66';
 export { WORKSHOPS, RETURNS };
-export const BUILD = 'world65';
+export { bossProfile } from './content.js?v=world66';
+export const BUILD = 'world66';
 export const REGION_W = 36;
 export const REGION_H = 44;
 export const WORLD_W = REGION_W * 9;
@@ -13,7 +14,11 @@ export const REGION_LAYOUT = [[1,1],[0,1],[1,0],[2,1],[2,2],...MORE_TILES.map(t=
 export const REGION_TILES = [[[1,1],[1,2]],[[0,1],[0,0]],[[1,0],[2,0]],[[2,1]],[[2,2]],...MORE_TILES];
 const TILE_OWNERS=new Map(REGION_TILES.flatMap((tiles,r)=>tiles.map(([x,y])=>[`${x},${y}`,r])));
 export const regionOrigin = r => ({x:REGION_LAYOUT[r][0]*REGION_W,y:REGION_LAYOUT[r][1]*REGION_H});
-export const relayFor = r => {const p=regionOrigin(r);return {x:p.x+30.5,y:p.y+6.5};};
+const GUARDIAN_CLEARINGS=[[1,25.5,10.5],[1,25.5,33.5],[1,26.5,12.5],[0,10.5,14.5],[0,25.5,10.5],[1,25.5,10.5],[1,23.5,29.5],[1,25.5,32.5],[0,10.5,10.5],[0,12.5,13.5]];
+export const relayFor = r => {
+  if(r<5){const p=regionOrigin(r);return {x:p.x+30.5,y:p.y+6.5};}
+  const [tile,x,y]=GUARDIAN_CLEARINGS[r-5],[tx,ty]=REGION_TILES[r][tile];return {x:tx*REGION_W+x,y:ty*REGION_H+y};
+};
 export const atlasLayout = () => {const scale=Math.min(552/WORLD_W,712/WORLD_H);return {scale,ox:(600-WORLD_W*scale)/2,oy:(760-WORLD_H*scale)/2};};
 export const COLORS = ['#ee6954', '#459de0', '#57bd85', '#f4c54b', '#f28d42', '#ac7fe0'];
 export const REGIONS = [
@@ -112,6 +117,7 @@ export function isRoad(x,y) {
 }
 export function makeWorld() {
   const sites = [], enemies = [], chests = [], stations = [], props = [], blocks = new Set(), water = new Set();
+  const arenas=REGIONS.map((_,r)=>({r,...relayFor(r),radius:3.8}));
   const offsets = [[10,25],[6,6],[29,17],[7,38],[29,39]];
   for (let r = 0; r < REGIONS.length; r++) {
     const origin=regionOrigin(r);
@@ -121,12 +127,14 @@ export function makeWorld() {
     const positions=r===0?[...offsets,[10,60],[28,70],[14,85],[20,7],[25,51],[8,74],[28,84]]:r===1?[...offsets,[6,-37],[29,-23],[9,-7],[20,7],[20,-39],[5,-22],[28,-6]]:r===2?[...offsets,[42,7],[65,23],[43,38],[20,7],[56,5],[41,22],[64,38]]:delta?[...offsets,...[[6,7],[29,21],[9,37]].map(([x,y])=>[x+delta[0],y+delta[1]]),[20,7],...[[20,5],[5,22],[28,38]].map(([x,y])=>[x+delta[0],y+delta[1]])]:[...offsets,[20,7],[27,29],[16,40]];
     positions.forEach(([ox,oy], i) => {
       const x = origin.x + ox, y=origin.y+oy, id = `site-${r}-${i}`;
-      const site = { id, r, x: x + .5, y: y + .5, index: i };
+      const formation=(i+r)%4;
+      const site = { id, r, x: x + .5, y: y + .5, index: i, formation };
       sites.push(site);
       const n = r === 0 ? 4 : 5;
       for (let wave = 0; wave < 2; wave++) for (let j = 0; j < n; j++) {
-        const a = j * Math.PI * 2 / n;
-        const ex = x + .5 + Math.cos(a) * 1.45, ey = y + .5 + Math.sin(a) * 1.45;
+        const a = j * Math.PI * 2 / n+wave*.45;
+        const offset=formation===0?[Math.cos(a)*1.45,Math.sin(a)*1.45]:formation===1?[(j-(n-1)/2)*.7,(j%2?1:-1)*.9]:formation===2?[Math.cos(a)*1.8,Math.sin(a)*.85]:[(j%2?1:-1)*1.35,(Math.floor(j/2)-1)*1.1];
+        const ex = x + .5 + offset[0], ey = y + .5 + offset[1];
         const type = r<5?(j === n - 1 && r > 0 ? 'ranged' : j % 3 === 2 ? 'tank' : 'scout'):['scout','shield','hopper','medic','carrier','burrow','sentry'][(r+j+wave)%7];
         const hp = (r<5?[13,28,55,95,165][r]:180+(r-5)*28) * (type==='tank'||type==='carrier'?1.6:1);
         const enemy={ id: `${id}-${wave}-${j}`, site: id, wave, dormant: wave > 0, r, x: ex, y: ey, homeX: ex, homeY: ey, hp, maxHp: hp, type, damage:r<5?[2,3,4,5,6][r]:7+Math.floor((r-5)*.7), cd: hash(i,j,r) * 2, hit: 0, swing: 0, angle: 0 };
@@ -141,11 +149,12 @@ export function makeWorld() {
       enemies.push({ id: `boss-${r}-${j}`, r, x: bx + (count === 2 ? j * 2 - 1 : 0), y: by, homeX: bx, homeY: by, hp, maxHp: hp, type: 'boss', damage: REGIONS[r].damage, cd: 2.5 + j, hit: 0, swing: 0, angle: 0 });
     }
     for (const [i,[x,y]] of [[3.5,4.5],[15.5,12.5],[32.5,21.5],[3.5,29.5],[14.5,33.5],[23.5,41.5],[32.5,42.5]].entries()){
-      const extra=r===0?[[10.5,55.5],[28.5,72.5],[18.5,85.5]]:r===1?[[13.5,-32.5],[31.5,-12.5],[3.5,-4.5]]:r===2?[[44.5,13.5],[60.5,34.5],[68.5,5.5]]:null;
+      const extra=r===0?[[10.5,55.5],[28.5,72.5],[18.5,85.5]]:r===1?[[13.5,-32.5],[31.5,-12.5],[3.5,-4.5]]:r===2?[[44.5,13.5],[60.5,34.5],[68.5,5.5]]:delta?[[delta[0]+12.5,delta[1]+12.5],[delta[0]+30.5,delta[1]+33.5],[delta[0]+5.5,delta[1]+39.5]]:null;
       const p=extra&&i>=4?extra[i-4]:[x,y];chests.push({id:`chest-${r}-${i}`,r,x:origin.x+p[0],y:origin.y+p[1]});
     }
   }
   for(const mission of RETURNS){
+    arenas.push({r:mission.r,x:mission.x,y:mission.y,radius:3.8,returnId:mission.id});
     for(const [i,[x,y]] of mission.sites.entries()){
       const site={id:`${mission.sitePrefix}-${i}`,r:mission.r,x,y,index:i,returnId:mission.id,unlock:mission.unlock};sites.push(site);
       for(let j=0;j<4;j++){const a=j*Math.PI/2,hp=mission.unlock===8?170:340;enemies.push({id:`${site.id}-bot-${j}`,site:site.id,wave:0,dormant:false,r:mission.r,x:x+Math.cos(a)*1.3,y:y+Math.sin(a)*1.3,homeX:x+Math.cos(a)*1.3,homeY:y+Math.sin(a)*1.3,hp,maxHp:hp,type:j%2?'shield':'sentry',damage:8,cd:j*.3,hit:0,swing:0,angle:0,returnId:mission.id,unlock:mission.unlock});}
@@ -157,7 +166,7 @@ export function makeWorld() {
     const targets=p.r===0&&p.y>=88?[{x:HOME.x,y:p.y},{x:p.x,y:105.5},{x:p.x,y:118.5}]:[{x:tx,y:p.y},{x:p.x,y:ty}];
     targets.sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y));return {x1:Math.min(p.x,targets[0].x),x2:Math.max(p.x,targets[0].x),y1:Math.min(p.y,targets[0].y),y2:Math.max(p.y,targets[0].y)};
   });
-  const reserved = (x,y) => isRoad(x+.5,y+.5) || spurs.some(p=>x+.5>=p.x1-.55&&x+.5<=p.x2+.55&&y+.5>=p.y1-.55&&y+.5<=p.y2+.55) || sites.some(s => Math.abs(x+.5-s.x) < 2.8 && Math.abs(y+.5-s.y) < 2.8) || chests.some(s => Math.abs(x+.5-s.x)<1.8 && Math.abs(y+.5-s.y)<1.8) || stations.some(s=>Math.hypot(x+.5-s.x,y+.5-s.y)<3.8) || REGIONS.some((_,r)=>Math.hypot(x+.5-relayFor(r).x,y+.5-relayFor(r).y)<4) || WORKSHOPS.some(h=>Math.abs(x-h.x)<4&&Math.abs(y-h.y)<5);
+  const reserved = (x,y) => isRoad(x+.5,y+.5) || spurs.some(p=>x+.5>=p.x1-.55&&x+.5<=p.x2+.55&&y+.5>=p.y1-.55&&y+.5<=p.y2+.55) || sites.some(s => Math.abs(x+.5-s.x) < 2.8 && Math.abs(y+.5-s.y) < 2.8) || chests.some(s => Math.abs(x+.5-s.x)<1.8 && Math.abs(y+.5-s.y)<1.8) || stations.some(s=>Math.hypot(x+.5-s.x,y+.5-s.y)<3.8) || arenas.some(a=>Math.hypot(x+.5-a.x,y+.5-a.y)<4) || WORKSHOPS.some(h=>Math.abs(x-h.x)<4&&Math.abs(y-h.y)<5);
   for (let y=1;y<WORLD_H-1;y++) for(let x=1;x<WORLD_W-1;x++) {
     const r=regionAt(x,y);
     if(r<0){blocks.add(`${x},${y}`);if(x<REGION_W)water.add(`${x},${y}`);else if(hash(x,y)<.36)props.push({x:x+.5,y:y+.5,type:'mountain',r:4,seed:hash(x,y)});continue;}
@@ -171,13 +180,23 @@ export function makeWorld() {
     }else if(n<(biome===1?.21:.14)){
       blocks.add(`${x},${y}`);const type=biome===1?(n<.17?'tree':'scrap'):biome===2?(n<.08?'crystal':'rock'):biome===3?(n<.07?'solar':'crate'):biome===4?(n<.07?'antenna':'crate'):n<.065?'tree':n<.11?'rock':'scrap';
       props.push({x:x+.5,y:y+.5,type,r,seed:n});
-    }else if(n>.92)props.push({x:x+.5,y:y+.5,type:r>=3?'beacon':r===2?'crystal':'flower',r,seed:n});
+    }else if(n>.92&&(r<5||hash(x,y,73)<.25))props.push({x:x+.5,y:y+.5,type:r>=3?'beacon':r===2?'crystal':'flower',r,seed:n});
   }
   for(let r=0;r<5;r++)for(const [tx,ty] of REGION_TILES[r])for(const [lx,ly] of [[13,10],[17,31],[3,40]]){
     const x=tx*REGION_W+lx,y=ty*REGION_H+ly;
     if(!blocks.has(`${x},${y}`))props.push({x,y,type:'landmark',r,seed:hash(lx,ly,r)});
   }
-  return { sites, enemies, chests, stations, props, blocks, water };
+  for(let r=5;r<REGIONS.length;r++)for(const [tx,ty] of REGION_TILES[r])for(const [lx,ly] of [[7,13],[27,31]]){
+    const candidates=props.filter(p=>p.r===r&&Math.floor(p.x/REGION_W)===tx&&Math.floor(p.y/REGION_H)===ty&&p.type!=='landmark'&&blocks.has(`${Math.floor(p.x)},${Math.floor(p.y)}`)&&!isRoad(p.x,p.y-1)&&!isRoad(p.x,p.y-2));
+    candidates.sort((a,b)=>Math.hypot(a.x-tx*REGION_W-lx,a.y-ty*REGION_H-ly)-Math.hypot(b.x-tx*REGION_W-lx,b.y-ty*REGION_H-ly));
+    if(candidates[0]){
+      const landmark=candidates[0];landmark.type='landmark';
+    }
+  }
+  for(const landmark of props.filter(p=>p.type==='landmark'))for(let i=props.length-1;i>=0;i--){
+    const p=props[i];if(p.r===landmark.r&&p.type!=='landmark'&&Math.abs(p.x-landmark.x)<1.7&&p.y<landmark.y+1.2&&p.y>landmark.y-2.8){blocks.delete(`${Math.floor(p.x)},${Math.floor(p.y)}`);props.splice(i,1);}
+  }
+  return { sites, enemies, chests, stations, props, blocks, water, arenas };
 }
 export function unlockedRegion(save) { let r=0;while(r<REGIONS.length-1&&save.bosses.includes(r))r++;for(const m of RETURNS)if(r>=m.unlock&&!(save.returns||[]).includes(m.id))r=Math.min(r,m.unlock-1);return r; }
 export function cellsIn(save,r) { return new Set(save.cleared.filter(id=>{const m=/^site-(\d+)-(\d+)$/.exec(id);return m&&Number(m[1])===r&&Number(m[2])<requiredCells(r);})).size; }
@@ -185,6 +204,17 @@ export function available(save,part) { return part.unlock < 0 || save.bosses.inc
 export function canWalk(world,save,x,y) {
   const r=regionAt(x,y);
   return x>=1 && y>=1 && x<WORLD_W-1 && y<WORLD_H-1 && r>=0 && r<=unlockedRegion(save) && !world.blocks.has(`${x},${y}`);
+}
+export function nearestWalkable(world,save,point){
+  const cx=Math.floor(point.x),cy=Math.floor(point.y);
+  if(canWalk(world,save,cx,cy))return {x:point.x,y:point.y};
+  for(let radius=1;radius<=8;radius++){
+    const candidates=[];
+    for(let dy=-radius;dy<=radius;dy++)for(let dx=-radius;dx<=radius;dx++)if(Math.max(Math.abs(dx),Math.abs(dy))===radius&&canWalk(world,save,cx+dx,cy+dy))candidates.push({x:cx+dx+.5,y:cy+dy+.5});
+    candidates.sort((a,b)=>Math.hypot(a.x-point.x,a.y-point.y)-Math.hypot(b.x-point.x,b.y-point.y));
+    if(candidates[0])return candidates[0];
+  }
+  return {...HOME};
 }
 // A breadth-first grid search keeps every destination predictable on touch screens.
 export function pathfind(world,save,from,to) {
