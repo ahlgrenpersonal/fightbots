@@ -1,8 +1,9 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, canWalk, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, REQUIRED_CELLS } from './data.js?v=world59';
-import { Adventure, distance } from './engine.js?v=world59';
-import { Painter, bot, weapon, rounded } from './art.js?v=world59';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, canWalk, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, REQUIRED_CELLS } from './data.js?v=world60';
+import { Adventure, distance } from './engine.js?v=world60';
+import { Painter, bot, weapon, rounded } from './art.js?v=world60';
+import { mountAtlas } from './atlas.js?v=world60';
 
-const buildVersion = 'world59';
+const buildVersion = 'world60';
 const SAVE_KEY='bot-adventure-save-v1';
 const $=id=>document.getElementById(id);
 $('buildLabel').textContent=buildVersion;
@@ -33,7 +34,7 @@ window.visualViewport?.addEventListener('resize',()=>painter.resize());
 window.addEventListener('pageshow',()=>painter.resize());
 document.fonts?.ready.then(()=>painter.resize());
 game.reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
-const panel=$('panel');let panelMode=null,workTab='weapon',toastTimer,bannerTimer,frame=0,last=performance.now(),lastSave=0,wasPaused=false;
+const panel=$('panel');let panelMode=null,atlasController=null,workTab='weapon',toastTimer,bannerTimer,frame=0,last=performance.now(),lastSave=0,wasPaused=false;
 let audio;
 function tone(freq=400,duration=.09,type='sine',volume=.035,slide=0){
   if(!game.save.sound)return;
@@ -59,8 +60,8 @@ game.onEvent=e=>{
   if(e.type==='equip'){tone(350,.08,'triangle',.025,500);persist();}
   if(e.type==='boost'){tone(250,.4,'triangle',.04,900);toast('Power surge!');}
 };
-function closePanel(){if(panel.open)panel.close();panelMode=null;game.paused=false;last=performance.now();persist();}
-function openPanel(mode,html){game.paused=true;panelMode=mode;$('panelContent').innerHTML=html;if(!panel.open)panel.showModal();panel.scrollTop=0;drawPanels();}
+function closePanel(){atlasController?.destroy();atlasController=null;if(panel.open)panel.close();panelMode=null;game.paused=false;last=performance.now();persist();}
+function openPanel(mode,html){atlasController?.destroy();atlasController=null;game.paused=true;panelMode=mode;panel.dataset.mode=mode;$('panelContent').innerHTML=html;if(!panel.open)panel.showModal();panel.scrollTop=0;drawPanels();}
 function head(title,sub,eyebrow='BOT ADVENTURE'){return `<div class="panel-head"><div><div class="eyebrow">${eyebrow}</div><h1 id="panelTitle">${title}</h1>${sub?`<p>${sub}</p>`:''}</div><button class="close" data-action="close" aria-label="Close" title="Close">×</button></div>`;}
 function workbenchHTML(){const s=stats(game.save);return `<div class="workbench"><canvas id="botPreview" width="440" height="350" aria-label="Your bot"></canvas><div class="bot-stats"><div>Health <strong>${s.hp}</strong></div><div>Power <strong>${s.weapon.damage}</strong></div><div>Reach <strong>${s.weapon.range>2?'Long':'Close'}</strong></div><div class="swatches">${COLORS.map((color,i)=>`<button class="swatch ${game.save.color===color?'selected':''}" style="--swatch:${color}" data-color="${color}" aria-label="${['Coral','Blue','Green','Yellow','Orange','Purple'][i]}" title="${['Coral','Blue','Green','Yellow','Orange','Purple'][i]}"></button>`).join('')}</div></div></div>`;}
 function workshop(){
@@ -79,7 +80,17 @@ function adventureMap(){
   const key=panel.querySelector('.map-key');key.insertAdjacentHTML('beforeend','<span>＋ Charging station</span>');
   const stations=game.world.stations.filter(st=>s.discovered.includes(st.id));
   panel.querySelector('.region-list').insertAdjacentHTML('afterbegin',stations.map(st=>`<button class="region-row station-row" data-station="${st.id}"><span>＋</span><div><b>Charging station</b><small>${REGIONS[st.r].name} · 2 scrap · safe zone</small></div><em>Go ↗</em></button>`).join(''));
-  const map=$('atlas');map.addEventListener('click',e=>{const rect=map.getBoundingClientRect(),{scale,ox,oy}=atlasLayout(),x=((e.clientX-rect.left)/rect.width*600-ox)/scale,y=((e.clientY-rect.top)/rect.height*760-oy)/scale;if(x<0||x>=WORLD_W||y<0||y>=WORLD_H||regionAt(x,y)<0)return;if(regionAt(x,y)>unlockedRegion(s)){toast('That trail is still asleep.');return;}closePanel();game.moveTo({x,y});});
+  const map=$('atlas'),stage=document.createElement('div');stage.className='atlas-stage';map.before(stage);stage.append(map);
+  stage.insertAdjacentHTML('afterbegin','<div class="atlas-tools" role="group" aria-label="Map zoom"><output id="mapZoom" class="atlas-zoom" aria-label="Map zoom level">100%</output><button id="mapZoomOut" aria-label="Zoom out" title="Zoom out">−</button><button id="mapZoomIn" aria-label="Zoom in" title="Zoom in">+</button><button id="mapFit" aria-label="Show whole map" title="Show whole map">⛶</button></div>');
+  const status=document.createElement('p');status.className='atlas-status';status.setAttribute('role','status');stage.after(status);
+  const source=document.createElement('canvas');source.width=map.width;source.height=map.height;source.getContext('2d').drawImage(map,0,0);
+  atlasController=mountAtlas(map,{source,onChange:zoom=>{$('mapZoom').value=`${Math.round(zoom*100)}%`;$('mapZoomOut').disabled=zoom<=1;$('mapZoomIn').disabled=zoom>=3;},onSelect:p=>{
+    const {scale,ox,oy}=atlasLayout(),x=(p.x-ox)/scale,y=(p.y-oy)/scale,r=regionAt(x,y);
+    if(x<0||x>=WORLD_W||y<0||y>=WORLD_H||r<0)return;
+    if(r>unlockedRegion(s)){status.textContent=`Restore the ${REGIONS[r-1].name} relay to open this trail.`;return;}
+    closePanel();game.moveTo({x,y});
+  }});
+  $('mapZoomIn').onclick=()=>atlasController.zoomBy(1.35);$('mapZoomOut').onclick=()=>atlasController.zoomBy(1/1.35);$('mapFit').onclick=()=>atlasController.reset();
 }
 function goRegion(r){
   const sites=game.world.sites.filter(s=>s.r===r&&!game.save.cleared.includes(s.id)).sort((a,b)=>distance(a,game.player)-distance(b,game.player));
@@ -126,7 +137,7 @@ function drawPanels(){
   const t=game.time;
   const preview=$('botPreview');if(preview){const r=preview.getBoundingClientRect(),dpr=Math.min(devicePixelRatio,2);if(preview.width!==Math.round(r.width*dpr)||preview.height!==Math.round(r.height*dpr)){preview.width=Math.round(r.width*dpr);preview.height=Math.round(r.height*dpr);}const c=preview.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,r.width,r.height);const width=r.width,size=Math.min(102,(width*.6-8)/.98);rounded(c,12,137,width-24,13,5,'#43615b');rounded(c,17,131,width-34,9,3,'#829f8a');for(let i=0;i<4;i++){c.fillStyle='#d5b95f';c.fillRect(22+i*(width-40)/4,140,10,2);}bot(c,width*.38,132-size*.39,size,{color:game.save.color,armor:game.save.build.armor,wheels:game.save.build.wheels,gun:game.save.build.weapon,angle:-.25},t);}
   document.querySelectorAll('canvas[data-item]').forEach(canvas=>{const c=canvas.getContext('2d'),id=canvas.dataset.item;c.clearRect(0,0,136,136);c.save();c.scale(2,2);if(workTab==='weapon'){c.translate(17,36);c.scale(.8,.8);weapon(c,id,t);}else{const o={color:'#9fceba',gun:'none',armor:workTab==='armor'?id:'light',wheels:workTab==='wheels'?id:'basic'};bot(c,32,32,49,o,t);if(workTab==='gadget'&&id!=='none'){c.font='bold 23px system-ui';c.textAlign='center';c.fillStyle=id==='repair'?'#a7efc8':id==='shield'?'#a3e8ff':'#ffda6b';c.fillText(id==='repair'?'+':id==='shield'?'◈':'∩',50,55);}}c.restore();});
-  const atlas=$('atlas');if(atlas)painter.map(atlas,game);
+  const atlas=$('atlas');if(atlas&&!atlasController)painter.map(atlas,game);
   const reward=$('rewardWeapon');if(reward){const c=reward.getContext('2d');c.clearRect(0,0,700,280);c.save();c.translate(230,145);c.scale(4,4);weapon(c,reward.dataset.reward,t,.1);c.restore();}
   const rb=$('rewardBot');if(rb){const c=rb.getContext('2d');c.clearRect(0,0,700,280);bot(c,350,140,170,{color:game.save.color,armor:game.save.build.armor,wheels:game.save.build.wheels,gun:game.save.build.weapon},t);}
 }

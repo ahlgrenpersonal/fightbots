@@ -1,4 +1,4 @@
-import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, regionOrigin, relayFor, atlasLayout, isRoad, REQUIRED_CELLS } from './data.js?v=world59';
+import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, regionOrigin, relayFor, atlasLayout, isRoad, REQUIRED_CELLS } from './data.js?v=world60';
 
 export function rounded(c,x,y,w,h,r,fill,stroke,line=2) {
   c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=line;c.stroke();}
@@ -252,8 +252,28 @@ export class Painter {
     for(let y=0;y<WORLD_H;y++)for(let x=0;x<WORLD_W;x++){const r=regionAt(x,y);c.fillStyle=g.world.water.has(`${x},${y}`)?'#64a8b5':r<0?'#607b87':REGIONS[r].ground;c.fillRect(ox+x*s,oy+y*s,s+.1,s+.1);if(r>=0&&isRoad(x+.5,y+.5)){c.fillStyle='#e1d9a5';c.fillRect(ox+x*s,oy+y*s,s+.1,s+.1);}}
     for(const p of g.world.props)if(p.type==='mountain'&&hash(Math.floor(p.x),Math.floor(p.y))<.04){text(c,'▲',ox+p.x*s,oy+p.y*s,9,'#a5b9bb');}
     for(let r=0;r<5;r++){const o=regionOrigin(r);if(r>unlockedRegion(g.save)){c.fillStyle='#20323dba';c.fillRect(ox+o.x*s,oy+o.y*s,REGION_W*s,REGION_H*s);}text(c,REGIONS[r].name,ox+(o.x+18)*s,oy+(o.y+2)*s,14,r>unlockedRegion(g.save)?'#b4bfbe':'#244f49');}
-    for(const site of g.world.sites){const done=g.save.cleared.includes(site.id);ellipse(c,ox+site.x*s,oy+site.y*s,3.3,3.3,done?'#d8f0b5':site.r<=unlockedRegion(g.save)?'#ffdc7d':'#758590');}
-    for(let r=0;r<5;r++){const p=relayFor(r),x=ox+p.x*s,y=oy+p.y*s;rounded(c,x-5,y-7,10,14,2,g.save.bosses.includes(r)?'#a7f4cd':'#ee9578','#34534b',1);text(c,g.save.bosses.includes(r)?'✓':'!',x,y+3,10,'#1b3c38');}
+    for(const site of g.world.sites){if(site.r>unlockedRegion(g.save))continue;const done=g.save.cleared.includes(site.id);ellipse(c,ox+site.x*s,oy+site.y*s,3.3,3.3,done?'#d8f0b5':'#ffdc7d');}
+    for(let r=0;r<5;r++){
+      if(r>unlockedRegion(g.save)){
+        const o=regionOrigin(r),x=ox+(o.x+18)*s,y=oy+(o.y+23)*s;
+        c.save();c.translate(x,y);ellipse(c,0,2,30,27,'#102c385c');ellipse(c,0,0,27,27,'#476773');
+        if(r===2){
+          for(const [dx,dy,height] of [[-13,1,24],[0,-4,38],[13,3,24]]){
+            c.beginPath();c.moveTo(dx-8,10);c.lineTo(dx-6,dy-height/2);c.lineTo(dx,dy-height);c.lineTo(dx+7,dy-height/2);c.lineTo(dx+6,10);c.closePath();c.fillStyle=dx===0?'#b5f3ef':'#69b8d4';c.fill();line(c,dx,dy-height,dx,8,'#ecffff',1.5);
+          }
+        }else if(r===3){
+          rounded(c,-18,-15,36,34,4,'#aa8062','#e0b786',2);rounded(c,-13,-8,26,23,4,'#493b3c');rounded(c,8,-29,8,14,2,'#c3a58a');
+          c.beginPath();c.moveTo(-9,11);c.quadraticCurveTo(-13,1,-3,-5);c.quadraticCurveTo(-3,2,3,1);c.lineTo(7,-10);c.quadraticCurveTo(19,12,7,13);c.closePath();c.fillStyle='#ffbd61';c.fill();line(c,-21,20,21,20,'#e8c998',3);
+        }else if(r===4){
+          rounded(c,-11,-18,22,37,4,'#8aa7bc','#c7dce1',2);rounded(c,-17,-22,34,9,3,'#b1c9ce');line(c,0,-23,0,-35,'#b4e7eb',2);ellipse(c,0,-36,4,4,'#f5dc85');bolt(c,0,0,24,'#ffe5a4');
+          for(const side of [-1,1]){line(c,side*18,-14,side*24,-23,'#a3e7ea',2);line(c,side*20,-3,side*28,-6,'#a3e7ea',2);}
+        }else{
+          for(const side of [-1,1]){rounded(c,side*10-10,-17,20,27,4,'#c39372','#efd1a2',2);ellipse(c,side*10,-6,5,5,'#f6d17f');line(c,side*10-6,15,side*10+6,15,'#d5c7aa',4);}
+        }
+        text(c,'?',20,32,20,'#ffe5a4');c.restore();continue;
+      }
+      const p=relayFor(r),x=ox+p.x*s,y=oy+p.y*s;rounded(c,x-5,y-7,10,14,2,g.save.bosses.includes(r)?'#a7f4cd':'#ee9578','#34534b',1);text(c,g.save.bosses.includes(r)?'✓':'!',x,y+3,10,'#1b3c38');
+    }
     for(const st of g.world.stations)if(g.save.discovered.includes(st.id)){rounded(c,ox+st.x*s-5,oy+st.y*s-5,10,10,2,'#edffe3','#326f59',1);text(c,'+',ox+st.x*s,oy+st.y*s+4,12,'#327859');}
     text(c,'⌂',ox+HOME.x*s,oy+HOME.y*s+5,21,'#fff6c5');ellipse(c,ox+g.player.x*s,oy+g.player.y*s,5.5,5.5,'#fff');ellipse(c,ox+g.player.x*s,oy+g.player.y*s,3.5,3.5,g.save.color);rounded(c,ox,oy,WORLD_W*s,WORLD_H*s,8,null,'#f6f7cb55',2);
   }
