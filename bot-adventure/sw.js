@@ -1,5 +1,5 @@
-const CACHE_NAME='bot-adventure-world69';
-const ASSETS=['./','./index.html','./styles.css?v=world69','./layout.css?v=world69','./app.js?v=world69','./data.js?v=world69','./content.js?v=world69','./engine.js?v=world69','./patrols.js?v=world69','./art.js?v=world69','./atlas.js?v=world69','./manifest.webmanifest','./version.json','./assets/icon.svg','./assets/icon-192.png','./assets/icon-512.png','./refresh.html'];
+const CACHE_NAME='bot-adventure-world70';
+const ASSETS=['./','./index.html','./styles.css?v=world70','./layout.css?v=world70','./app.js?v=world70','./data.js?v=world70','./topology.js?v=world70','./content.js?v=world70','./engine.js?v=world70','./patrols.js?v=world70','./art.js?v=world70','./atlas.js?v=world70','./manifest.webmanifest','./version.json','./assets/icon.svg','./assets/icon-192.png','./assets/icon-512.png','./refresh.html'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('bot-adventure-')&&key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{

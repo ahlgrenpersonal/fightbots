@@ -1,3 +1,4 @@
+import {relocateEntity,relocateMission} from './topology.js?v=world70';
 const region=(name,theme,ground,path,water,accent,boss,hp,reward,pattern)=>({name,theme,subtitle:boss,ground,path,water,accent,dark:'#466675',boss,hp,reward,pattern,damage:20+Math.round((hp-2500)/650)});
 export const MORE_REGIONS=[
   region('Harbor Reach','coast','#a9c9b8','#e1d7ad','#579bb6','#ffdb8f','The Anchor Crab',2500,'frost','rings'),
@@ -11,7 +12,6 @@ export const MORE_REGIONS=[
   region('Orbit Docks','orbital','#aab4ce','#d5e0e9','#344d70','#c0f8ff','The Satellite Weaver',6500,'swarm','salvo'),
   region('Starfall Ruins','ancient','#acaac7','#e2d6c0','#586b93','#ffecb0','The Star Colossus',7600,'supernova','cross')
 ];
-export const MORE_TILES=[[[3,2],[3,1]],[[4,2],[5,2]],[[4,1],[5,1]],[[4,0]],[[5,0]],[[6,0],[7,0]],[[8,0],[8,1]],[[7,1],[7,2]],[[6,1]],[[6,2]]];
 export function bossProfile(enemyOrRegion){
   const {r,returnId,encounterRole}=typeof enemyOrRegion==='number'?{r:enemyOrRegion}:enemyOrRegion;
   const theme=MORE_REGIONS[r-5]?.theme;
@@ -30,19 +30,22 @@ export function bossProfile(enemyOrRegion){
   return profile;
 }
 // Optional road encounters have their own identities; they never replace a relay guardian.
-export const ENCOUNTERS=[
+export const LEGACY_ENCOUNTERS=[
   {id:'harbor-duo',r:5,x:120.5,y:105.5,name:'Clank & Zip',reward:70},
   {id:'scrap-split',r:6,x:162.5,y:110.5,name:'The Splitstack',reward:90}
 ];
-export const WORKSHOPS=[
+export const LEGACY_WORKSHOPS=[
   {id:'valley',name:'Valley Workshop',r:0,x:54.5,y:66.5},
   {id:'harbor',name:'Harbor Workshop',r:5,x:126.5,y:110.5},
   {id:'star',name:'Star Workshop',r:10,x:234.5,y:22.5}
 ];
-export const RETURNS=[
+export const LEGACY_RETURNS=[
   {id:'copper-return',r:1,unlock:8,boss:'The Copper Captain',x:28.5,y:52.5,sitePrefix:'reclaim-copper',sites:[[10.5,14.5],[27.5,32.5],[8.5,74.5]],hp:1600},
   {id:'crystal-return',r:2,unlock:13,boss:'The Frost Commander',x:99.5,y:8.5,sitePrefix:'reclaim-crystal',sites:[[45.5,13.5],[62.5,36.5],[94.5,31.5]],hp:3400}
 ];
+export const ENCOUNTERS=LEGACY_ENCOUNTERS.map(relocateEntity);
+export const WORKSHOPS=LEGACY_WORKSHOPS.map(relocateEntity);
+export const RETURNS=LEGACY_RETURNS.map(relocateMission);
 export const NEW_EQUIPMENT={
   weapon:[
     {id:'flame',name:'Flamethrower',desc:'A roaring fan of fire. Sweeps through a crowd.',damage:38,range:3.2,rate:.18,cost:180,gears:7,unlock:4,power:7},

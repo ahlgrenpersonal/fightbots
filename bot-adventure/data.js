@@ -1,24 +1,29 @@
-import { MORE_REGIONS, MORE_TILES, NEW_EQUIPMENT, WORKSHOPS, RETURNS, ENCOUNTERS } from './content.js?v=world69';
+import { MORE_REGIONS, NEW_EQUIPMENT, WORKSHOPS, RETURNS, ENCOUNTERS, LEGACY_WORKSHOPS, LEGACY_RETURNS, LEGACY_ENCOUNTERS } from './content.js?v=world70';
+import {LEGACY_TILES,WORLD_TILES,relocatePoint,relocateEntity,legacyPoint,worldGates} from './topology.js?v=world70';
 export { WORKSHOPS, RETURNS, ENCOUNTERS };
-export { bossProfile } from './content.js?v=world69';
-export const BUILD = 'world69';
+export { bossProfile } from './content.js?v=world70';
+export const BUILD = 'world70';
 export const REGION_W = 36;
 export const REGION_H = 44;
-export const WORLD_W = REGION_W * 9;
-export const WORLD_H = REGION_H * 3;
-export const MAIN_Y = 66.5;
+export const WORLD_W = REGION_W * 5;
+export const WORLD_H = REGION_H * 7;
+export const MAIN_Y = WORKSHOPS[0].y;
 export const REQUIRED_CELLS = 5;
 export const requiredCells = r => r%5<3?12:8;
-export const HOME = { x: 54.5, y: MAIN_Y };
-export const REGION_LAYOUT = [[1,1],[0,1],[1,0],[2,1],[2,2],...MORE_TILES.map(t=>t[0])];
-export const REGION_TILES = [[[1,1],[1,2]],[[0,1],[0,0]],[[1,0],[2,0]],[[2,1]],[[2,2]],...MORE_TILES];
+export const HOME = {x:WORKSHOPS[0].x,y:WORKSHOPS[0].y};
+export const REGION_LAYOUT = WORLD_TILES.map(t=>t[0]);
+export const REGION_TILES = WORLD_TILES;
+export const GATES=worldGates();
 const TILE_OWNERS=new Map(REGION_TILES.flatMap((tiles,r)=>tiles.map(([x,y])=>[`${x},${y}`,r])));
+const OLD_OWNERS=new Map(LEGACY_TILES.flatMap((tiles,r)=>tiles.map(([x,y])=>[`${x},${y}`,r])));
+const legacyRegionAt=(x,y)=>OLD_OWNERS.get(`${Math.floor(x/REGION_W)},${Math.floor(y/REGION_H)}`)??-1;
 export const regionOrigin = r => ({x:REGION_LAYOUT[r][0]*REGION_W,y:REGION_LAYOUT[r][1]*REGION_H});
 const GUARDIAN_CLEARINGS=[[1,25.5,10.5],[1,25.5,33.5],[1,26.5,12.5],[0,10.5,14.5],[0,25.5,10.5],[1,25.5,10.5],[1,23.5,29.5],[1,25.5,32.5],[0,10.5,10.5],[0,12.5,13.5]];
-export const relayFor = r => {
-  if(r<5){const p=regionOrigin(r);return {x:p.x+30.5,y:p.y+6.5};}
-  const [tile,x,y]=GUARDIAN_CLEARINGS[r-5],[tx,ty]=REGION_TILES[r][tile];return {x:tx*REGION_W+x,y:ty*REGION_H+y};
+const legacyRelay = r => {
+  if(r<5){const [tx,ty]=LEGACY_TILES[r][0];return {x:tx*REGION_W+30.5,y:ty*REGION_H+6.5};}
+  const [tile,x,y]=GUARDIAN_CLEARINGS[r-5],[tx,ty]=LEGACY_TILES[r][tile];return {x:tx*REGION_W+x,y:ty*REGION_H+y};
 };
+export const relayFor=r=>relocatePoint(legacyRelay(r));
 export const atlasLayout = () => {const scale=Math.min(552/WORLD_W,712/WORLD_H);return {scale,ox:(600-WORLD_W*scale)/2,oy:(760-WORLD_H*scale)/2};};
 export const COLORS = ['#ee6954', '#459de0', '#57bd85', '#f4c54b', '#f28d42', '#ac7fe0'];
 export const REGIONS = [
@@ -70,7 +75,15 @@ export function stats(save) {
   return { hp: armor.hp + (wheels.hp || 0), defense: armor.defense, speed: wheels.speed, weapon: item('weapon', save.build.weapon) };
 }
 export function freshSave() {
-  return { schema: 1, worldLayout: 2, siteLayout: 5, returns:[], scrap: 0, gears: 0, build: { ...STARTERS }, color: COLORS[0], owned: Object.values(STARTERS), cleared: [], bosses: [], kills: [], chests: [], discovered: [], visited: [], position: { ...HOME }, hp: 70, totalBots: 0, playSeconds: 0, sound: false, gentle: true, completed: false, intro: false };
+  return { schema: 1, worldLayout: 3, siteLayout: 5, returns:[], scrap: 0, gears: 0, build: { ...STARTERS }, color: COLORS[0], owned: Object.values(STARTERS), cleared: [], bosses: [], kills: [], chests: [], discovered: [], visited: [], position: { ...HOME }, hp: 70, totalBots: 0, playSeconds: 0, sound: false, gentle: true, completed: false, intro: false };
+}
+export function migrateWorldLayout(save){
+  if(save.worldLayout===3)return save;
+  save.position=save.worldLayout===2?relocatePoint(save.position)||{...HOME}:{...HOME};
+  if(save.worldLayout===2&&save.patrols&&typeof save.patrols==='object')for(const record of Object.values(save.patrols)){
+    if(Array.isArray(record?.mobs))record.mobs=record.mobs.map(m=>{const point=relocatePoint(m);return point?{...m,...point}:null;}).filter(Boolean);
+  }
+  save.worldLayout=3;return save;
 }
 export function migrateSiteProgress(save){
   save.returns ||= [];
@@ -109,13 +122,19 @@ export function regionAt(x,y) {
   const sx=Math.floor(x/REGION_W),sy=Math.floor(y/REGION_H);
   return TILE_OWNERS.get(`${sx},${sy}`)??-1;
 }
-export function isRoad(x,y) {
-  const r=regionAt(x,y);if(r<0)return false;
-  if(r===0&&y>=REGION_H*2)return Math.abs(x-HOME.x)<1.2||([105.5,118.5].some(v=>Math.abs(y-v)<1.2)&&x>43&&x<68);
+function legacyRoad(x,y) {
+  const r=legacyRegionAt(x,y);if(r<0)return false;
+  if(r===0&&y>=REGION_H*2)return Math.abs(x-54.5)<1.2||([105.5,118.5].some(v=>Math.abs(y-v)<1.2)&&x>43&&x<68);
   const p={x:Math.floor(x/REGION_W)*REGION_W,y:Math.floor(y/REGION_H)*REGION_H};
   return Math.abs(y-(p.y+22.5))<1.2||Math.abs(x-(p.x+18.5))<1.2;
 }
+export function isRoad(x,y){const p=legacyPoint({x,y});return !!p&&legacyRoad(p.x,p.y);}
 export function makeWorld() {
+  // Build established sectors in their original coordinates, then relocate them intact.
+  const WORLD_W=324,WORLD_H=132,REGION_TILES=LEGACY_TILES,REGION_LAYOUT=LEGACY_TILES.map(t=>t[0]);
+  const HOME={x:54.5,y:66.5},WORKSHOPS=LEGACY_WORKSHOPS,RETURNS=LEGACY_RETURNS,ENCOUNTERS=LEGACY_ENCOUNTERS;
+  const regionAt=legacyRegionAt,isRoad=legacyRoad,relayFor=legacyRelay;
+  const regionOrigin=r=>({x:REGION_LAYOUT[r][0]*REGION_W,y:REGION_LAYOUT[r][1]*REGION_H});
   const sites = [], enemies = [], chests = [], stations = [], props = [], blocks = new Set(), water = new Set();
   const arenas=REGIONS.map((_,r)=>({r,...relayFor(r),radius:3.8}));
   const offsets = [[10,25],[6,6],[29,17],[7,38],[29,39]];
@@ -212,7 +231,15 @@ export function makeWorld() {
   for(const landmark of props.filter(p=>p.type==='landmark'))for(let i=props.length-1;i>=0;i--){
     const p=props[i];if(p.r===landmark.r&&p.type!=='landmark'&&Math.abs(p.x-landmark.x)<1.7&&p.y<landmark.y+1.2&&p.y>landmark.y-2.8){blocks.delete(`${Math.floor(p.x)},${Math.floor(p.y)}`);props.splice(i,1);}
   }
-  return { sites, enemies, chests, stations, props, blocks, water, arenas };
+  return relocateWorld({ sites, enemies, chests, stations, props, blocks, water, arenas });
+}
+function relocateWorld(world){
+  const points=list=>list.map(relocateEntity).filter(Boolean);
+  const cells=set=>new Set([...set].map(key=>{const [x,y]=key.split(',').map(Number),p=relocatePoint({x:x+.5,y:y+.5});return p?`${Math.floor(p.x)},${Math.floor(p.y)}`:null;}).filter(Boolean));
+  const enemies=world.enemies.map(old=>{const e=relocateEntity(old),home=relocatePoint({x:old.homeX,y:old.homeY});return e&&home?{...e,homeX:home.x,homeY:home.y}:null;}).filter(Boolean);
+  const blocks=cells(world.blocks),water=cells(world.water),props=points(world.props);
+  for(let y=0;y<WORLD_H;y++)for(let x=0;x<WORLD_W;x++)if(regionAt(x,y)<0){blocks.add(`${x},${y}`);if(y<REGION_H*2){if(hash(x,y)<.012)props.push({x:x+.5,y:y+.5,type:'mountain',r:2,seed:hash(x,y)});}else water.add(`${x},${y}`);}
+  return {...world,sites:points(world.sites),enemies,chests:points(world.chests),stations:points(world.stations),arenas:points(world.arenas),props,blocks,water};
 }
 export function unlockedRegion(save) { let r=0;while(r<REGIONS.length-1&&save.bosses.includes(r))r++;for(const m of RETURNS)if(r>=m.unlock&&!(save.returns||[]).includes(m.id))r=Math.min(r,m.unlock-1);return r; }
 export function cellsIn(save,r) { return new Set(save.cleared.filter(id=>{const m=/^site-(\d+)-(\d+)$/.exec(id);return m&&Number(m[1])===r&&Number(m[2])<requiredCells(r);})).size; }

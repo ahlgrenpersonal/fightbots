@@ -1,9 +1,9 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells } from './data.js?v=world69';
-import { Adventure, distance } from './engine.js?v=world69';
-import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon } from './art.js?v=world69';
-import { mountAtlas } from './atlas.js?v=world69';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world70';
+import { Adventure, distance } from './engine.js?v=world70';
+import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon } from './art.js?v=world70';
+import { mountAtlas } from './atlas.js?v=world70';
 
-const buildVersion = 'world69';
+const buildVersion = 'world70';
 const SAVE_KEY='bot-adventure-save-v1';
 const $=id=>document.getElementById(id);
 $('buildLabel').textContent=buildVersion;
@@ -12,7 +12,7 @@ function load(){
   const base=freshSave();
   try{
     const raw=JSON.parse(localStorage.getItem(SAVE_KEY));if(!raw||raw.schema!==1)return base;
-    const s={...base,...raw,siteLayout:raw.siteLayout||0};
+    const s={...base,...raw,worldLayout:raw.worldLayout||0,siteLayout:raw.siteLayout||0};
     for(const key of ['scrap','gears','totalBots','playSeconds'])s[key]=Math.max(0,Number.isFinite(s[key])?s[key]:0);
     for(const key of ['owned','cleared','kills','chests','discovered','visited'])s[key]=Array.isArray(s[key])?s[key]:base[key];
     s.bosses=Array.isArray(s.bosses)?[...new Set(s.bosses.filter(v=>Number.isInteger(v)&&v>=0&&v<REGIONS.length))].sort((a,b)=>a-b):[];
@@ -20,7 +20,7 @@ function load(){
     s.owned=[...new Set([...base.owned,...s.owned.filter(id=>Object.values(EQUIPMENT).flat().some(p=>p.id===id))])];
     s.build={...base.build,...s.build};for(const type of Object.keys(EQUIPMENT))if(!s.owned.includes(s.build[type])||!EQUIPMENT[type].some(p=>p.id===s.build[type]))s.build[type]=base.build[type];
     if(!COLORS.includes(s.color))s.color=base.color;
-    if(raw.worldLayout!==2){s.position={...HOME};s.worldLayout=2;s.visited=[];s.discovered=[];s.hp=stats(s).hp;}
+    migrateWorldLayout(s);
     if(!Number.isFinite(s.position?.x)||!Number.isFinite(s.position?.y)||s.position.x<1||s.position.x>WORLD_W-2||s.position.y<1||s.position.y>WORLD_H-2||regionAt(s.position.x,s.position.y)<0||regionAt(s.position.x,s.position.y)>unlockedRegion(s))s.position={...HOME};
     if(!Number.isFinite(s.hp)||s.hp<=0)s.hp=stats(s).hp;
     return s;

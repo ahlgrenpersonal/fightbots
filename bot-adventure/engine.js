@@ -1,6 +1,6 @@
-import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress } from './data.js?v=world69';
-import { bossProfile } from './content.js?v=world69';
-import { ReturningPatrols } from './patrols.js?v=world69';
+import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout } from './data.js?v=world70';
+import { bossProfile } from './content.js?v=world70';
+import { ReturningPatrols } from './patrols.js?v=world70';
 
 export const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -16,7 +16,7 @@ function weaponMuzzle(p,id,size=1.17){
 }
 export class Adventure {
   constructor(save=freshSave(),onEvent=()=>{}) {
-    this.save=migrateSiteProgress(save);this.onEvent=onEvent;this.world=makeWorld();
+    this.save=migrateSiteProgress(migrateWorldLayout(save));this.onEvent=onEvent;this.world=makeWorld();
     this.player={...save.position,hp:Math.max(1,Math.min(save.hp,stats(save).hp)),angle:0,cd:0,hit:0,swing:0,invincible:2};
     this.enemies=this.world.enemies.filter(e=>!save.kills.includes(e.id)&&!save.cleared.includes(e.site)&&!(e.returnId?save.returns.includes(e.returnId):!e.encounterId&&e.type==='boss'&&save.bosses.includes(e.r)));
     for(const e of this.enemies)if(e.dormant&&(e.spawnParent?save.kills.includes(e.spawnParent):!this.enemies.some(n=>n.site===e.site&&n.wave===0&&n.hp>0)))e.dormant=false;

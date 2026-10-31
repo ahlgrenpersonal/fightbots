@@ -1,5 +1,5 @@
-import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells } from './data.js?v=world69';
-import * as worldData from './data.js?v=world69';
+import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world70';
+import * as worldData from './data.js?v=world70';
 
 export function rounded(c,x,y,w,h,r,fill,stroke,line=2) {
   c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=line;c.stroke();}
@@ -481,7 +481,7 @@ export class Painter {
       const radius=arena.radius||3.8;
       if(arena.r<=unlockedRegion(g.save)&&returnVisible(g.save,arena)&&arena.x+radius>x0&&arena.x-radius<x1&&arena.y+radius>y0&&arena.y-radius<y1)arenaFloor(c,arena);
     }
-    for(const gate of [{r:1,x:36,y:66.5},{r:2,x:54.5,y:44,horizontal:true},{r:2,x:36,y:22.5},{r:3,x:72,y:66.5},{r:3,x:90.5,y:44,horizontal:true},{r:4,x:90.5,y:88,horizontal:true}])if(gate.r>unlockedRegion(g.save)){c.save();c.translate(gate.x,gate.y);if(gate.horizontal)c.rotate(Math.PI/2);this.gate(0,0,t);c.restore();}
+    for(const gate of GATES)if(gate.r>unlockedRegion(g.save)){c.save();c.translate(gate.x,gate.y);if(gate.horizontal)c.rotate(Math.PI/2);this.gate(0,0,t);c.restore();}
     for(const site of g.world.sites)if(returnVisible(g.save,site)&&site.x>x0-2&&site.x<x1+2&&site.y>y0-2&&site.y<y1+2)this.site(site,g.save.cleared.includes(site.id),t);
     for(let r=0;r<REGIONS.length;r++){const p=relayFor(r);if(p.x>x0-3&&p.x<x1+3&&p.y>y0-3&&p.y<y1+3)this.relay(p.x,p.y,r,g,t);}
     for(const station of g.world.stations)if(station.r<=unlockedRegion(g.save)&&station.x>x0-4&&station.x<x1+4&&station.y>y0-4&&station.y<y1+4)this.station(station,g,t);
