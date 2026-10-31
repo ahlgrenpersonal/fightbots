@@ -1,8 +1,11 @@
 /* Reserve the mission and controls outside the moving world. */
+html,body{background:var(--ink)}
 #game{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;height:100dvh}
-.topbar{position:static;min-height:65px;padding-top:calc(16px + var(--safe-top,env(safe-area-inset-top,0px)));padding-bottom:4px;box-shadow:none}
-.brand>div{min-width:0;padding-block:4px;overflow:visible}
-.brand b{font-size:13px;line-height:20px;letter-spacing:0}
+.topbar{position:static;min-height:0;gap:10px;padding-top:calc(24px + var(--safe-top,env(safe-area-inset-top,0px)));padding-bottom:2px;background:var(--ink);box-shadow:none}
+.brand{gap:8px}.brand-mark{flex-shrink:0;width:34px;height:34px;font-size:25px}.brand-mark span{top:-3px;font-size:15px}
+.brand>div{min-width:0;padding:0;overflow:visible}
+.brand b{font-family:system-ui,sans-serif;font-size:12px;line-height:20px;letter-spacing:0}
+.wallet{min-height:44px;padding:6px 10px;font-size:18px}.topbar .icon-button{width:44px;height:44px;flex-shrink:0}
 .quest{position:static;width:100%;max-width:none;min-height:55px;margin:0;padding:7px 18px;border:0;border-bottom:1px solid #426355;border-radius:0;background:#dce9d8;box-shadow:none}
 .quest-icon{font-size:25px}.quest div>span{margin-top:2px}.quest button{flex-shrink:0}
 .brand .brand-meta{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:12px;line-height:16px;margin-top:0}
@@ -10,8 +13,8 @@
 #playfield{position:relative;min-height:0;overflow:hidden;background:#85b979}
 #world{position:absolute;inset:0;height:100%;width:100%}
 .display-report{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.6 ui-monospace,monospace;color:#d5e8dd}
-.console{position:static;transform:none;width:100%;max-width:none;border-radius:0;padding-top:9px;padding-bottom:calc(7px + max(0px,var(--safe-bottom,env(safe-area-inset-bottom,0px)) - 15px));box-shadow:none}
-.console .tools{max-width:530px;margin:auto}.health-row{max-width:530px;margin:0 auto 6px}
+.console{position:static;transform:none;width:100%;max-width:none;border-radius:0;padding-top:6px;padding-bottom:calc(4px + max(0px,var(--safe-bottom,env(safe-area-inset-bottom,0px)) - 20px));background:var(--ink);box-shadow:none}
+.console .tools{max-width:530px;margin:auto}.health-row{max-width:530px;margin:0 auto 4px}
 .boss-hud{top:10px;left:12px;right:12px;max-width:360px}
 .toast{top:10px}.toast.boss-active{top:78px}
 .interact{bottom:14px;padding:11px 18px;min-height:48px}
