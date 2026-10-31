@@ -13,6 +13,11 @@ html,body{background:var(--ink)}
 #playfield{position:relative;min-height:0;overflow:hidden;background:#85b979}
 #world{position:absolute;inset:0;height:100%;width:100%}
 .display-report{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.6 ui-monospace,monospace;color:#d5e8dd}
+/* Dialogs need their own safe-area bounds; the game header cannot protect them. */
+dialog{position:fixed;inset:calc(12px + var(--safe-top,env(safe-area-inset-top,0px))) 12px calc(12px + var(--safe-bottom,env(safe-area-inset-bottom,0px)));margin:auto;max-height:calc(100dvh - 24px - var(--safe-top,env(safe-area-inset-top,0px)) - var(--safe-bottom,env(safe-area-inset-bottom,0px)))}
+.panel-head{position:sticky;top:0;z-index:1;background:#20373a;border-bottom:1px solid #ffffff15;margin-bottom:14px}
+.panel-head>div{min-width:0}.panel-head h1{font-size:22px;line-height:1.25;overflow-wrap:anywhere}
+.panel-head .close{width:44px;height:44px}
 .console{position:static;transform:none;width:100%;max-width:none;border-radius:0;padding-top:6px;padding-bottom:calc(4px + max(0px,var(--safe-bottom,env(safe-area-inset-bottom,0px)) - 20px));background:var(--ink);box-shadow:none}
 .console .tools{max-width:530px;margin:auto}.health-row{max-width:530px;margin:0 auto 4px}
 .boss-hud{top:10px;left:12px;right:12px;max-width:360px}
