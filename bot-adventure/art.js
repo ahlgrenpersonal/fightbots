@@ -1,4 +1,4 @@
-import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells } from './data.js?v=world62';
+import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells } from './data.js?v=world63';
 
 export function rounded(c,x,y,w,h,r,fill,stroke,line=2) {
   c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=line;c.stroke();}
@@ -331,6 +331,8 @@ export class Painter {
       const p=relayFor(r),x=ox+p.x*s,y=oy+p.y*s;rounded(c,x-5,y-7,10,14,2,g.save.bosses.includes(r)?'#a7f4cd':'#ee9578','#34534b',1);text(c,g.save.bosses.includes(r)?'✓':'!',x,y+3,10,'#1b3c38');
     }
     for(const st of g.world.stations)if(g.save.discovered.includes(st.id)){rounded(c,ox+st.x*s-5,oy+st.y*s-5,10,10,2,'#edffe3','#326f59',1);text(c,'+',ox+st.x*s,oy+st.y*s+4,12,'#327859');}
-    text(c,'⌂',ox+HOME.x*s,oy+HOME.y*s+5,21,'#fff6c5');ellipse(c,ox+g.player.x*s,oy+g.player.y*s,5.5,5.5,'#fff');ellipse(c,ox+g.player.x*s,oy+g.player.y*s,3.5,3.5,g.save.color);rounded(c,ox,oy,WORLD_W*s,WORLD_H*s,8,null,'#f6f7cb55',2);
+    text(c,'⌂',ox+HOME.x*s,oy+HOME.y*s+5,21,'#fff6c5');rounded(c,ox,oy,WORLD_W*s,WORLD_H*s,8,null,'#f6f7cb55',2);
+    const playerX=ox+g.player.x*s,playerY=oy+g.player.y*s;
+    ellipse(c,playerX,playerY,18,18,'#f4fff8');ellipse(c,playerX,playerY,16,16,'#173d68');ellipse(c,playerX,playerY,12,12,'#65ef86');
   }
 }

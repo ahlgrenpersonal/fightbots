@@ -38,6 +38,8 @@ dialog[data-mode="map"] .panel-head{padding:14px 16px;margin-bottom:8px}
 .health-row.critical .health-heart{animation:warning-pulse 1s ease-in-out infinite}
 .health-row.critical>b{color:#ffba9f}
 .map-key{flex-wrap:wrap;gap:8px 14px}
+.map-key .player-key{display:inline-flex;align-items:center;gap:5px;color:#c4d5c9}
+.player-key::before{content:"";width:12px;height:12px;border:3px solid #173d68;border-radius:50%;background:#65ef86;outline:1px solid #f4fff8}
 .station-row{border-color:#77c6a250}.station-row span{color:#a9efd0}
 @keyframes warning-pulse{50%{opacity:.45;transform:scale(1.2)}}
 @media(min-width:900px){.quest{padding-left:28px}.console{padding-bottom:10px}.tools button{min-height:48px}.tools .boost{min-height:52px}}

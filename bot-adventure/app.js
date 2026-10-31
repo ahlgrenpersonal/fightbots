@@ -1,9 +1,9 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, canWalk, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, TOTAL_CELLS } from './data.js?v=world62';
-import { Adventure, distance } from './engine.js?v=world62';
-import { Painter, bot, weapon, rounded } from './art.js?v=world62';
-import { mountAtlas } from './atlas.js?v=world62';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, canWalk, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, TOTAL_CELLS } from './data.js?v=world63';
+import { Adventure, distance } from './engine.js?v=world63';
+import { Painter, bot, weapon, rounded } from './art.js?v=world63';
+import { mountAtlas } from './atlas.js?v=world63';
 
-const buildVersion = 'world62';
+const buildVersion = 'world63';
 const SAVE_KEY='bot-adventure-save-v1';
 const $=id=>document.getElementById(id);
 $('buildLabel').textContent=buildVersion;
@@ -77,7 +77,7 @@ function workshop(){
 function adventureMap(){
   const s=game.save,region=unlockedRegion(s);
   openPanel('map',`${head('The little big world',`${s.bosses.length} relays restored · ${s.cleared.length} power cells found`,'VALLEY ATLAS')}<div class="panel-body"><canvas id="atlas" class="map-canvas" aria-label="Map of five regions. Select a destination." width="1200" height="960"></canvas><div class="map-key"><span>● Power cell</span><span>▣ Guardian</span><span>⌂ Home</span></div><div class="region-list">${REGIONS.map((reg,r)=>`<button class="region-row" data-region="${r}" ${r>region?'disabled':''}><span>${s.bosses.includes(r)?'✓':r>region?'◇':'ϟ'}</span><div><b>${reg.name}</b><small>${s.bosses.includes(r)?'Relay restored · more treasures to find':r>region?'Bridge asleep':`${cellsIn(s,r)} / ${requiredCells(r)} power cells · ${reg.boss}`}</small></div><em>${r<=region?'Go ↗':'Locked'}</em></button>`).join('')}</div></div>`);
-  const key=panel.querySelector('.map-key');key.insertAdjacentHTML('beforeend','<span>＋ Charging station</span>');
+  const key=panel.querySelector('.map-key');key.insertAdjacentHTML('afterbegin','<span class="player-key">You</span>');key.insertAdjacentHTML('beforeend','<span>＋ Charging station</span>');
   const stations=game.world.stations.filter(st=>s.discovered.includes(st.id));
   panel.querySelector('.region-list').insertAdjacentHTML('afterbegin',stations.map(st=>`<button class="region-row station-row" data-station="${st.id}"><span>＋</span><div><b>Charging station</b><small>${REGIONS[st.r].name} · 2 scrap · safe zone</small></div><em>Go ↗</em></button>`).join(''));
   const map=$('atlas'),stage=document.createElement('div');stage.className='atlas-stage';map.before(stage);stage.append(map);
