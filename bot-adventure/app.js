@@ -1,9 +1,9 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, canWalk, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, TOTAL_CELLS } from './data.js?v=world61';
-import { Adventure, distance } from './engine.js?v=world61';
-import { Painter, bot, weapon, rounded } from './art.js?v=world61';
-import { mountAtlas } from './atlas.js?v=world61';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, canWalk, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, TOTAL_CELLS } from './data.js?v=world62';
+import { Adventure, distance } from './engine.js?v=world62';
+import { Painter, bot, weapon, rounded } from './art.js?v=world62';
+import { mountAtlas } from './atlas.js?v=world62';
 
-const buildVersion = 'world61';
+const buildVersion = 'world62';
 const SAVE_KEY='bot-adventure-save-v1';
 const $=id=>document.getElementById(id);
 $('buildLabel').textContent=buildVersion;
