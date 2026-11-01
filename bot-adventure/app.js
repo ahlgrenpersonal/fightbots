@@ -1,10 +1,10 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world73';
-import { Adventure, distance } from './engine.js?v=world73';
-import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon } from './art.js?v=world73';
-import { mountAtlas } from './atlas.js?v=world73';
-import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world73';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world74';
+import { Adventure, distance } from './engine.js?v=world74';
+import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon } from './art.js?v=world74';
+import { mountAtlas } from './atlas.js?v=world74';
+import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world74';
 
-const buildVersion = 'world73';
+const buildVersion = 'world74';
 const SAVE_KEY='bot-adventure-save-v1';
 const $=id=>document.getElementById(id);
 $('buildLabel').textContent=buildVersion;

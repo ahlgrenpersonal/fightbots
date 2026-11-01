@@ -1,4 +1,4 @@
-import {PANTHEON,COURT,COLUMNS} from './pantheon.js?v=world73';
+import {PANTHEON,COURT,COLUMNS,STAIRWAY,TERRACE} from './pantheon.js?v=world74';
 const INK='#304955',GOLD='#e4bf67',LIGHT='#fff1bd';
 function shape(c,points,fill,stroke=INK,width=.045){c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fillStyle=fill;c.fill();if(stroke){c.strokeStyle=stroke;c.lineWidth=width;c.stroke();}}
 function oval(c,x,y,rx,ry,fill,stroke=null,width=.04){c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fillStyle=fill;c.fill();if(stroke){c.strokeStyle=stroke;c.lineWidth=width;c.stroke();}}
@@ -31,9 +31,28 @@ export function templeFloor(c,t){
   c.scale(1/.78,1);
   for(const royal of COURT){const x=royal.x-162.5,y=royal.y-237,s=royal.role==='guard'?1:2.05;oval(c,x+.16,y+.34,s*1.1,.5,'#203e5355');oval(c,x,y+.26,s,.47,'#6e8b91','#b7c5b4',.08);oval(c,x,y+.1,s,.4,'#b3c4b4','#e4e4c9',.055);}
   for(let i=0;i<7;i++){const f=(t*.04+i*.173)%1;c.globalAlpha=Math.sin(f*Math.PI)*.3;oval(c,Math.sin(i*19)*9,-4+f*10,.035,.07,'#d8fff1');}c.globalAlpha=1;
-  // A broad processional walk continues into the foreground instead of empty paving.
-  box(c,-2.35,10.5,4.7,10.5,'#bdc8b5','#657e81',.06);
-  for(let y=11;y<21;y++)line(c,-2.3,y,2.3,y,'#8eaa9f',.025);
+  // The only ascent is the long central flight; the terrace has sheer retaining walls.
+  c.save();c.translate(-162.5,-237);
+  for(const [x,width] of [[TERRACE.left,STAIRWAY.left-TERRACE.left],[STAIRWAY.right,TERRACE.right-STAIRWAY.right]]){
+    box(c,x,244.8,width,2.2,'#566f7a',INK,.07);box(c,x,244.75,width,.32,'#d4dac5');
+    for(let y=245.3;y<247;y+=.55){line(c,x,y,x+width,y,'#8da69f',.04);for(let bx=x+1+(Math.round(y*2)%2);bx<x+width;bx+=1.8)line(c,bx,y,bx,y+.5,'#304b5d',.035);}
+  }
+  for(const side of [-1,1]){
+    const x=side<0?TERRACE.left:TERRACE.right;
+    box(c,x-.22,229,.44,15.8,'#d3d9c2',INK,.07);box(c,x-.13,229,.1,15.8,'#f0eed4',null);
+  }
+  const top=STAIRWAY.top-.6,bottom=STAIRWAY.bottom;
+  shape(c,[[159.7,top],[165.3,top],[166.1,bottom+.25],[158.9,bottom+.25]],'#456372',INK,.08);
+  for(let i=0;i<12;i++){
+    const y=top+(bottom-top)*i/12,next=top+(bottom-top)*(i+1)/12,half=2.5+i*.055;
+    box(c,162.5-half,y,half*2,next-y,'#c4cebb','#849b98',.025);
+    box(c,162.5-half,next-.18,half*2,.18,'#617e87',null);
+    line(c,162.5-half,y+.025,162.5+half,y+.025,'#f7f0d7',.07);
+  }
+  for(const side of [-1,1])shape(c,[[162.5+side*2.55,top],[162.5+side*2.95,top],[162.5+side*3.7,bottom+.3],[162.5+side*3.25,bottom+.3]],'#adbfb0',INK,.07);
+  box(c,160.15,bottom+.35,4.7,258-bottom,'#bdc8b5','#657e81',.04);
+  for(let y=bottom+1;y<258.5;y++)line(c,160.2,y,164.8,y,'#8eaa9f',.025);
+  c.restore();
   for(const side of [-1,1]){
     const x=side*7.2,y=10.1;
     oval(c,x,y,.8,.25,'#293d4d35');box(c,x-.36,y-.9,.72,.9,'#9ab1aa');box(c,x-.52,y-1.1,1.04,.25,GOLD);
@@ -129,4 +148,21 @@ export function sleepingRoyal(c,p,t){
   oval(c,sx,sy,ss,ss,'#d5eacb');oval(c,sx+ss*.42,sy-ss*.22,ss*.8,ss*.8,'#6b878c');
 }
 export function templeColumns(c){for(const p of COLUMNS)column(c,p);}
+export function templeSeal(c,t){
+  c.save();c.translate(162.5,246.65);
+  const field=c.createLinearGradient(0,-2.4,0,0);field.addColorStop(0,'#b8f4e71c');field.addColorStop(.6,'#b8f4e755');field.addColorStop(1,'#c8fff180');
+  box(c,-2.55,-2.4,5.1,2.4,field,null);
+  for(let i=0;i<7;i++){const x=-2.3+i*.76;line(c,x,-2.3,x,0,'#c7fff046',.035);}
+  for(const side of [-1,1]){
+    box(c,side*2.8-.24,-.55,.48,.8,'#66848b');box(c,side*2.8-.31,-.68,.62,.18,GOLD);
+    shape(c,[[side*2.8,-1.6],[side*2.8+.24,-1.1],[side*2.8,-.66],[side*2.8-.24,-1.1]],'#b7f7e4',INK,.045);
+  }
+  line(c,-2.55,.02,2.55,.02,'#d2fff0',.11);
+  // A single closed padlock communicates "not yet" without text or a health bar.
+  oval(c,0,-1.2,.71,.71,'#25495c',GOLD,.07);
+  c.beginPath();c.arc(0,-1.42,.22,Math.PI,0);c.strokeStyle='#fff0ba';c.lineWidth=.1;c.stroke();
+  box(c,-.32,-1.44,.64,.5,GOLD,INK,.055);oval(c,0,-1.23,.055,.07,'#304955');
+  const shimmer=(t*.12)%1;c.globalAlpha=Math.sin(shimmer*Math.PI)*.32;line(c,-2.4,-2.3+shimmer*2.2,2.4,-2.3+shimmer*2.2,'#f4fff2',.07);
+  c.restore();
+}
 export function pantheonMarker(c,x,y,scale,open){c.save();c.translate(x,y);c.scale(scale,scale);oval(c,0,1,19,19,open?'#355e71':'#41525f',GOLD,2);for(const x of [-11,-4,4,11])box(c,x-1.5,-4,3,15,'#d7dfcb',null);shape(c,[[-17,-5],[0,-17],[17,-5]],'#b6ccbe',GOLD,1.3);line(c,-16,13,16,13,GOLD,3);crown(c,0,-2,10);c.restore();}

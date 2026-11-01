@@ -1,8 +1,8 @@
-import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world73';
-import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world73';
-import {COURT} from './pantheon.js?v=world73';
-import {templeGround,templeFloor,templeArchitecture,templeColumns,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world73';
-import * as worldData from './data.js?v=world73';
+import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world74';
+import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world74';
+import {COURT} from './pantheon.js?v=world74';
+import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world74';
+import * as worldData from './data.js?v=world74';
 
 export function rounded(c,x,y,w,h,r,fill,stroke,line=2) {
   c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=line;c.stroke();}
@@ -458,8 +458,9 @@ export class Painter {
   follow(g,dt){
     const bosses=g.enemies.filter(e=>e.type==='boss'&&e.hp>0&&!e.dormant&&g.enemyAwake(e)&&Math.hypot(e.x-g.player.x,e.y-g.player.y)<8&&(e.active||Math.hypot(e.x-g.player.x,e.y-g.player.y)<5.5));
     let target={x:g.player.x,y:g.player.y},zoom=this.baseTile;
-    if(regionAt(g.player.x,g.player.y)===PANTHEON.r&&g.player.y>225&&g.player.y<252){
-      zoom=Math.min(this.baseTile,(this.w-16)/21,(this.h-30)/35);target={x:162.5,y:237};
+    if(regionAt(g.player.x,g.player.y)===PANTHEON.r&&g.player.y>225&&g.player.y<260){
+      const top=219,bottom=Math.max(251,g.player.y+1.8);
+      zoom=Math.min(this.baseTile,(this.w-16)/23,(this.h-36)/(bottom-top));target={x:162.5,y:(top+bottom)/2};
     }else if(bosses.length){
       const left=Math.min(g.player.x-1.2,...bosses.map(e=>e.x-1.9)),right=Math.max(g.player.x+1.2,...bosses.map(e=>e.x+1.9));
       const top=Math.min(g.player.y-1.1,...bosses.map(e=>e.y-1.8)),bottom=Math.max(g.player.y+.8,...bosses.map(e=>e.y+1.1));
@@ -534,7 +535,7 @@ export class Painter {
         }
       }
     }
-    if(courtVisible)templeColumns(c);
+    if(courtVisible){templeColumns(c);templeSeal(c,t);}
     for(const l of g.loot){const bob=Math.sin(t*4+l.x)*.05;ellipse(c,l.x,l.y+.12,.14,.06,'#284b4930');if(l.kind==='gear')this.gear(l.x,l.y+bob,.2);else{c.save();c.translate(l.x,l.y+bob);c.rotate(Math.PI/4);rounded(c,-.09,-.09,.18,.18,.03,'#ffe18c','#b59b46',.025);c.restore();}}
     for(const fx of g.effects)if(fx.type!=='slam'&&fx.type!=='vortex'&&fx.type!=='nova')this.effect(fx,t,g.reducedMotion);
     for(const p of g.projectiles)this.projectile(p,t,g.reducedMotion);

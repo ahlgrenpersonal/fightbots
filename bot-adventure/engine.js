@@ -1,6 +1,7 @@
-import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world73';
-import { bossProfile } from './content.js?v=world73';
-import { ReturningPatrols } from './patrols.js?v=world73';
+import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world74';
+import { bossProfile } from './content.js?v=world74';
+import { ReturningPatrols } from './patrols.js?v=world74';
+import {inRoyalChamber} from './pantheon.js?v=world74';
 
 export const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -18,6 +19,7 @@ export class Adventure {
   constructor(save=freshSave(),onEvent=()=>{}) {
     this.save=migrateSiteProgress(migrateWorldLayout(save));this.onEvent=onEvent;this.world=makeWorld();
     this.player={...save.position,hp:Math.max(1,Math.min(save.hp,stats(save).hp)),angle:0,cd:0,hit:0,swing:0,invincible:2};
+    if(regionAt(this.player.x,this.player.y)===PANTHEON.r&&!canWalk(this.world,save,Math.floor(this.player.x),Math.floor(this.player.y)))Object.assign(this.player,pantheonUnlocked(save)?PANTHEON.viewpoint:HOME);
     this.enemies=this.world.enemies.filter(e=>!save.kills.includes(e.id)&&!save.cleared.includes(e.site)&&!(e.returnId?save.returns.includes(e.returnId):!e.encounterId&&e.type==='boss'&&save.bosses.includes(e.r)));
     for(const e of this.enemies)if(e.dormant&&(e.spawnParent?save.kills.includes(e.spawnParent):!this.enemies.some(n=>n.site===e.site&&n.wave===0&&n.hp>0)))e.dormant=false;
     this.route=[];this.loot=[];this.projectiles=[];this.effects=[];this.telegraphs=[];this.target=null;this.waypoint=null;
@@ -81,6 +83,7 @@ export class Adventure {
   discover(){const r=regionAt(this.player.x,this.player.y);if(r>=0&&!this.save.visited.includes(r)){this.save.visited.push(r);this.emit('region',{r});}for(const s of this.world.stations)if(s.r<=unlockedRegion(this.save)&&distance(this.player,s)<6&&!this.save.discovered.includes(s.id)){this.save.discovered.push(s.id);this.emit('toast',{text:'Charging station discovered!'});}}
   moveTo(pos){
     if(!areaUnlocked(this.save,regionAt(pos.x,pos.y))){this.emit('toast',{text:regionAt(pos.x,pos.y)===PANTHEON.r?'Restore every relay and finish the return missions to open the ancient pantheon.':'Restore this region\'s relay to open the next trail.'});return false;}
+    if(inRoyalChamber(pos.x,pos.y)){this.emit('toast',{text:'The royal court is sealed. More adventures will open it.'});return this.moveTo(PANTHEON.stairTop);}
     let to={x:Math.floor(pos.x)+.5,y:Math.floor(pos.y)+.5};
     if(!canWalk(this.world,this.save,Math.floor(to.x),Math.floor(to.y))){
       const neighbors=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if(canWalk(this.world,this.save,Math.floor(to.x)+dx,Math.floor(to.y)+dy))neighbors.push({x:to.x+dx,y:to.y+dy});

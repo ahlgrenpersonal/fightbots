@@ -1,10 +1,10 @@
-import { MORE_REGIONS, NEW_EQUIPMENT, WORKSHOPS, RETURNS, ENCOUNTERS, LEGACY_WORKSHOPS, LEGACY_RETURNS, LEGACY_ENCOUNTERS } from './content.js?v=world73';
-import {LEGACY_TILES,WORLD_TILES,relocatePoint,relocateEntity,legacyPoint,worldGates} from './topology.js?v=world73';
-import {PANTHEON,inPantheon,buildPantheon} from './pantheon.js?v=world73';
+import { MORE_REGIONS, NEW_EQUIPMENT, WORKSHOPS, RETURNS, ENCOUNTERS, LEGACY_WORKSHOPS, LEGACY_RETURNS, LEGACY_ENCOUNTERS } from './content.js?v=world74';
+import {LEGACY_TILES,WORLD_TILES,relocatePoint,relocateEntity,legacyPoint,worldGates} from './topology.js?v=world74';
+import {PANTHEON,inPantheon,buildPantheon} from './pantheon.js?v=world74';
 export {PANTHEON};
 export { WORKSHOPS, RETURNS, ENCOUNTERS };
-export { bossProfile } from './content.js?v=world73';
-export const BUILD = 'world73';
+export { bossProfile } from './content.js?v=world74';
+export const BUILD = 'world74';
 export const REGION_W = 36;
 export const REGION_H = 44;
 export const WORLD_W = REGION_W * 5;

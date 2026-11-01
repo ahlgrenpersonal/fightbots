@@ -1,4 +1,4 @@
-import { WORKSHOPS, RETURNS, returnActive, regionAt, canWalk } from './data.js?v=world73';
+import { WORKSHOPS, RETURNS, returnActive, regionAt, canWalk } from './data.js?v=world74';
 
 export const PATROL_DELAY=300;
 export const WORKSHOP_REFUGE=12;
