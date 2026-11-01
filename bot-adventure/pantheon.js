@@ -37,7 +37,7 @@ export function buildPantheon(world){
   return {...world,court:COURT,courtWalls,courtSeal,courtPlinths};
 }
 export const ROYAL_SPECS=Object.freeze({
-  king:{name:'The Robot King',weapon:'rocket',pattern:'salvo',hp:12000,damage:64,range:10,speed:1.05,interval:4.5,heal:18},
-  queen:{name:'The Crystal Queen',weapon:'rail',pattern:'beam',hp:10000,damage:58,range:11,speed:1.15,interval:4.8,heal:15},
-  guard:{name:'Royal Sentinel',weapon:'hammer',pattern:'slam',hp:2600,damage:30,range:1.5,speed:1.45,interval:3.7,heal:0}
+  king:{name:'The Robot King',weapon:'rocket',pattern:'salvo',hp:24000,damage:64,range:10,speed:1.05,interval:4.5,heal:18},
+  queen:{name:'The Crystal Queen',weapon:'rail',pattern:'beam',hp:20000,damage:58,range:11,speed:1.15,interval:4.8,heal:15},
+  guard:{name:'Royal Sentinel',weapon:'hammer',pattern:'slam',hp:5200,damage:30,range:1.5,speed:1.45,interval:3.7,heal:0}
 });

@@ -1,10 +1,10 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world76';
-import { Adventure, distance } from './engine.js?v=world76';
-import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon } from './art.js?v=world76';
-import { mountAtlas } from './atlas.js?v=world76';
-import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world76';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world77';
+import { Adventure, distance } from './engine.js?v=world77';
+import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon } from './art.js?v=world77';
+import { mountAtlas } from './atlas.js?v=world77';
+import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world77';
 
-const buildVersion = 'world76';
+const buildVersion = 'world77';
 const SAVE_KEY='bot-adventure-save-v1';
 const $=id=>document.getElementById(id);
 $('buildLabel').textContent=buildVersion;
@@ -46,7 +46,7 @@ function toast(message){$('toast').textContent=message;$('toast').classList.add(
 function banner(title,detail=''){const n=$('announcement');n.replaceChildren();const main=document.createElement('div');main.textContent=title;n.append(main);if(detail){const sub=document.createElement('small');sub.textContent=detail;n.append(sub);}n.hidden=false;clearTimeout(bannerTimer);bannerTimer=setTimeout(()=>n.hidden=true,3500);}
 function persist(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(game.snapshot()));}catch{if(storageOK){storageOK=false;const note=document.createElement('div');note.className='storage-warning';note.textContent='Saving is unavailable in this browser. Keep this page open to keep your adventure.';$('game').append(note);}}}
 game.onEvent=e=>{
-  if(e.type==='attack'){const f={bumper:110,blaster:700,saw:170,hammer:80,lightning:900,rocket:150,flame:140,frost:850,boomerang:400,tractor:240,drone:650,rail:1000,meteor:120,gravity:60,sunbeam:1200,swarm:760,supernova:95}[e.weapon]||400;tone(f,.07,e.weapon==='saw'||e.weapon==='flame'?'sawtooth':'triangle',.018,f*.5);}
+  if(e.type==='attack'){const f={bumper:110,blaster:700,saw:170,hammer:80,lightning:900,rocket:150,flame:140,frost:850,boomerang:400,tractor:240,drone:650,rail:1000,meteor:120,gravity:60,sunbeam:1200,swarm:760,supernova:95}[e.weapon]||400;tone(f,e.power?.18:.07,e.weapon==='saw'||e.weapon==='flame'?'sawtooth':'triangle',e.power?.04:.018,f*.5);if(e.power)tone(f*2,.12,'triangle',.025,f);}
   if(e.type==='toast')toast(e.text);
   if(e.type==='defeat'){tone(e.boss?130:320,.12,'triangle',.03,75);}
   if(e.type==='explosion')tone(90,.35,'sawtooth',.035,30);
@@ -171,7 +171,7 @@ $('sound').onclick=()=>{game.save.sound=!game.save.sound;tone(700);persist();};
 let interaction='';
 $('interact').onclick=()=>{if(interaction==='royal'){if(game.royals.start())persist();}else if(interaction==='home')workshop();else if(interaction==='repair')game.repair();else if(interaction==='guardian'){const r=regionAt(game.player.x,game.player.y);toast(REGIONS[r].hint);game.moveTo(relayFor(r));}};
 let pressed=false,pressPoint;
-$('world').addEventListener('pointerdown',e=>{if(game.paused)return;pressed=true;pressPoint={x:e.clientX,y:e.clientY};const rect=$('world').getBoundingClientRect(),pos=painter.screenToWorld(e.clientX-rect.left,e.clientY-rect.top);const enemy=game.enemies.filter(n=>n.hp>0&&!n.dormant&&distance(n,pos)<.7).sort((a,b)=>distance(a,pos)-distance(b,pos))[0],station=game.world.stations.find(s=>s.r<=unlockedRegion(game.save)&&distance(s,pos)<1.8);if(station)game.moveTo(station);else if(enemy)game.focusEnemy(enemy);else game.moveTo(pos);$('world').setPointerCapture(e.pointerId);});
+$('world').addEventListener('pointerdown',e=>{if(game.paused)return;pressPoint={x:e.clientX,y:e.clientY};const rect=$('world').getBoundingClientRect(),pos=painter.screenToWorld(e.clientX-rect.left,e.clientY-rect.top),enemy=game.enemyAt(pos,painter.tile),station=game.world.stations.find(s=>s.r<=unlockedRegion(game.save)&&distance(s,pos)<1.8);pressed=!enemy;if(enemy)game.tapEnemy(enemy);else if(station)game.moveTo(station);else game.moveTo(pos);$('world').setPointerCapture(e.pointerId);});
 $('world').addEventListener('pointermove',e=>{if(!pressed||game.paused||Math.hypot(e.clientX-pressPoint.x,e.clientY-pressPoint.y)<20)return;const rect=$('world').getBoundingClientRect();game.moveTo(painter.screenToWorld(e.clientX-rect.left,e.clientY-rect.top));pressPoint={x:e.clientX,y:e.clientY};});
 for(const event of ['pointerup','pointercancel'])$('world').addEventListener(event,()=>pressed=false);
 $('world').addEventListener('pointerdown',e=>{if(game.paused||!game.royals.ready)return;const r=$('world').getBoundingClientRect(),p=painter.screenToWorld(e.clientX-r.left,e.clientY-r.top);if(distance(p,{x:162.5,y:245.5})<1.5){e.preventDefault();e.stopImmediatePropagation();game.royals.start();persist();}},true);

@@ -1,10 +1,10 @@
-import { MORE_REGIONS, NEW_EQUIPMENT, WORKSHOPS, RETURNS, ENCOUNTERS, LEGACY_WORKSHOPS, LEGACY_RETURNS, LEGACY_ENCOUNTERS } from './content.js?v=world76';
-import {LEGACY_TILES,WORLD_TILES,relocatePoint,relocateEntity,legacyPoint,worldGates} from './topology.js?v=world76';
-import {PANTHEON,inPantheon,buildPantheon} from './pantheon.js?v=world76';
+import { MORE_REGIONS, NEW_EQUIPMENT, WORKSHOPS, RETURNS, ENCOUNTERS, LEGACY_WORKSHOPS, LEGACY_RETURNS, LEGACY_ENCOUNTERS } from './content.js?v=world77';
+import {LEGACY_TILES,WORLD_TILES,relocatePoint,relocateEntity,legacyPoint,worldGates} from './topology.js?v=world77';
+import {PANTHEON,inPantheon,buildPantheon} from './pantheon.js?v=world77';
 export {PANTHEON};
 export { WORKSHOPS, RETURNS, ENCOUNTERS };
-export { bossProfile } from './content.js?v=world76';
-export const BUILD = 'world76';
+export { bossProfile } from './content.js?v=world77';
+export const BUILD = 'world77';
 export const REGION_W = 36;
 export const REGION_H = 44;
 export const WORLD_W = REGION_W * 5;
@@ -205,6 +205,7 @@ export function makeWorld() {
       for(let i=0;i<2;i++)add('fragment',(i-.5)*2.2,0,210,1.05,{id:`${encounter.id}-fragment-${i}`,spawnParent:`${encounter.id}-splitter`,dormant:true});
     }
   }
+  for(const enemy of enemies)if(enemy.type==='boss'){enemy.hp*=2;enemy.maxHp*=2;}
   const spurs=[...sites,...chests,...stations].map(p=>{
     const tx=Math.floor(p.x/REGION_W)*REGION_W+18.5,ty=Math.floor(p.y/REGION_H)*REGION_H+22.5;
     const targets=p.r===0&&p.y>=88?[{x:HOME.x,y:p.y},{x:p.x,y:105.5},{x:p.x,y:118.5}]:[{x:tx,y:p.y},{x:p.x,y:ty}];

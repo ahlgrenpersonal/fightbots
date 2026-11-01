@@ -1,11 +1,14 @@
-import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world76';
-import { bossProfile } from './content.js?v=world76';
-import { ReturningPatrols } from './patrols.js?v=world76';
-import {inRoyalChamber} from './pantheon.js?v=world76';
-import {RoyalCourt} from './royal-court.js?v=world76';
-import {nearestWalkable} from './data.js?v=world76';
+import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world77';
+import { bossProfile } from './content.js?v=world77';
+import { ReturningPatrols } from './patrols.js?v=world77';
+import {inRoyalChamber} from './pantheon.js?v=world77';
+import {RoyalCourt} from './royal-court.js?v=world77';
+import {nearestWalkable} from './data.js?v=world77';
 
 export const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
+export const TAP_COOLDOWN=1.5;
+export const AUTO_DAMAGE=.6;
+export const TAP_DAMAGE=2;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const DIRECT_WEAPONS=new Set(['bumper','blaster','saw','hammer','flame','frost']);
 function segmentDistance(p,a,b){
@@ -25,6 +28,7 @@ export class Adventure {
     for(const e of this.enemies)if(e.dormant&&(e.spawnParent?save.kills.includes(e.spawnParent):!this.enemies.some(n=>n.site===e.site&&n.wave===0&&n.hp>0)))e.dormant=false;
     this.route=[];this.loot=[];this.projectiles=[];this.effects=[];this.telegraphs=[];this.target=null;this.waypoint=null;
     this.time=0;this.boostTime=0;this.boostCd=0;this.shieldCd=0;this.buddyCd=0;this.shake=0;this.paused=false;this.reducedMotion=false;this.routeTimer=0;this.charging=null;this.headingHome=false;
+    this.tapCd=0;this.powerTarget=null;this.tapSelection=null;
     this.royals=new RoyalCourt(this);
     if(regionAt(this.player.x,this.player.y)===PANTHEON.r&&!canWalk(this.world,save,Math.floor(this.player.x),Math.floor(this.player.y)))Object.assign(this.player,pantheonUnlocked(save)?this.royals.sealed?PANTHEON.viewpoint:nearestWalkable(this.world,save,this.player):HOME);
     this.patrols=new ReturningPatrols(this);
@@ -93,15 +97,35 @@ export class Adventure {
       const neighbors=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if(canWalk(this.world,this.save,Math.floor(to.x)+dx,Math.floor(to.y)+dy))neighbors.push({x:to.x+dx,y:to.y+dy});
       neighbors.sort((a,b)=>distance(a,this.player)-distance(b,this.player));if(!neighbors.length)return false;to=neighbors[0];
     }
-    this.route=pathfind(this.world,this.save,this.player,to);this.waypoint=to;this.target=null;this.charging=null;this.headingHome=false;return this.route.length>0;
+    this.route=pathfind(this.world,this.save,this.player,to);this.waypoint=to;this.target=null;this.powerTarget=null;this.tapSelection=null;this.charging=null;this.headingHome=false;return this.route.length>0;
   }
   focusEnemy(enemy){if(enemy.dormant||!this.enemyAwake(enemy))return;this.target=enemy.id;this.moveTo(enemy);this.target=enemy.id;}
+  enemyAt(pos,tile){
+    return this.enemies.filter(e=>e.hp>0&&!e.dormant&&this.enemyAwake(e)&&(e.spawnUntil||0)<=this.time)
+      .map(e=>({e,d:distance(pos,{x:e.x,y:e.y-(e.size||.8)*.15}),radius:Math.max(.4,(e.size||.8)*.5)+22/Math.max(1,tile)}))
+      .filter(p=>p.d<=p.radius).sort((a,b)=>a.d/a.radius-b.d/b.radius)[0]?.e;
+  }
+  tapEnemy(e){
+    if(this.paused||e.hp<=0||e.dormant||!this.enemyAwake(e)||e.spawnUntil>this.time)return false;
+    const w=stats(this.save).weapon,inRange=distance(this.player,e)<=w.range&&this.canAttack(this.player,e,w.id);
+    if(!inRange)this.focusEnemy(e);
+    else{if(this.target){this.route=[];this.waypoint=null;}this.target=null;}
+    this.tapSelection=e.id;
+    if(this.tapCd>0)return false;
+    this.powerTarget=e.id;return this.tryPowerAttack();
+  }
+  tryPowerAttack(){
+    const e=this.enemies.find(n=>n.id===this.powerTarget&&n.hp>0&&!n.dormant&&this.enemyAwake(n)),w=stats(this.save).weapon;
+    if(!e){this.powerTarget=null;return false;}
+    if(this.tapCd>0||this.safeAt(this.player)||distance(this.player,e)>w.range||!this.canAttack(this.player,e,w.id))return false;
+    this.powerTarget=null;this.tapCd=TAP_COOLDOWN;this.attack(e,true);return true;
+  }
   goHome(){
     const choice=this.homeRoutes()[0];if(!choice)return false;this.moveTo(choice.home);this.headingHome=this.route.length>0;return this.headingHome;
   }
   rescueHome(){
     const home=this.nearestHome();this.player.x=home.x;this.player.y=home.y;this.player.hp=this.maxHp();this.player.invincible=3;
-    this.route=[];this.target=null;this.waypoint=null;this.projectiles=[];this.telegraphs=[];this.charging=null;this.headingHome=false;
+    this.route=[];this.target=null;this.powerTarget=null;this.tapSelection=null;this.waypoint=null;this.projectiles=[];this.telegraphs=[];this.charging=null;this.headingHome=false;
     this.emit('home');
   }
   depart(){
@@ -122,7 +146,7 @@ export class Adventure {
     if(this.isHome()){this.player.hp=this.maxHp();return true;}
     const station=this.stationNear();if(!station||this.charging||this.player.hp>=this.maxHp())return false;
     if(this.save.scrap<2){this.emit('toast',{text:'Charging costs 2 scrap. Home repairs are always free.'});return false;}
-    this.save.scrap-=2;this.route=[];this.target=null;this.waypoint=null;this.charging=station.id;
+    this.save.scrap-=2;this.route=[];this.target=null;this.powerTarget=null;this.tapSelection=null;this.waypoint=null;this.charging=station.id;
     this.emit('toast',{text:'Charging… Safe inside the green ring.'});return true;
   }
   boost(){if(this.boostCd>0)return false;const capacitor=this.save.build.gadget==='capacitor';this.boostCd=capacitor?18:28;this.boostTime=capacitor?8:6;this.player.invincible=1;this.emit('boost');this.burst(this.player.x,this.player.y,1.2);return true;}
@@ -169,19 +193,22 @@ export class Adventure {
     this.player.hp=Math.max(0,this.player.hp-actual);this.player.hit=.2;this.player.invincible=.4;this.shake=1.8;this.number(this.player.x,this.player.y-.7,`-${Math.ceil(actual)}`,'#ffd4c3');
     if(this.player.hp<=0){this.save.scrap=Math.max(0,this.save.scrap-1);this.rescueHome();this.emit('rescue');}
   }
-  attack(e){
-    const w=stats(this.save).weapon,p=this.player,damage=w.damage*(this.boostTime>0?1.65:1);
+  attack(e,power=false){
+    const w=stats(this.save).weapon,p=this.player,damage=w.damage*(power?TAP_DAMAGE:AUTO_DAMAGE)*(this.boostTime>0?1.65:1);
     if(!this.canAttack(p,e,w.id))return;
-    p.cd=w.rate*(this.boostTime>0?.7:1);p.swing=.42;p.angle=Math.atan2(e.y-p.y,e.x-p.x);
+    if(!power)p.cd=w.rate*(this.boostTime>0?.7:1);p.swing=power?.65:.42;p.angle=Math.atan2(e.y-p.y,e.x-p.x);
     const muzzle=this.firingMuzzle(p,w.id,e);
-    this.emit('attack',{weapon:w.id});
+    this.emit('attack',{weapon:w.id,power});
+    const splashDamage=damage*(power?AUTO_DAMAGE/TAP_DAMAGE:1),shotPower={power,powerTarget:e.id,splashDamage};
+    const hit=(n,amount=damage)=>this.hitEnemy(n,amount*(power&&n!==e?AUTO_DAMAGE/TAP_DAMAGE:1),w.id);
+    if(power){this.effects.push({type:'power-launch',x:muzzle.x,y:muzzle.y,tx:e.x,ty:e.y,life:.35,max:.35});if(!['blaster','rocket','frost','boomerang','drone','meteor','swarm','supernova'].includes(w.id))this.effects.push({type:'power-hit',x:e.x,y:e.y,weapon:w.id,life:.5,max:.5});}
     const foes=this.enemies.filter(n=>n.hp>0&&!n.dormant&&this.enemyAwake(n));
     if(w.id==='flame'){
-      this.effects.push({type:'flame',x:muzzle.x,y:muzzle.y,angle:p.angle,radius:w.range,life:.24,max:.24});for(const n of foes){const angle=Math.atan2(n.y-p.y,n.x-p.x);if(distance(n,p)<=w.range&&Math.cos(angle-p.angle)>.65&&this.clearShot(p,n))this.hitEnemy(n,damage,w.id);}return;
+      this.effects.push({type:'flame',power,x:muzzle.x,y:muzzle.y,angle:p.angle,radius:w.range,life:.24,max:.24});for(const n of foes){const angle=Math.atan2(n.y-p.y,n.x-p.x);if(distance(n,p)<=w.range&&Math.cos(angle-p.angle)>.65&&this.clearShot(p,n))hit(n);}return;
     }
     if(['tractor','gravity'].includes(w.id)){
       this.effects.push({type:'vortex',x:e.x,y:e.y,radius:2.6,life:.55,max:.55});
-      for(const n of foes.filter(n=>distance(n,e)<2.6)){const a=Math.atan2(e.y-n.y,e.x-n.x),step=Math.min(.8,distance(n,e)),x=n.x+Math.cos(a)*step,y=n.y+Math.sin(a)*step;if(n.type!=='boss'&&canWalk(this.world,this.save,Math.floor(x),Math.floor(y))){n.x=x;n.y=y;}this.hitEnemy(n,damage,w.id);}
+      for(const n of foes.filter(n=>distance(n,e)<2.6)){const a=Math.atan2(e.y-n.y,e.x-n.x),step=Math.min(.8,distance(n,e)),x=n.x+Math.cos(a)*step,y=n.y+Math.sin(a)*step;if(n.type!=='boss'&&canWalk(this.world,this.save,Math.floor(x),Math.floor(y))){n.x=x;n.y=y;}hit(n);}
       if(w.id==='gravity'){this.effects.push({type:'slam',x:e.x,y:e.y,life:.55,max:.55});this.shake=4;}return;
     }
     if(w.id==='rail'||w.id==='sunbeam'){
@@ -190,40 +217,40 @@ export class Adventure {
       const beamAngle=w.id==='sunbeam'&&!closeDischarge?Math.atan2(e.y-muzzle.y,e.x-muzzle.x):p.angle;
       const flareRadius=closeDischarge?Math.min(1.2,distance(e,muzzle)+.1):0;
       const tx=muzzle.x+Math.cos(beamAngle)*w.range,ty=muzzle.y+Math.sin(beamAngle)*w.range;
-      this.effects.push({type:w.id==='sunbeam'?'sunbeam':'rail',x:muzzle.x,y:muzzle.y,tx,ty,flareRadius,life:.3,max:.3});
+      this.effects.push({type:w.id==='sunbeam'?'sunbeam':'rail',power,x:muzzle.x,y:muzzle.y,tx,ty,flareRadius,life:.3,max:.3});
       for(const n of foes){
         if(w.id==='sunbeam'){
           // The beam halo plus a bot's body radius defines the same visible hit corridor.
-          if(distance(n,p)<=w.range&&(segmentDistance(n,muzzle,{x:tx,y:ty})<.65||flareRadius&&distance(n,muzzle)<flareRadius+.35))this.hitEnemy(n,damage,w.id);
+          if(distance(n,p)<=w.range&&(segmentDistance(n,muzzle,{x:tx,y:ty})<.65||flareRadius&&distance(n,muzzle)<flareRadius+.35))hit(n);
         }else{
           const dx=n.x-p.x,dy=n.y-p.y,along=dx*Math.cos(p.angle)+dy*Math.sin(p.angle),across=Math.abs(dx*Math.sin(p.angle)-dy*Math.cos(p.angle));
-          if(along>=0&&along<=w.range&&across<.65)this.hitEnemy(n,damage,w.id);
+          if(along>=0&&along<=w.range&&across<.65)hit(n);
         }
       }return;
     }
     if(w.id==='swarm'||w.id==='supernova'){
-      const targets=[e,...foes.filter(n=>n!==e&&distance(n,p)<=w.range).sort((a,b)=>distance(a,e)-distance(b,e))].slice(0,3);
+      const targets=power?[e]:[e,...foes.filter(n=>n!==e&&distance(n,p)<=w.range).sort((a,b)=>distance(a,e)-distance(b,e))].slice(0,3);
       for(let i=0;i<3;i++){
         const target=targets[i%targets.length],side=(i-1)*.24;
         this.projectiles.push({x:muzzle.x-Math.sin(p.angle)*side,y:muzzle.y+Math.cos(p.angle)*side,
           tx:target.x,ty:target.y,target:target.id,angle:p.angle,speed:w.id==='swarm'?8.5:6.5,
-          damage,kind:w.id==='swarm'?'drone':'rocket',style:w.id,launch:.18,launchAngle:p.angle+(i-1)*.65,life:4});
+          damage,...shotPower,kind:w.id==='swarm'?'drone':'rocket',style:w.id,launch:.18,launchAngle:p.angle+(i-1)*.65,life:4});
       }
       return;
     }
     if(['frost','boomerang','drone','meteor'].includes(w.id)){
       const kind={frost:'ice',boomerang:'blade',drone:'drone',meteor:'meteor'}[w.id];
-      this.projectiles.push({x:w.id==='meteor'?e.x-1:muzzle.x,y:w.id==='meteor'?e.y-5:muzzle.y,tx:e.x,ty:e.y,target:e.id,angle:p.angle,speed:w.id==='meteor'?8:10,damage,kind,life:4});
+      this.projectiles.push({x:w.id==='meteor'?e.x-1:muzzle.x,y:w.id==='meteor'?e.y-5:muzzle.y,tx:e.x,ty:e.y,target:e.id,angle:p.angle,speed:w.id==='meteor'?8:10,damage,...shotPower,kind,life:4});
       this.effects.push({type:w.id==='frost'?'frost':w.id==='boomerang'?'blade':w.id,x:w.id==='meteor'?e.x:muzzle.x,y:w.id==='meteor'?e.y:muzzle.y,tx:e.x,ty:e.y,radius:2.3,life:.6,max:.6});return;
     }
-    if(w.id==='blaster'||w.id==='rocket')this.projectiles.push({x:muzzle.x,y:muzzle.y,tx:e.x,ty:e.y,target:e.id,angle:p.angle,speed:w.id==='rocket'?6.5:11,damage,kind:w.id==='rocket'?'rocket':'bolt',life:3});
+    if(w.id==='blaster'||w.id==='rocket')this.projectiles.push({x:muzzle.x,y:muzzle.y,tx:e.x,ty:e.y,target:e.id,angle:p.angle,speed:w.id==='rocket'?6.5:11,damage,...shotPower,kind:w.id==='rocket'?'rocket':'bolt',life:3});
     else if(w.id==='lightning'){
       const chain=[e,...foes.filter(n=>n!==e&&distance(n,e)<2.8).sort((a,b)=>distance(a,e)-distance(b,e)).slice(0,3)];let from=muzzle;
-      for(const [i,n] of chain.entries()){this.effects.push({type:'arc',x:from.x,y:from.y,tx:n.x,ty:n.y,life:.24,max:.24});this.hitEnemy(n,damage*(i===0?1:.72));from=n;}
+      for(const [i,n] of chain.entries()){this.effects.push({type:'arc',power,x:from.x,y:from.y,tx:n.x,ty:n.y,life:.24,max:.24});hit(n,damage*(i===0?1:.72));from=n;}
     }else if(w.id==='hammer'){
       this.effects.push({type:'slam',x:e.x,y:e.y,life:.55,max:.55});this.shake=4;
-      for(const n of foes.filter(n=>distance(n,e)<1.9&&this.clearShot(p,n)))this.hitEnemy(n,damage);
-    }else{this.hitEnemy(e,damage);this.burst(e.x,e.y,.25);if(w.id==='bumper'&&e.type!=='boss'){const a=Math.atan2(e.y-p.y,e.x-p.x),nx=e.x+Math.cos(a)*.25,ny=e.y+Math.sin(a)*.25;if(canWalk(this.world,this.save,Math.floor(nx),Math.floor(ny))){e.x=nx;e.y=ny;}}}
+      for(const n of foes.filter(n=>distance(n,e)<1.9&&this.clearShot(p,n)))hit(n);
+    }else{hit(e);this.burst(e.x,e.y,.25);if(w.id==='bumper'&&e.type!=='boss'){const a=Math.atan2(e.y-p.y,e.x-p.x),nx=e.x+Math.cos(a)*.25,ny=e.y+Math.sin(a)*.25;if(canWalk(this.world,this.save,Math.floor(nx),Math.floor(ny))){e.x=nx;e.y=ny;}}}
   }
   warnBoss(e){
     const profile=bossProfile(e),p=this.player,angle=Math.atan2(p.y-e.y,p.x-e.x);
@@ -277,12 +304,13 @@ export class Adventure {
       if(shot.kind==='blade'){
         shot.hitIds ||= new Set();
         if(shot.enemy){if(!shot.hitIds.has('player')&&segmentDistance(p,from,next)<.45){shot.hitIds.add('player');this.hurt(shot.damage);}}
-        else for(const e of this.enemies)if(e.hp>0&&!e.dormant&&this.enemyAwake(e)&&!shot.hitIds.has(e.id)&&segmentDistance(e,from,next)<.5){shot.hitIds.add(e.id);this.hitEnemy(e,shot.damage,'boomerang');}
-        if(arrived){if(shot.returning)shot.life=0;else{shot.returning=true;shot.target=null;shot.hitIds=new Set();shot.life=5;shot.damage*=.65;const endpoint=shot.enemy?source:p;shot.tx=endpoint.x;shot.ty=endpoint.y;}}
+        else for(const e of this.enemies)if(e.hp>0&&!e.dormant&&this.enemyAwake(e)&&!shot.hitIds.has(e.id)&&segmentDistance(e,from,next)<.5){shot.hitIds.add(e.id);this.hitEnemy(e,shot.power&&e.id!==shot.powerTarget?shot.splashDamage:shot.damage,'boomerang');if(shot.power)this.effects.push({type:'power-hit',x:e.x,y:e.y,life:.4,max:.4});}
+        if(arrived){if(shot.returning)shot.life=0;else{shot.returning=true;shot.target=null;shot.hitIds=new Set();shot.life=5;shot.damage*=.65;shot.splashDamage*=.65;const endpoint=shot.enemy?source:p;shot.tx=endpoint.x;shot.ty=endpoint.y;}}
         continue;
       }
       if(!arrived)continue;
       shot.life=0;
+      if(shot.power)this.effects.push({type:'power-hit',x:shot.x,y:shot.y,weapon:shot.style||shot.kind,life:.5,max:.5});
       if(shot.enemy){
         const radius=shot.radius??.8;
         if(['rocket','meteor'].includes(shot.kind))this.burst(shot.x,shot.y,radius,'explosion');
@@ -292,10 +320,10 @@ export class Adventure {
         const nova=shot.style==='supernova',radius=nova?2.4:shot.kind==='meteor'?2.8:2;
         if(nova)this.effects.push({type:'nova',x:shot.x,y:shot.y,radius,life:.65,max:.65});
         else this.burst(shot.x,shot.y,shot.kind==='meteor'?2.3:1.4,'explosion');this.shake=5;
-        for(const e of this.enemies)if(e.hp>0&&distance(e,shot)<radius&&this.enemyAwake(e))this.hitEnemy(e,shot.damage);
+        for(const e of this.enemies)if(e.hp>0&&distance(e,shot)<radius&&this.enemyAwake(e))this.hitEnemy(e,shot.power&&e.id!==shot.powerTarget?shot.splashDamage:shot.damage);
         this.emit('explosion');
       }else if(shot.kind==='ice'){
-        for(const e of this.enemies)if(e.hp>0&&distance(e,shot)<1.2&&this.enemyAwake(e)&&this.clearShot(shot,e)){e.frozen=e.type==='boss'?.4:1.1;this.hitEnemy(e,shot.damage,'frost');}
+        for(const e of this.enemies)if(e.hp>0&&distance(e,shot)<1.2&&this.enemyAwake(e)&&this.clearShot(shot,e)){e.frozen=e.type==='boss'?.4:1.1;this.hitEnemy(e,shot.power&&e.id!==shot.powerTarget?shot.splashDamage:shot.damage,'frost');}
         this.burst(shot.x,shot.y,.7,'frost');
       }else if(target)this.hitEnemy(target,shot.damage);
     }
@@ -303,7 +331,7 @@ export class Adventure {
   }
   tick(dt){
     if(this.paused)return;dt=Math.max(0,Math.min(dt,.06));this.time+=dt;this.save.playSeconds+=dt;
-    const p=this.player,st=stats(this.save);this.routeTimer-=dt;
+    const p=this.player,st=stats(this.save);this.routeTimer-=dt;this.tapCd=Math.max(0,this.tapCd-dt);
     for(const key of ['cd','hit','swing','invincible'])p[key]=Math.max(0,p[key]-dt);
     this.boostCd=Math.max(0,this.boostCd-dt);this.boostTime=Math.max(0,this.boostTime-dt);this.shieldCd=Math.max(0,this.shieldCd-dt);this.buddyCd=Math.max(0,this.buddyCd-dt);this.shake=Math.max(0,this.shake-dt*18);
     const target=this.target&&this.enemies.find(e=>e.id===this.target&&e.hp>0);
@@ -314,10 +342,12 @@ export class Adventure {
     if(this.headingHome&&this.isHome()&&!this.route.length){this.headingHome=false;this.player.hp=this.maxHp();this.emit('home-arrived');}
     for(const e of this.enemies)e.active=false;
     this.royals.tick(dt);
+    if(this.powerTarget)this.tryPowerAttack();
     const threats=this.enemies.filter(e=>!e.royal&&e.hp>0&&!e.dormant&&e.r<=unlockedRegion(this.save)&&(distance(p,e)<8||e.aggroUntil>this.time)&&this.enemyAwake(e));
-    const inRange=[...threats,...this.royals.units.filter(e=>this.royals.awake(e))].filter(e=>distance(p,e)<=st.weapon.range&&this.canAttack(p,e,st.weapon.id)).sort((a,b)=>distance(p,a)-distance(p,b));
+    const focus=this.tapSelection||this.target;
+    const inRange=[...threats,...this.royals.units.filter(e=>this.royals.awake(e))].filter(e=>distance(p,e)<=st.weapon.range&&this.canAttack(p,e,st.weapon.id)).sort((a,b)=>(b.id===focus)-(a.id===focus)||distance(p,a)-distance(p,b));
     if(p.cd<=0&&inRange.length&&!this.safeAt(p))this.attack(inRange[0]);
-    if(this.save.build.gadget==='buddy'&&this.buddyCd<=0&&inRange.length&&!this.safeAt(p)){const e=inRange[0];this.buddyCd=1;this.projectiles.push({x:p.x-.6,y:p.y-.6,tx:e.x,ty:e.y,target:e.id,angle:0,speed:11,damage:45,kind:'drone',life:3});this.effects.push({type:'drone',x:p.x,y:p.y,tx:e.x,ty:e.y,life:.7,max:.7});}
+    if(this.save.build.gadget==='buddy'&&this.buddyCd<=0&&inRange.length&&!this.safeAt(p)){const e=inRange[0];this.buddyCd=1;this.projectiles.push({x:p.x-.6,y:p.y-.6,tx:e.x,ty:e.y,target:e.id,angle:0,speed:11,damage:45*AUTO_DAMAGE,kind:'drone',life:3});this.effects.push({type:'drone',x:p.x,y:p.y,tx:e.x,ty:e.y,life:.7,max:.7});}
     for(const e of threats){
       if(e.hp<=0)continue;
       e.frozen=Math.max(0,(e.frozen||0)-dt);e.cd-=dt;e.hit=Math.max(0,e.hit-dt);e.swing=Math.max(0,e.swing-dt);const d=distance(p,e),boss=e.type==='boss';

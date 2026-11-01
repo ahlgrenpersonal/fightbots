@@ -1,5 +1,5 @@
-import {PANTHEON,COURT,ROYAL_SPECS,inRoyalChamber} from './pantheon.js?v=world76';
-import {pantheonUnlocked,canWalk,pathfind,regionAt} from './data.js?v=world76';
+import {PANTHEON,COURT,ROYAL_SPECS,inRoyalChamber} from './pantheon.js?v=world77';
+import {pantheonUnlocked,canWalk,pathfind,regionAt} from './data.js?v=world77';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const inside=p=>regionAt(p.x,p.y)===PANTHEON.r&&p.y>=229&&p.y<259;
 const finite=(v,fallback)=>Number.isFinite(v)?v:fallback;
@@ -12,7 +12,7 @@ export class RoyalCourt {
     this.units=COURT.map((p,i)=>{
       const spec=ROYAL_SPECS[p.role],record=old?.mobs?.find(e=>e.id===p.id);
       return {...p,r:PANTHEON.r,royal:true,type:'boss',name:spec.name,weapon:spec.weapon,pattern:spec.pattern,homeX:p.x,homeY:p.y,
-        hp:Math.max(0,Math.min(spec.hp,finite(record?.hp,spec.hp))),maxHp:spec.hp,damage:spec.damage,cd:2+i*.45,hit:0,swing:0,angle:Math.PI/2,
+        hp:Math.max(0,Math.min(spec.hp,record?finite(record.hp,spec.hp/(old.endurance===2?1:2))*(old.endurance===2?1:2):spec.hp)),maxHp:spec.hp,damage:spec.damage,cd:2+i*.45,hit:0,swing:0,angle:Math.PI/2,
         weapon:p.role==='guard'&&i%2?'saw':spec.weapon,enteredArena:record?.enteredArena===true||record?.y>=254,flanked:record?.flanked===true,
         x:finite(record?.x,p.x),y:finite(record?.y,p.y),active:false,frozen:0};
     });
@@ -69,7 +69,7 @@ export class RoyalCourt {
   }
   snapshot(){
     if(this.phase==='sleeping'){delete this.game.save.royalCourt;return;}
-    this.game.save.royalCourt={phase:this.phase,rallying:this.rallying,mobs:this.units.map(e=>({id:e.id,x:e.x,y:e.y,hp:e.hp,enteredArena:e.enteredArena,flanked:e.flanked}))};
+    this.game.save.royalCourt={endurance:2,phase:this.phase,rallying:this.rallying,mobs:this.units.map(e=>({id:e.id,x:e.x,y:e.y,hp:e.hp,enteredArena:e.enteredArena,flanked:e.flanked}))};
   }
   muzzle(e,side=0){
     const size=e.size/80,a=e.angle??Math.PI/2;
