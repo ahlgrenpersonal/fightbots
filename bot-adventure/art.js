@@ -1,5 +1,8 @@
-import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world71';
-import * as worldData from './data.js?v=world71';
+import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world72';
+import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world72';
+import {COURT} from './pantheon.js?v=world72';
+import {templeGround,templeFloor,templeArchitecture,templeColumns,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world72';
+import * as worldData from './data.js?v=world72';
 
 export function rounded(c,x,y,w,h,r,fill,stroke,line=2) {
   c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=line;c.stroke();}
@@ -454,7 +457,9 @@ export class Painter {
   follow(g,dt){
     const bosses=g.enemies.filter(e=>e.type==='boss'&&e.hp>0&&!e.dormant&&g.enemyAwake(e)&&Math.hypot(e.x-g.player.x,e.y-g.player.y)<8&&(e.active||Math.hypot(e.x-g.player.x,e.y-g.player.y)<5.5));
     let target={x:g.player.x,y:g.player.y},zoom=this.baseTile;
-    if(bosses.length){
+    if(regionAt(g.player.x,g.player.y)===PANTHEON.r&&g.player.y>225&&g.player.y<252){
+      zoom=Math.min(this.baseTile,(this.w-16)/21,(this.h-30)/30);target={x:162.5,y:233.5};
+    }else if(bosses.length){
       const left=Math.min(g.player.x-1.2,...bosses.map(e=>e.x-1.9)),right=Math.max(g.player.x+1.2,...bosses.map(e=>e.x+1.9));
       const top=Math.min(g.player.y-1.1,...bosses.map(e=>e.y-1.8)),bottom=Math.max(g.player.y+.8,...bosses.map(e=>e.y+1.1));
       zoom=Math.min(this.baseTile,(this.w-32)/(right-left),(this.h-110)/(bottom-top));
@@ -477,6 +482,8 @@ export class Painter {
     c.save();c.translate(w/2-this.camera.x*s+sx,h*.51-this.camera.y*s+sy);c.scale(s,s);
     const x0=Math.max(0,Math.floor(this.camera.x-w/s/2)-2),x1=Math.min(WORLD_W,Math.ceil(this.camera.x+w/s/2)+2),y0=Math.max(0,Math.floor(this.camera.y-h/s*.51)-2),y1=Math.min(WORLD_H,Math.ceil(this.camera.y+h/s*.49)+2);
     for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++)this.ground(x,y,t,g);
+    const courtVisible=x1>147&&x0<178&&y1>218&&y0<258;
+    if(courtVisible){templeFloor(c,t);templeArchitecture(c);if(!pantheonUnlocked(g.save)){c.save();c.translate(PANTHEON.entry.x,PANTHEON.entry.y);c.rotate(Math.PI/2);this.gate(0,0,t);c.restore();}}
     for(const arena of g.world.arenas||[]){
       const radius=arena.radius||3.8;
       if(arena.r<=unlockedRegion(g.save)&&returnVisible(g.save,arena)&&arena.x+radius>x0&&arena.x-radius<x1&&arena.y+radius>y0&&arena.y-radius<y1)arenaFloor(c,arena);
@@ -493,6 +500,7 @@ export class Painter {
       else if(fx.type==='slam'||fx.type==='vortex'||fx.type==='nova')this.effect(fx,t,g.reducedMotion);
     }
     const objects=g.world.props.filter(p=>p.x>x0-2&&p.x<x1+2&&p.y>y0-2&&p.y<y1+2).map(p=>({...p,kind:'prop'}));
+    if(courtVisible)for(const p of COURT)objects.push({...p,kind:'royal'});
     for(const shop of workshops())if(shop.r<=unlockedRegion(g.save)&&shop.x>x0-4&&shop.x<x1+4&&shop.y>y0-4&&shop.y<y1+4)objects.push({...shop,y:shop.y-.6,kind:'home'});
     for(const e of g.enemies)if(returnVisible(g.save,e)&&e.hp>0&&!e.dormant&&e.x>x0-2&&e.x<x1+2&&e.y>y0-2&&e.y<y1+2)objects.push({...e,kind:'enemy'});
     objects.push({...g.player,kind:'player'});objects.sort((a,b)=>a.y-b.y);
@@ -509,6 +517,7 @@ export class Painter {
         }
         this.prop(obj,t);c.restore();
       }
+      else if(obj.kind==='royal')sleepingRoyal(c,obj,t);
       else if(obj.kind==='home')this.home(obj.x,obj.y,t);
       else if(obj.kind==='player'){
         if(g.boostTime>0){ellipse(c,obj.x,obj.y+.2,.64,.36,'#ffdc6340');for(let i=0;i<3;i++)ellipse(c,obj.x+Math.cos(t*3+i*2)*.7,obj.y+Math.sin(t*3+i*2)*.7,.06,.06,'#ffe18c');}
@@ -523,6 +532,7 @@ export class Painter {
         }
       }
     }
+    if(courtVisible)templeColumns(c);
     for(const l of g.loot){const bob=Math.sin(t*4+l.x)*.05;ellipse(c,l.x,l.y+.12,.14,.06,'#284b4930');if(l.kind==='gear')this.gear(l.x,l.y+bob,.2);else{c.save();c.translate(l.x,l.y+bob);c.rotate(Math.PI/4);rounded(c,-.09,-.09,.18,.18,.03,'#ffe18c','#b59b46',.025);c.restore();}}
     for(const fx of g.effects)if(fx.type!=='slam'&&fx.type!=='vortex'&&fx.type!=='nova')this.effect(fx,t,g.reducedMotion);
     for(const p of g.projectiles)this.projectile(p,t,g.reducedMotion);
@@ -581,7 +591,7 @@ export class Painter {
     }
     c.restore();
   }
-  ground(x,y,t,g){const c=this.c,r=regionAt(x,y),reg=REGIONS[r]||REGIONS[4],n=hash(x,y);const road=isRoad(x+.5,y+.5);
+  ground(x,y,t,g){const c=this.c,r=regionAt(x,y),reg=REGIONS[r]||REGIONS[4],n=hash(x,y);if(r===PANTHEON.r){templeGround(c,x,y);return;}const road=isRoad(x+.5,y+.5);
     if(g.world.water.has(`${x},${y}`)){
       c.fillStyle=reg.water;c.fillRect(x,y,1.02,1.02);
       if(r>=5){themeGround(c,x,y,reg,n,false,t,true);return;}
@@ -803,7 +813,7 @@ export class Painter {
   }
   map(canvas,g){const c=canvas.getContext('2d'),w=600,h=760;canvas.width=w*2;canvas.height=h*2;c.scale(2,2);c.fillStyle='#19393c';c.fillRect(0,0,w,h);const {scale:s,ox,oy}=atlasLayout(),markerScale=Math.min(1,108/WORLD_W);
     rounded(c,ox,oy,WORLD_W*s,WORLD_H*s,8,'#7eb6bd');
-    for(let y=0;y<WORLD_H;y++)for(let x=0;x<WORLD_W;x++){const r=regionAt(x,y);c.fillStyle=g.world.water.has(`${x},${y}`)?(REGIONS[r]?.water||'#64a8b5'):r<0?'#607b87':REGIONS[r].ground;c.fillRect(ox+x*s,oy+y*s,s+.1,s+.1);if(r>=0&&isRoad(x+.5,y+.5)){c.fillStyle=REGIONS[r].path;c.fillRect(ox+x*s,oy+y*s,s+.1,s+.1);}}
+    for(let y=0;y<WORLD_H;y++)for(let x=0;x<WORLD_W;x++){const r=regionAt(x,y);c.fillStyle=g.world.water.has(`${x},${y}`)?(REGIONS[r]?.water||'#64a8b5'):r<0?'#607b87':areaInfo(r).ground;c.fillRect(ox+x*s,oy+y*s,s+.1,s+.1);if(r>=0&&isRoad(x+.5,y+.5)){c.fillStyle=REGIONS[r].path;c.fillRect(ox+x*s,oy+y*s,s+.1,s+.1);}}
     for(const p of g.world.props)if(p.type==='mountain'&&(p.r===2||hash(Math.floor(p.x),Math.floor(p.y))<.04)){
       const x=ox+p.x*s,y=oy+p.y*s;c.beginPath();c.moveTo(x-4,y+2);c.lineTo(x,y-5);c.lineTo(x+4,y+2);c.closePath();c.fillStyle='#607e91';c.fill();c.beginPath();c.moveTo(x-1.7,y-2);c.lineTo(x,y-5);c.lineTo(x+1.7,y-2);c.closePath();c.fillStyle='#f0ffff';c.fill();
     }
@@ -855,6 +865,7 @@ export class Painter {
     for(const mission of worldData.RETURNS||[]){if(!returnVisible(g.save,{returnId:mission.id}))continue;c.save();c.translate(ox+mission.x*s,oy+mission.y*s);c.scale(markerScale,markerScale);ring(c,0,0,13,'#e4c7ff',3);line(c,0,8,0,-14,'#fff0dd',2);polygon(c,[[0,-14],[14,-10],[0,-5]],'#9e6ace','#f3dfff',1.5);c.restore();}
     for(const shop of workshops())if(shop.r<=unlockedRegion(g.save)){c.save();c.translate(ox+shop.x*s,oy+shop.y*s);c.scale(markerScale,markerScale);workshopMarker(c,0,0);c.restore();}
     rounded(c,ox,oy,WORLD_W*s,WORLD_H*s,8,null,'#f6f7cb55',2);
+    pantheonMarker(c,ox+PANTHEON.viewpoint.x*s,oy+PANTHEON.viewpoint.y*s,markerScale,pantheonUnlocked(g.save));
     const playerX=ox+g.player.x*s,playerY=oy+g.player.y*s;
     ellipse(c,playerX,playerY,18*markerScale,18*markerScale,'#f4fff8');ellipse(c,playerX,playerY,16*markerScale,16*markerScale,'#173d68');ellipse(c,playerX,playerY,12*markerScale,12*markerScale,'#65ef86');
   }

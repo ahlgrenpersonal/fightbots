@@ -1,6 +1,6 @@
-import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout } from './data.js?v=world71';
-import { bossProfile } from './content.js?v=world71';
-import { ReturningPatrols } from './patrols.js?v=world71';
+import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world72';
+import { bossProfile } from './content.js?v=world72';
+import { ReturningPatrols } from './patrols.js?v=world72';
 
 export const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -44,7 +44,7 @@ export class Adventure {
   nearestHome(){return this.homeRoutes()[0]?.home||this.homes()[0];}
   enemyAwake(e){if(e.r>unlockedRegion(this.save))return false;if(e.patrolSite)return this.patrols.awake(e);if(e.encounterId)return true;if(!e.returnId)return e.type!=='boss'||this.bossAwake(e.r);const m=RETURNS.find(m=>m.id===e.returnId);return returnActive(this.save,m)&&(e.type!=='boss'||m.sites.every((_,i)=>this.save.cleared.includes(`${m.sitePrefix}-${i}`)));}
   stationNear(radius=1.1){return this.world.stations.find(s=>s.r<=unlockedRegion(this.save)&&distance(this.player,s)<radius);}
-  safeAt(pos){return this.homes().some(h=>distance(pos,h)<2.6)||this.world.stations.some(s=>s.r<=unlockedRegion(this.save)&&distance(pos,s)<2.25);}
+  safeAt(pos){return regionAt(pos.x,pos.y)===PANTHEON.r||this.homes().some(h=>distance(pos,h)<2.6)||this.world.stations.some(s=>s.r<=unlockedRegion(this.save)&&distance(pos,s)<2.25);}
   clearShot(from,to){
     let x=Math.floor(from.x),y=Math.floor(from.y);const tx=Math.floor(to.x),ty=Math.floor(to.y);
     const dx=to.x-from.x,dy=to.y-from.y,sx=Math.sign(dx),sy=Math.sign(dy),ix=dx?Math.abs(1/dx):Infinity,iy=dy?Math.abs(1/dy):Infinity;
@@ -80,7 +80,7 @@ export class Adventure {
   }
   discover(){const r=regionAt(this.player.x,this.player.y);if(r>=0&&!this.save.visited.includes(r)){this.save.visited.push(r);this.emit('region',{r});}for(const s of this.world.stations)if(s.r<=unlockedRegion(this.save)&&distance(this.player,s)<6&&!this.save.discovered.includes(s.id)){this.save.discovered.push(s.id);this.emit('toast',{text:'Charging station discovered!'});}}
   moveTo(pos){
-    if(regionAt(pos.x,pos.y)>unlockedRegion(this.save)){this.emit('toast',{text:'Restore this region\'s relay to open the next trail.'});return false;}
+    if(!areaUnlocked(this.save,regionAt(pos.x,pos.y))){this.emit('toast',{text:regionAt(pos.x,pos.y)===PANTHEON.r?'Restore every relay and finish the return missions to open the ancient pantheon.':'Restore this region\'s relay to open the next trail.'});return false;}
     let to={x:Math.floor(pos.x)+.5,y:Math.floor(pos.y)+.5};
     if(!canWalk(this.world,this.save,Math.floor(to.x),Math.floor(to.y))){
       const neighbors=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if(canWalk(this.world,this.save,Math.floor(to.x)+dx,Math.floor(to.y)+dy))neighbors.push({x:to.x+dx,y:to.y+dy});
@@ -379,9 +379,9 @@ export class Adventure {
     this.patrols.tick(dt);
   }
   nearestSite(){const r=unlockedRegion(this.save);return this.world.sites.filter(s=>!s.returnId&&s.r===r&&!this.save.cleared.includes(s.id)).sort((a,b)=>distance(a,this.player)-distance(b,this.player))[0];}
-  nextObjective(){const m=RETURNS.find(m=>returnActive(this.save,m));if(m)return this.world.sites.find(s=>s.returnId===m.id&&!this.save.cleared.includes(s.id))||m;const r=unlockedRegion(this.save);return this.nearestSite()||relayFor(r);}
+  nextObjective(){if(pantheonUnlocked(this.save))return PANTHEON.viewpoint;const m=RETURNS.find(m=>returnActive(this.save,m));if(m)return this.world.sites.find(s=>s.returnId===m.id&&!this.save.cleared.includes(s.id))||m;const r=unlockedRegion(this.save);return this.nearestSite()||relayFor(r);}
   guideRoute(){
-    const route=this.route.length?this.route:this.save.completed?[]:pathfind(this.world,this.save,this.player,this.nextObjective());
+    const route=this.route.length?this.route:this.save.completed&&(!pantheonUnlocked(this.save)||this.save.visited.includes(PANTHEON.r))?[]:pathfind(this.world,this.save,this.player,this.nextObjective());
     return route.length?[this.player,...route]:[];
   }
   goNext(){return this.moveTo(this.nextObjective());}

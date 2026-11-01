@@ -1,8 +1,10 @@
-import { MORE_REGIONS, NEW_EQUIPMENT, WORKSHOPS, RETURNS, ENCOUNTERS, LEGACY_WORKSHOPS, LEGACY_RETURNS, LEGACY_ENCOUNTERS } from './content.js?v=world71';
-import {LEGACY_TILES,WORLD_TILES,relocatePoint,relocateEntity,legacyPoint,worldGates} from './topology.js?v=world71';
+import { MORE_REGIONS, NEW_EQUIPMENT, WORKSHOPS, RETURNS, ENCOUNTERS, LEGACY_WORKSHOPS, LEGACY_RETURNS, LEGACY_ENCOUNTERS } from './content.js?v=world72';
+import {LEGACY_TILES,WORLD_TILES,relocatePoint,relocateEntity,legacyPoint,worldGates} from './topology.js?v=world72';
+import {PANTHEON,inPantheon,buildPantheon} from './pantheon.js?v=world72';
+export {PANTHEON};
 export { WORKSHOPS, RETURNS, ENCOUNTERS };
-export { bossProfile } from './content.js?v=world71';
-export const BUILD = 'world71';
+export { bossProfile } from './content.js?v=world72';
+export const BUILD = 'world72';
 export const REGION_W = 36;
 export const REGION_H = 44;
 export const WORLD_W = REGION_W * 5;
@@ -119,6 +121,7 @@ export function hash(x, y, seed = 17) {
   return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
 }
 export function regionAt(x,y) {
+  if(inPantheon(x,y))return PANTHEON.r;
   const sx=Math.floor(x/REGION_W),sy=Math.floor(y/REGION_H);
   return TILE_OWNERS.get(`${sx},${sy}`)??-1;
 }
@@ -231,7 +234,7 @@ export function makeWorld() {
   for(const landmark of props.filter(p=>p.type==='landmark'))for(let i=props.length-1;i>=0;i--){
     const p=props[i];if(p.r===landmark.r&&p.type!=='landmark'&&Math.abs(p.x-landmark.x)<1.7&&p.y<landmark.y+1.2&&p.y>landmark.y-2.8){blocks.delete(`${Math.floor(p.x)},${Math.floor(p.y)}`);props.splice(i,1);}
   }
-  return relocateWorld({ sites, enemies, chests, stations, props, blocks, water, arenas });
+  return buildPantheon(relocateWorld({ sites, enemies, chests, stations, props, blocks, water, arenas }));
 }
 function relocateWorld(world){
   const points=list=>list.map(relocateEntity).filter(Boolean);
@@ -242,11 +245,14 @@ function relocateWorld(world){
   return {...world,sites:points(world.sites),enemies,chests:points(world.chests),stations:points(world.stations),arenas:points(world.arenas),props,blocks,water};
 }
 export function unlockedRegion(save) { let r=0;while(r<REGIONS.length-1&&save.bosses.includes(r))r++;for(const m of RETURNS)if(r>=m.unlock&&!(save.returns||[]).includes(m.id))r=Math.min(r,m.unlock-1);return r; }
+export const pantheonUnlocked=save=>REGIONS.every((_,r)=>save.bosses.includes(r))&&RETURNS.every(m=>(save.returns||[]).includes(m.id));
+export const areaUnlocked=(save,r)=>r===PANTHEON.r?pantheonUnlocked(save):r>=0&&r<=unlockedRegion(save);
+export const areaInfo=r=>r===PANTHEON.r?PANTHEON:REGIONS[r];
 export function cellsIn(save,r) { return new Set(save.cleared.filter(id=>{const m=/^site-(\d+)-(\d+)$/.exec(id);return m&&Number(m[1])===r&&Number(m[2])<requiredCells(r);})).size; }
 export function available(save,part) { return part.unlock < 0 || save.bosses.includes(part.unlock); }
 export function canWalk(world,save,x,y) {
   const r=regionAt(x,y);
-  return x>=1 && y>=1 && x<WORLD_W-1 && y<WORLD_H-1 && r>=0 && r<=unlockedRegion(save) && !world.blocks.has(`${x},${y}`);
+  return x>=1 && y>=1 && x<WORLD_W-1 && y<WORLD_H-1 && areaUnlocked(save,r) && !world.blocks.has(`${x},${y}`);
 }
 export function nearestWalkable(world,save,point){
   const cx=Math.floor(point.x),cy=Math.floor(point.y);
