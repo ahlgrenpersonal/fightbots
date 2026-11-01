@@ -1,11 +1,14 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world78';
-import { Adventure, distance } from './engine.js?v=world78';
-import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon } from './art.js?v=world78';
-import { mountAtlas } from './atlas.js?v=world78';
-import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world78';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world79';
+import { Adventure, distance } from './engine.js?v=world79';
+import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon } from './art.js?v=world79';
+import { mountAtlas } from './atlas.js?v=world79';
+import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world79';
+import {AdventureSaves} from './adventure-saves.js?v=world79';
+import {bindHoldConfirmation} from './hold-confirm.js?v=world79';
 
-const buildVersion = 'world78';
+const buildVersion = 'world79';
 const SAVE_KEY='bot-adventure-save-v1';
+const adventureSaves=new AdventureSaves({storage:()=>localStorage,key:SAVE_KEY});
 const $=id=>document.getElementById(id);
 $('buildLabel').textContent=buildVersion;
 let storageOK=true;
@@ -36,7 +39,7 @@ window.visualViewport?.addEventListener('resize',()=>painter.resize());
 window.addEventListener('pageshow',()=>painter.resize());
 document.fonts?.ready.then(()=>painter.resize());
 game.reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
-const panel=$('panel');let panelMode=null,atlasController=null,workTab='weapon',toastTimer,bannerTimer,frame=0,last=performance.now(),lastSave=0,wasPaused=false;
+const panel=$('panel');let panelMode=null,atlasController=null,workTab='weapon',toastTimer,bannerTimer,frame=0,last=performance.now(),lastSave=0,wasPaused=false,holdCleanup=null,switchingSave=false;
 let audio;
 function tone(freq=400,duration=.09,type='sine',volume=.035,slide=0){
   if(!game.save.sound)return;
@@ -44,7 +47,7 @@ function tone(freq=400,duration=.09,type='sine',volume=.035,slide=0){
 }
 function toast(message){$('toast').textContent=message;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),3200);}
 function banner(title,detail=''){const n=$('announcement');n.replaceChildren();const main=document.createElement('div');main.textContent=title;n.append(main);if(detail){const sub=document.createElement('small');sub.textContent=detail;n.append(sub);}n.hidden=false;clearTimeout(bannerTimer);bannerTimer=setTimeout(()=>n.hidden=true,3500);}
-function persist(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(game.snapshot()));}catch{if(storageOK){storageOK=false;const note=document.createElement('div');note.className='storage-warning';note.textContent='Saving is unavailable in this browser. Keep this page open to keep your adventure.';$('game').append(note);}}}
+function persist(){if(switchingSave)return;try{localStorage.setItem(SAVE_KEY,JSON.stringify(game.snapshot()));}catch{if(storageOK){storageOK=false;const note=document.createElement('div');note.className='storage-warning';note.textContent='Saving is unavailable in this browser. Keep this page open to keep your adventure.';$('game').append(note);}}}
 game.onEvent=e=>{
   if(e.type==='attack'){const f={bumper:110,blaster:700,saw:170,hammer:80,lightning:900,rocket:150,flame:140,frost:850,boomerang:400,tractor:240,drone:650,rail:1000,meteor:120,gravity:60,sunbeam:1200,swarm:760,supernova:95}[e.weapon]||400;tone(f,e.power?.18:.07,e.weapon==='saw'||e.weapon==='flame'?'sawtooth':'triangle',e.power?.04:.018,f*.5);if(e.power)tone(f*2,.12,'triangle',.025,f);}
   if(e.type==='toast')toast(e.text);
@@ -65,8 +68,8 @@ game.onEvent=e=>{
   if(e.type==='royal-stage'){persist();banner(e.phase==='guards'?'The four sentinels awaken!':e.phase==='awakening'?'The royal pair is awakening…':'The king and queen are coming!');tone(100,.6,'triangle',.035,350);}
   if(e.type==='royal-victory'){persist();openPanel('royal-victory',`${head('Royal Champion!','The king, queen and all four sentinels are defeated.','THE ROYAL FINALE')}<div class="panel-body"><canvas id="rewardBot" class="celebration" width="700" height="280"></canvas><p class="dialog-copy">The ancient court is yours. All your progress and equipment are saved. +250 scrap · +12 parts</p><div class="pause-actions"><button class="primary pictorial-action" data-action="close"><span>♛</span><small>Explore</small></button><button class="secondary pictorial-action" data-action="home"><span>⚙</span><small>Build</small></button></div></div>`);}
 };
-function closePanel(){atlasController?.destroy();atlasController=null;if(panel.open)panel.close();panelMode=null;game.paused=false;last=performance.now();persist();}
-function openPanel(mode,html){atlasController?.destroy();atlasController=null;game.paused=true;panelMode=mode;panel.dataset.mode=mode;$('panelContent').innerHTML=html;if(!panel.open)panel.showModal();panel.scrollTop=0;drawPanels();}
+function closePanel(){holdCleanup?.();holdCleanup=null;atlasController?.destroy();atlasController=null;if(panel.open)panel.close();panelMode=null;game.paused=false;last=performance.now();persist();}
+function openPanel(mode,html){holdCleanup?.();holdCleanup=null;atlasController?.destroy();atlasController=null;game.paused=true;panelMode=mode;panel.dataset.mode=mode;$('panelContent').innerHTML=html;if(!panel.open)panel.showModal();panel.scrollTop=0;drawPanels();}
 function head(title,sub,eyebrow='BOT ADVENTURE'){return `<div class="panel-head"><div><div class="eyebrow">${eyebrow}</div><h1 id="panelTitle">${title}</h1>${sub?`<p>${sub}</p>`:''}</div><button class="close" data-action="close" aria-label="Close" title="Close">×</button></div>`;}
 function workbenchHTML(){const s=stats(game.save);return `<div class="workbench"><canvas id="botPreview" width="440" height="350" aria-label="Your bot"></canvas><div class="bot-stats"><div>Health <strong>${s.hp}</strong></div><div>Power <strong>${s.weapon.damage}</strong></div><div>Reach <strong>${s.weapon.range>2?'Long':'Close'}</strong></div><div class="swatches">${COLORS.map((color,i)=>`<button class="swatch ${game.save.color===color?'selected':''}" style="--swatch:${color}" data-color="${color}" aria-label="${['Coral','Blue','Green','Yellow','Orange','Purple'][i]}" title="${['Coral','Blue','Green','Yellow','Orange','Purple'][i]}"></button>`).join('')}</div></div></div>`;}
 function workshop(){
@@ -113,6 +116,38 @@ function goReturn(mission){const goal=game.world.sites.find(s=>s.returnId===miss
 function pauseMenu(){
   openPanel('pause',`${head('Take a breather','Your adventure is saved.')}<div class="panel-body"><div class="pause-actions"><button class="primary" data-action="close">Keep exploring ↗</button><button class="secondary" data-action="home">Home workshop</button><button class="secondary" data-action="map">Adventure map</button></div><label class="settings-row"><span>Gentle battles</span><input type="checkbox" id="gentle" ${game.save.gentle?'checked':''}></label><label class="settings-row"><span>Sound</span><input type="checkbox" id="audio" ${game.save.sound?'checked':''}></label><p class="install-note">On iPhone: Safari → Share → Add to Home Screen. Your adventure saves on this device and works offline after its first visit.</p><p class="install-note">${BUILD} · ${Math.floor(game.save.playSeconds/60)} minutes exploring</p></div>`);
   panel.querySelector('.pause-actions').insertAdjacentHTML('beforeend','<button class="secondary" data-action="display">Display details</button>');
+  panel.querySelector('.panel-body').insertAdjacentHTML('beforeend','<button class="management-link" data-action="manage">⚙ Game Management</button>');
+}
+function backupDetails(record){
+  if(record.status!=='ready')return `<p class="backup-empty">${{missing:'No backup yet. Restarting creates one automatically.',corrupt:'The existing backup cannot be read. Restarting will replace it.',unavailable:'Storage is unavailable. Restart and restore are disabled.'}[record.status]}</p>`;
+  const s=record.summary,date=new Intl.DateTimeFormat(undefined,{dateStyle:'medium',timeStyle:'short'}).format(new Date(record.backup.savedAt));
+  return `<section class="backup-details" aria-label="Adventure backup"><h2>${s.king?'♛':'⚑'} ${s.title}</h2><p>${s.region}</p><dl><div><dt>Relays restored</dt><dd>${s.relays} / ${s.totalRelays}</dd></div><div><dt>Equipment owned</dt><dd>${s.equipment}</dd></div><div><dt>Robot king</dt><dd>${s.king?'Defeated':'Not defeated'}</dd></div></dl><p class="backup-date">Saved before restart · ${date}</p></section>`;
+}
+function gameManagement(){
+  const record=adventureSaves.readBackup();
+  openPanel('management',`${head('Game Management','Restart and recovery','ADVENTURE SAVES')}<div class="panel-body"><h2 class="management-heading">Previous adventure</h2>${backupDetails(record)}<div class="pause-actions"><button class="secondary" data-action="restore-review" ${record.status==='ready'?'':'disabled'}>↶ Restore Previous Adventure</button><button class="danger" data-action="restart-review" ${record.status==='unavailable'?'disabled':''}>⚠ Start A New Adventure</button><button class="secondary" data-action="pause">Back</button></div><p class="install-note">The backup stays on this device. Only another restart replaces it.</p></div>`);
+}
+function restartReview(error=''){
+  const record=adventureSaves.readBackup();
+  openPanel('restart-confirm',`${head('Start from scratch?','All levels, all the way to the royal court.','NEW ADVENTURE')}<div class="panel-body"><div class="restart-warning" id="restartWarning"><b>⚠ Your bot starts over</b><p>Weapons, armor, upgrades, coins and world progress reset. Your current adventure is backed up first.</p><p>${record.status==='missing'?'You can restore it later from Game Management.':'This replaces the previous backup. Only the adventure you are leaving will be kept.'}</p></div><p id="managementStatus" role="status" class="management-status"></p><div class="pause-actions"><button class="secondary" data-action="manage">Cancel</button><button id="confirmRestart" class="danger hold-restart" aria-label="Hold to restart for two seconds" aria-describedby="restartWarning"><span>⚠ Hold to restart</span><small>2 seconds</small></button></div></div>`);
+  $('managementStatus').textContent=error;
+  holdCleanup=bindHoldConfirmation($('confirmRestart'),()=>switchAdventure('restart'));
+}
+function restoreReview(error=''){
+  const record=adventureSaves.readBackup();
+  openPanel('restore-confirm',`${head('Restore previous adventure?','This replaces the adventure currently in progress.','RESTORE BACKUP')}<div class="panel-body">${backupDetails(record)}<p class="dialog-copy">The current adventure will not be backed up. This saved backup remains available until your next restart.</p><p id="managementStatus" role="status" class="management-status"></p><div class="pause-actions"><button class="secondary" data-action="manage">Cancel</button><button class="primary" data-action="restore-confirm" ${record.status==='ready'?'':'disabled'}>↶ Restore This Adventure</button></div></div>`);
+  $('managementStatus').textContent=error;
+}
+function switchAdventure(operation){
+  if(switchingSave)return;
+  try{
+    if(operation==='restart')adventureSaves.restart(game.snapshot());else adventureSaves.restore();
+    // Do not let autosave or pagehide write the old in-memory game over the new save.
+    switchingSave=true;holdCleanup?.();holdCleanup=null;location.reload();
+  }catch{
+    const message=operation==='restart'?'Could not save and verify the backup. Nothing was restarted. Your current adventure is still open.':'Could not restore the backup. Your current adventure is still open.';
+    if(operation==='restart')restartReview(message);else restoreReview(message);
+  }
 }
 function displayDetails(){
   const rect=element=>{const r=element.getBoundingClientRect();return [r.x,r.y,r.width,r.height].map(n=>Math.round(n*100)/100);};
@@ -150,6 +185,10 @@ panel.addEventListener('click',e=>{
   if(action==='map')adventureMap();
   if(action==='display')displayDetails();
   if(action==='pause')pauseMenu();
+  if(action==='manage')gameManagement();
+  if(action==='restart-review')restartReview();
+  if(action==='restore-review')restoreReview();
+  if(action==='restore-confirm')switchAdventure('restore');
   if(action==='depart'){closePanel();game.depart();painter.camera={x:game.player.x,y:game.player.y};}
   if(action==='repair'){game.repair();closePanel();}
   if(action==='next'){closePanel();game.goNext();}
