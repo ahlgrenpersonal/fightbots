@@ -1,7 +1,7 @@
-import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world74';
-import { bossProfile } from './content.js?v=world74';
-import { ReturningPatrols } from './patrols.js?v=world74';
-import {inRoyalChamber} from './pantheon.js?v=world74';
+import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world75';
+import { bossProfile } from './content.js?v=world75';
+import { ReturningPatrols } from './patrols.js?v=world75';
+import {inRoyalChamber} from './pantheon.js?v=world75';
 
 export const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));

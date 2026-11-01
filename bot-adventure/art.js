@@ -1,8 +1,8 @@
-import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world74';
-import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world74';
-import {COURT} from './pantheon.js?v=world74';
-import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world74';
-import * as worldData from './data.js?v=world74';
+import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world75';
+import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world75';
+import {COURT} from './pantheon.js?v=world75';
+import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world75';
+import * as worldData from './data.js?v=world75';
 
 export function rounded(c,x,y,w,h,r,fill,stroke,line=2) {
   c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=line;c.stroke();}

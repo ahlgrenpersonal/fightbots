@@ -1,4 +1,4 @@
-import {relocateEntity,relocateMission} from './topology.js?v=world74';
+import {relocateEntity,relocateMission} from './topology.js?v=world75';
 const REGION_GUIDES={
   coast:['Salt air and bright harbor trails','Watch the blade fly out and come back. Keep rolling.'],
   scrapyard:['Giant magnets and mountains of spare parts','Move out of the glowing magnetic circle before the blast.'],
@@ -63,7 +63,7 @@ export const NEW_EQUIPMENT={
     {id:'flame',name:'Flamethrower',desc:'A roaring fan of fire. Sweeps through a crowd.',damage:38,range:3.2,rate:.18,cost:180,gears:7,unlock:4,power:7},
     {id:'frost',name:'Freeze Cannon',desc:'Ice bursts freeze small bots and slow big ones.',damage:70,range:5,rate:.45,cost:230,gears:8,unlock:5,power:8},
     {id:'boomerang',name:'Boomerang Blade',desc:'A flying blade that cuts out and back again.',damage:110,range:5,rate:.7,cost:280,gears:9,unlock:6,power:9},
-    {id:'tractor',name:'Magnet Launcher',desc:'Pulls nearby bots together in a magnetic blast.',damage:90,range:4.5,rate:.5,cost:330,gears:10,unlock:7,power:10},
+    {id:'tractor',name:'Magnet Launcher',desc:'Pulls nearby bots together in a magnetic blast.',damage:90,range:4.5,rate:1,cost:330,gears:10,unlock:7,power:10},
     {id:'drone',name:'Drone Bay',desc:'Launches a flying helper with its own blaster.',damage:70,range:5.5,rate:.35,cost:380,gears:11,unlock:8,power:11},
     {id:'rail',name:'Rail Cannon',desc:'A brilliant shot that pierces a line of bots.',damage:220,range:7,rate:.7,cost:440,gears:12,unlock:9,power:12},
     {id:'meteor',name:'Meteor Launcher',desc:'Calls a spectacular shower of explosive stars.',damage:360,range:6.5,rate:1.2,cost:510,gears:14,unlock:10,power:13},
