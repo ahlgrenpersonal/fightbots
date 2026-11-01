@@ -1,4 +1,4 @@
-import {PANTHEON,COURT,COLUMNS,STAIRWAY,TERRACE} from './pantheon.js?v=world79';
+import {PANTHEON,COURT,COLUMNS,STAIRWAY,TERRACE} from './pantheon.js?v=world80';
 const INK='#304955',GOLD='#e4bf67',LIGHT='#fff1bd';
 function shape(c,points,fill,stroke=INK,width=.045){c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fillStyle=fill;c.fill();if(stroke){c.strokeStyle=stroke;c.lineWidth=width;c.stroke();}}
 function oval(c,x,y,rx,ry,fill,stroke=null,width=.04){c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fillStyle=fill;c.fill();if(stroke){c.strokeStyle=stroke;c.lineWidth=width;c.stroke();}}

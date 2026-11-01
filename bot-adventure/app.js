@@ -1,12 +1,13 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world79';
-import { Adventure, distance } from './engine.js?v=world79';
-import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon } from './art.js?v=world79';
-import { mountAtlas } from './atlas.js?v=world79';
-import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world79';
-import {AdventureSaves} from './adventure-saves.js?v=world79';
-import {bindHoldConfirmation} from './hold-confirm.js?v=world79';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world80';
+import { Adventure, distance } from './engine.js?v=world80';
+import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon } from './art.js?v=world80';
+import { mountAtlas } from './atlas.js?v=world80';
+import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world80';
+import {AdventureSaves} from './adventure-saves.js?v=world80';
+import {bindHoldConfirmation} from './hold-confirm.js?v=world80';
+import {bindPowerControl,updatePowerControl} from './power-control.js?v=world80';
 
-const buildVersion = 'world79';
+const buildVersion = 'world80';
 const SAVE_KEY='bot-adventure-save-v1';
 const adventureSaves=new AdventureSaves({storage:()=>localStorage,key:SAVE_KEY});
 const $=id=>document.getElementById(id);
@@ -205,7 +206,9 @@ function drawPanels(){
   const rb=$('rewardBot');if(rb){const c=rb.getContext('2d');c.clearRect(0,0,700,280);bot(c,350,140,170,{color:game.save.color,armor:game.save.build.armor,wheels:game.save.build.wheels,gun:game.save.build.weapon},t);}
 }
 $('pause').onclick=pauseMenu;$('map').onclick=adventureMap;
-$('home').onclick=workshop;$('workshop').onclick=workshop;$('boost').onclick=()=>game.boost();
+$('home').onclick=workshop;$('workshop').onclick=workshop;
+function activatePower(){if(!game.paused)game.boost();updatePowerControl($('boost'),$('boostLabel'),game);}
+bindPowerControl($('boost'),activatePower);
 $('sound').onclick=()=>{game.save.sound=!game.save.sound;tone(700);persist();};
 let interaction='';
 $('interact').onclick=()=>{if(interaction==='royal'){if(game.royals.start())persist();}else if(interaction==='home')workshop();else if(interaction==='repair')game.repair();else if(interaction==='guardian'){const r=regionAt(game.player.x,game.player.y);toast(REGIONS[r].hint);game.moveTo(relayFor(r));}};
@@ -223,7 +226,7 @@ function hud(){
   $('regionName').textContent=areaInfo(r)?.name||'Ancient trail';$('scrapCount').textContent=s.scrap;$('healthText').textContent=`${current} / ${max}`;$('healthFill').style.width=`${Math.max(0,game.player.hp/max*100)}%`;$('healthFill').style.background=game.player.hp/max<.3?'#f49b7d':'#94e5b1';$('weaponLabel').textContent=item('weapon',s.build.weapon).name;
   $('healthText').parentElement.classList.toggle('critical',game.player.hp/max<=.18);
   if(game.charging)$('weaponLabel').textContent='Charging…';else if(game.player.hp/max<=.18)$('weaponLabel').textContent='Needs repairs!';else if(game.player.hp/max<=.5)$('weaponLabel').textContent='Damaged';
-  $('boostLabel').textContent=game.boostTime>0?'SUPER!':game.boostCd>0?`${Math.ceil(game.boostCd)}s`:'Power';$('boost').classList.toggle('cooldown',game.boostCd>0&&game.boostTime<=0);$('boost').disabled=game.boostCd>0;
+  updatePowerControl($('boost'),$('boostLabel'),game);
   $('soundLabel').textContent=s.sound?'Sound on':'Sound off';$('sound').setAttribute('aria-label',s.sound?'Turn sound off':'Turn sound on');
   const fight=game.bossFight();
   $('toast').classList.toggle('boss-active',!!fight);
