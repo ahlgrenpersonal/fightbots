@@ -1,4 +1,4 @@
-import {PANTHEON,COURT,COLUMNS} from './pantheon.js?v=world72';
+import {PANTHEON,COURT,COLUMNS} from './pantheon.js?v=world73';
 const INK='#304955',GOLD='#e4bf67',LIGHT='#fff1bd';
 function shape(c,points,fill,stroke=INK,width=.045){c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fillStyle=fill;c.fill();if(stroke){c.strokeStyle=stroke;c.lineWidth=width;c.stroke();}}
 function oval(c,x,y,rx,ry,fill,stroke=null,width=.04){c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fillStyle=fill;c.fill();if(stroke){c.strokeStyle=stroke;c.lineWidth=width;c.stroke();}}
@@ -21,17 +21,19 @@ export function templeFloor(c,t){
   c.save();c.translate(162.5,237);c.scale(.78,1);
   // Broad worn marble steps and a mosaic rotunda, open at the front.
   for(let i=3;i>=0;i--)box(c,-12-i*.34,-7-i*.15,24+i*.68,16+i*.65,['#758e92','#9cb2ab','#c2cebd','#e1e1c9'][i],INK,.06);
-  box(c,-10.5,-5.9,21,13.5,'#486c79');
-  for(let y=-5;y<7;y++)for(let x=-10;x<10;x++)box(c,x,y,.95,.95,(x+y)%2?'#6c8d8b':'#7d9c94',null);
-  for(const ry of [5.9,5.3]){c.beginPath();c.ellipse(0,.4,9.6,ry,0,0,Math.PI*2);c.strokeStyle=GOLD;c.lineWidth=.09;c.stroke();}
-  for(let i=0;i<32;i++){const a=i*Math.PI/16;c.save();c.translate(Math.cos(a)*8.7,Math.sin(a)*5.5+.4);c.rotate(a);box(c,-.16,-.12,.32,.24,i%2?GOLD:'#c9e0cc',null);c.restore();}
-  laurel(c,0,3.2,1.55);crown(c,0,3.2,1.5);
+  box(c,-10.5,-5.9,21,13.5,'#536f77');
+  for(let y=-5;y<7;y+=2)for(let x=-10;x<10;x+=2){box(c,x,y,1.96,1.96,(x+y)%4?'#8ca39e':'#91a7a0',null);line(c,x+.08,y+.08,x+1.88,y+.08,'#c1cbbb',.035);}
+  c.beginPath();c.ellipse(0,.4,9.6,5.9,0,0,Math.PI*2);c.strokeStyle='#c4b885';c.lineWidth=.09;c.stroke();
+  // One subdued worn seal leaves the colorful court as the focal point.
+  c.globalAlpha=.4;laurel(c,0,3.2,1.3);crown(c,0,3.2,1.1);c.globalAlpha=1;
   // Weathering is architectural, never a barrier across the walk.
   for(const [x,y] of [[-9,6],[8,-4],[-7,-4],[9,5]]){line(c,x,y,x+.7,y+.2,'#3d6372',.045);line(c,x+.7,y+.2,x+.5,y+.7,'#3d6372',.035);}
   c.scale(1/.78,1);
-  for(const royal of COURT){const x=royal.x-162.5,y=royal.y-237,s=royal.role==='guard'?1:2.05;oval(c,x,y+.26,s,.46,'#283f5340');oval(c,x,y+.15,s,.47,'#819f9e',GOLD,.08);oval(c,x,y+.1,s*.82,.36,'#496e81','#abecdf',.045);}
-  // Blue stasis motes drift slowly; no firing or combat effects.
-  for(let i=0;i<16;i++){const f=(t*.07+i*.173)%1;c.globalAlpha=Math.sin(f*Math.PI)*.45;oval(c,Math.sin(i*19)*9,-4+f*10,.035,.07,'#d8fff1');}c.globalAlpha=1;
+  for(const royal of COURT){const x=royal.x-162.5,y=royal.y-237,s=royal.role==='guard'?1:2.05;oval(c,x+.16,y+.34,s*1.1,.5,'#203e5355');oval(c,x,y+.26,s,.47,'#6e8b91','#b7c5b4',.08);oval(c,x,y+.1,s,.4,'#b3c4b4','#e4e4c9',.055);}
+  for(let i=0;i<7;i++){const f=(t*.04+i*.173)%1;c.globalAlpha=Math.sin(f*Math.PI)*.3;oval(c,Math.sin(i*19)*9,-4+f*10,.035,.07,'#d8fff1');}c.globalAlpha=1;
+  // A broad processional walk continues into the foreground instead of empty paving.
+  box(c,-2.35,10.5,4.7,10.5,'#bdc8b5','#657e81',.06);
+  for(let y=11;y<21;y++)line(c,-2.3,y,2.3,y,'#8eaa9f',.025);
   for(const side of [-1,1]){
     const x=side*7.2,y=10.1;
     oval(c,x,y,.8,.25,'#293d4d35');box(c,x-.36,y-.9,.72,.9,'#9ab1aa');box(c,x-.52,y-1.1,1.04,.25,GOLD);
@@ -44,14 +46,23 @@ export function templeFloor(c,t){
 export function templeArchitecture(c){
   c.save();c.translate(162.5,228.5);c.scale(.78,1);
   oval(c,.5,.3,13,2,'#233c5438');
-  // Patinated bronze dome, ribs and oculus above a deep coffered arch.
-  c.beginPath();c.ellipse(0,-1.4,10.7,7.5,0,Math.PI,Math.PI*2);c.lineTo(10.7,-.8);c.lineTo(-10.7,-.8);c.closePath();c.fillStyle='#527f83';c.fill();c.strokeStyle=INK;c.lineWidth=.15;c.stroke();
-  for(const dx of [-8,-5,0,5,8]){c.beginPath();c.moveTo(0,-8.85);c.quadraticCurveTo(dx*.8,-7.5,dx,-1.4);c.strokeStyle=dx===0?'#ead7a2':'#98b2a3';c.lineWidth=.12;c.stroke();}
-  for(const y of [-6,-3.8])line(c,-Math.sqrt(Math.max(0,1-((y+1.4)/7.5)**2))*10.5,y,Math.sqrt(Math.max(0,1-((y+1.4)/7.5)**2))*10.5,y,'#abc1a7',.08);
-  oval(c,0,-8.72,1.35,.36,'#263f57',GOLD,.12);oval(c,0,-8.76,.87,.17,'#b2e2dc');
-  box(c,-12,-1.55,24,1.25,'#b5c7b9');box(c,-12.3,-1.65,24.6,.25,'#eee8cf');box(c,-12.25,-.35,24.5,.28,'#809f9e');
+  // Solid aged masonry, not a transparent latitude/longitude grid.
+  const dome=c.createLinearGradient(-9,-8,9,-1);dome.addColorStop(0,'#d1d6c3');dome.addColorStop(.42,'#a5b8ad');dome.addColorStop(.8,'#728e90');dome.addColorStop(1,'#4b6b78');
+  c.beginPath();c.ellipse(0,-1.4,10.7,7.5,0,Math.PI,Math.PI*2);c.lineTo(10.7,-.8);c.lineTo(-10.7,-.8);c.closePath();c.fillStyle=dome;c.fill();c.strokeStyle=INK;c.lineWidth=.2;c.stroke();
+  for(const dx of [-8,-4,4,8]){c.beginPath();c.moveTo(dx*.075,-8.78);c.quadraticCurveTo(dx*.85,-6.7,dx,-1.4);c.strokeStyle='#607c7e';c.lineWidth=.2;c.stroke();c.strokeStyle='#c5cfb9';c.lineWidth=.065;c.stroke();}
+  for(let row=0;row<5;row++){const y=-7.1+row*1.1,half=Math.sqrt(1-((y+1.4)/7.5)**2)*10.4;line(c,-half,y,half,y,'#5e79792e',.055);for(let x=-half+1+(row%2);x<half-1;x+=2.3)line(c,x,y,x-.2,y+.55,'#58757a40',.04);}
+  for(const [x,y] of [[-6,-4],[4,-6],[7,-2]]){line(c,x,y,x+.4,y+.3,'#4e6d74',.06);line(c,x+.4,y+.3,x+.27,y+.7,'#4e6d74',.045);}
+  oval(c,0,-8.6,1.5,.45,'#526a73','#d9d7b9',.2);oval(c,0,-8.62,1.03,.24,'#243d51','#9eb4ac',.08);oval(c,0,-8.5,.77,.1,'#526c7b');
+  box(c,-12,-1.55,24,1.25,'#b5c7b9');box(c,-12.3,-1.65,24.6,.25,'#eee8cf');box(c,-12.25,-.35,24.5,.36,'#536e77');
   for(let x=-10.8;x<11;x+=1.8){box(c,x,-1.25,1.2,.6,'#768f91');box(c,x+.18,-1.1,.84,.3,'#d0d6bf',null);}
   shape(c,[[-10,-.07],[0,-3],[10,-.07]],'#d5dac3',INK,.1);shape(c,[[-7.8,-.38],[0,-2.56],[7.8,-.38]],'#5f8588',GOLD,.07);laurel(c,0,-1.28,.83);crown(c,0,-1.25,.7);
+  box(c,-7.1,.12,14.2,3.2,'#405967',null);box(c,-6.6,.18,13.2,.45,'#263f50',null);
+  for(const side of [-1,1]){
+    const x=side*4.6;
+    c.beginPath();c.moveTo(x-1,3.3);c.lineTo(x-1,1.6);c.arc(x,1.6,1,Math.PI,0);c.lineTo(x+1,3.3);c.closePath();c.fillStyle='#263e50';c.fill();c.strokeStyle='#94aaa1';c.lineWidth=.13;c.stroke();
+    box(c,x-.56,1.7,1.12,1.3,'#778e91',null);box(c,x-.7,2.88,1.4,.24,'#b4c4b3',null);oval(c,x,1.43,.3,.3,'#a8b9ab');
+  }
+  line(c,-11.5,.14,11.5,.14,'#203a4b70',.2);
   // Back wall with niches and hanging imperial banners.
   for(const side of [-1,1]){
     box(c,side<0?-11:7,-.05,4,4.3,'#bacbbd');
@@ -69,7 +80,7 @@ export function sleepingRoyal(c,p,t){
   const L=(...args)=>line(c,...args);
   oval(c,0,29,42,12,'#223b4a45');
   // Cloaks, articulated feet and broad shoulder armor give the monarchs a silhouette of their own.
-  if(!guard)shape(c,[[-29,-23],[-42,32],[0,23],[42,32],[29,-23]],queen?'#514b7f':'#7f3346',trim,2);
+  if(!guard){shape(c,[[-29,-23],[-44,35],[0,27],[44,35],[29,-23]],queen?'#514b7f':'#7f3346',trim,2);for(const side of [-1,1])L(side*27,-12,side*34,29,queen?'#9183bd':'#ae5260',2);}
   for(const side of [-1,1]){R(side*25-10,7,20,28,'#355665');for(let y=13;y<34;y+=6)L(side*25-7,y,side*25+7,y,'#adc5be',2);R(side*25-13,27,26,9,trim);}
   const gradient=c.createLinearGradient(-26,-25,29,25);gradient.addColorStop(0,queen?'#d4c8ed':king?'#f28a64':'#a0ccc7');gradient.addColorStop(.55,body);gradient.addColorStop(1,queen?'#6c6497':king?'#913c48':'#3d6c7e');
   R(-30,-29,60,58,'#304b58');R(-25,-25,50,50,gradient);R(-21,-22,42,6,'#ffffff35',null);
@@ -78,29 +89,44 @@ export function sleepingRoyal(c,p,t){
     L(side*30,-19,side*35,-14,LIGHT,2);oval(c,side*32,-6,2.5,2.5,queen?'#99f9de':'#d47c54');
   }
   // Closed curved eyelids, dim cool cores: unmistakably asleep, not hostile.
-  for(const side of [-1,1]){R(side*10-7,-14,14,12,'#273d50',null);c.beginPath();c.arc(side*10,-10,5,0,Math.PI);c.strokeStyle='#bce4df';c.lineWidth=2;c.stroke();}
+  for(const side of [-1,1]){R(side*11-8,-15,16,14,'#273d50',null);c.beginPath();c.arc(side*11,-11,5.5,0,Math.PI);c.strokeStyle='#c9efdf';c.lineWidth=2.7;c.stroke();}
   R(-12,7,24,7,'#263f50',null);for(let i=0;i<3;i++)L(-7+i*7,9,-7+i*7,12,'#8fc1c5',1.5);
   if(guard){
     R(-28,-34,56,11,trim);shape(c,[[-17,-34],[-15,-45],[13,-45],[18,-34]],'#a75155',INK,2);for(let x=-10;x<=10;x+=5)L(x,-44,x,-35,'#ea9c71',2);
     // A Roman tower shield and resting spear, not the player's weapon silhouettes.
-    R(-46,-5,22,37,'#b7d1c7',INK,2);L(-35,-1,-35,27,GOLD,4);L(-43,12,-27,12,GOLD,3);
-    L(43,27,43,-47,'#9baea9',4);shape(c,[[38,-43],[43,-58],[48,-43]],'#e5e6ce',INK,1.7);
+    shape(c,[[-51,-7],[-25,-7],[-25,25],[-38,36],[-51,25]],'#3d686f','#e8d18c',3.5);
+    L(-38,-2,-38,26,GOLD,4);shape(c,[[-45,9],[-38,3],[-31,9],[-38,21]],'#d7dfc1',null);
+    L(45,28,45,-49,'#354e60',6);L(44,26,44,-49,'#d3dccb',2.5);shape(c,[[37,-45],[45,-65],[53,-45]],'#e5e6ce',INK,2.5);
   }else{
-    crown(c,0,-29,53,queen);
     R(-22,18,44,8,trim);oval(c,0,21,5,5,queen?'#9ef6d7':'#ffbd65',INK,1.5);
     if(king){
-      // Two enormous cold furnace cannons. Flame-shaped copper vents foreshadow his power.
-      for(const side of [-1,1]){R(side*39-12,-13,24,39,'#596875',INK,2.5);R(side*39-15,14,30,13,trim,INK,2);R(side*39-10,18,20,6,'#273d50',null);for(let i=0;i<3;i++)L(side*39-6+i*6,-7,side*39-6+i*6,8,'#efad66',2.4);shape(c,[[side*39-5,-15],[side*39-10,-25],[side*39-2,-23],[side*39+2,-36],[side*39+8,-22],[side*39+5,-15]],'#d99759',INK,1.5);}
-      laurel(c,0,0,22);
+      // A broad imperial helmet and laurel differ from the queen's tall diadem.
+      R(-30,-39,60,13,'#d8af59',INK,2.4);R(-25,-37,50,5,'#f6dc8d',null);
+      shape(c,[[-24,-39],[-24,-50],[-12,-47],[0,-57],[12,-47],[24,-50],[24,-39]],GOLD,INK,2.3);
+      for(const side of [-1,1])for(let j=0;j<3;j++){c.save();c.translate(side*(27-j*2),-25+j*7);c.rotate(side*.65);oval(c,0,0,5,2.5,GOLD);c.restore();}
+      oval(c,0,-41,5,5,'#e77b4c','#fff0ae',1.6);
+      // Deep round muzzles project from long barrel housings, not flat armrests.
+      for(const side of [-1,1]){
+        const x=side*41;
+        R(x-12,-15,24,42,'#566b77',INK,3);R(x-9,-12,7,32,'#8ea6aa',null);
+        for(const y of [-5,8,19])R(x-13,y,26,5,'#cba55e',INK,1.5);
+        oval(c,x,29,14,11,'#dcb66b',INK,2.6);oval(c,x,29,10,7.3,'#152e43','#f4d993',1.4);oval(c,x,30,5.8,3.5,'#293f50');
+        L(x-6,-10,x+6,-10,'#dd8d5f',3);
+      }
+      shape(c,[[-7,16],[-11,10],[-7,3],[-3,7],[1,-1],[8,8],[7,16]],'#f4c16d','#8e4547',1.5);
     }else{
-      for(const side of [-1,1])for(let j=0;j<3;j++)shape(c,[[side*28,-20+j*9],[side*(45-j*3),-36+j*10],[side*(41-j*3),-10+j*9]],'#d2e5ce',GOLD,1.5);
-      L(44,30,44,-43,GOLD,3);oval(c,44,-44,10,12,'#517c91',trim,2);shape(c,[[44,-54],[50,-44],[44,-34],[38,-44]],'#acf6e1',null);L(42,-50,42,-42,'#f2fff1',2);
+      shape(c,[[-27,-29],[-25,-43],[-12,-38],[0,-65],[12,-38],[25,-43],[27,-29]],'#eee0ad',INK,2);
+      L(-23,-30,23,-30,GOLD,4);shape(c,[[0,-57],[6,-45],[0,-34],[-6,-45]],'#8ee2cf','#f5f7d4',1.5);
+      for(const side of [-1,1]){shape(c,[[side*27,-20],[side*42,-31],[side*38,-3],[side*28,7]],'#d5e4ce',GOLD,2);L(side*30,-17,side*36,-22,'#8db7b0',2);}
+      L(45,31,45,-44,INK,5);L(44,30,44,-44,GOLD,2.5);
+      shape(c,[[45,-65],[56,-49],[45,-33],[34,-49]],'#a8f1d8',trim,2);shape(c,[[45,-65],[45,-33],[34,-49]],'#68b9b4',null);L(45,-62,52,-49,'#f2ffeb',2);
     }
   }
   c.restore();
-  // Only the stasis halo moves, never the sleeping figures themselves.
-  oval(c,p.x,p.y+p.size*.3,p.size*.57,p.size*.22,'#9dece80b','#bce7e988',.035);
-  c.save();c.font=`700 ${guard?.3:.38}px sans-serif`;c.textAlign='center';c.fillStyle='#e0fff4';c.fillText('z',p.x+p.size*.48,p.y-p.size*.7-(Math.sin(t*.8)*.04));c.restore();
+  // Quiet sleep bubbles, with a crescent that reads without knowing letters.
+  const sx=p.x+p.size*.43,sy=p.y-p.size*.77,ss=guard?.12:.23;
+  oval(c,sx-.2,sy+.3,ss*.25,ss*.25,'#e3f4dd88');oval(c,sx-.1,sy+.15,ss*.45,ss*.45,'#e3f4ddaa');
+  oval(c,sx,sy,ss,ss,'#d5eacb');oval(c,sx+ss*.42,sy-ss*.22,ss*.8,ss*.8,'#6b878c');
 }
 export function templeColumns(c){for(const p of COLUMNS)column(c,p);}
 export function pantheonMarker(c,x,y,scale,open){c.save();c.translate(x,y);c.scale(scale,scale);oval(c,0,1,19,19,open?'#355e71':'#41525f',GOLD,2);for(const x of [-11,-4,4,11])box(c,x-1.5,-4,3,15,'#d7dfcb',null);shape(c,[[-17,-5],[0,-17],[17,-5]],'#b6ccbe',GOLD,1.3);line(c,-16,13,16,13,GOLD,3);crown(c,0,-2,10);c.restore();}

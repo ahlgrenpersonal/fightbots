@@ -1,8 +1,8 @@
-import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world72';
-import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world72';
-import {COURT} from './pantheon.js?v=world72';
-import {templeGround,templeFloor,templeArchitecture,templeColumns,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world72';
-import * as worldData from './data.js?v=world72';
+import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world73';
+import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world73';
+import {COURT} from './pantheon.js?v=world73';
+import {templeGround,templeFloor,templeArchitecture,templeColumns,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world73';
+import * as worldData from './data.js?v=world73';
 
 export function rounded(c,x,y,w,h,r,fill,stroke,line=2) {
   c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=line;c.stroke();}
@@ -448,17 +448,18 @@ export class Painter {
   constructor(canvas){this.canvas=canvas;this.c=canvas.getContext('2d');this.w=0;this.h=0;this.camera={x:HOME.x,y:HOME.y};this.tile=72;this.baseTile=72;this.dpr=1;}
   resize(){
     const r=this.canvas.getBoundingClientRect();if(r.width<=0||r.height<=0)return;
+    const previousBase=this.baseTile,firstSize=this.w===0;
     this.w=r.width;this.h=r.height;this.dpr=Math.min(window.devicePixelRatio||1,2);
     const width=Math.round(this.w*this.dpr),height=Math.round(this.h*this.dpr);
     if(this.canvas.width!==width)this.canvas.width=width;
     if(this.canvas.height!==height)this.canvas.height=height;
-    this.baseTile=(this.w<600?Math.max(55,Math.min(76,this.w/6.3)):85)*.9;this.tile=this.baseTile;
+    this.baseTile=(this.w<600?Math.max(55,Math.min(76,this.w/6.3)):85)*.9;this.tile=firstSize?this.baseTile:this.tile*this.baseTile/previousBase;
   }
   follow(g,dt){
     const bosses=g.enemies.filter(e=>e.type==='boss'&&e.hp>0&&!e.dormant&&g.enemyAwake(e)&&Math.hypot(e.x-g.player.x,e.y-g.player.y)<8&&(e.active||Math.hypot(e.x-g.player.x,e.y-g.player.y)<5.5));
     let target={x:g.player.x,y:g.player.y},zoom=this.baseTile;
     if(regionAt(g.player.x,g.player.y)===PANTHEON.r&&g.player.y>225&&g.player.y<252){
-      zoom=Math.min(this.baseTile,(this.w-16)/21,(this.h-30)/30);target={x:162.5,y:233.5};
+      zoom=Math.min(this.baseTile,(this.w-16)/21,(this.h-30)/35);target={x:162.5,y:237};
     }else if(bosses.length){
       const left=Math.min(g.player.x-1.2,...bosses.map(e=>e.x-1.9)),right=Math.max(g.player.x+1.2,...bosses.map(e=>e.x+1.9));
       const top=Math.min(g.player.y-1.1,...bosses.map(e=>e.y-1.8)),bottom=Math.max(g.player.y+.8,...bosses.map(e=>e.y+1.1));
@@ -520,6 +521,7 @@ export class Painter {
       else if(obj.kind==='royal')sleepingRoyal(c,obj,t);
       else if(obj.kind==='home')this.home(obj.x,obj.y,t);
       else if(obj.kind==='player'){
+        if(regionAt(obj.x,obj.y)===PANTHEON.r){ellipse(c,obj.x,obj.y+.25,.73,.38,'#edf9df');ellipse(c,obj.x,obj.y+.25,.65,.32,'#183e61');ellipse(c,obj.x,obj.y+.25,.51,.23,'#77dfa2');}
         if(g.boostTime>0){ellipse(c,obj.x,obj.y+.2,.64,.36,'#ffdc6340');for(let i=0;i<3;i++)ellipse(c,obj.x+Math.cos(t*3+i*2)*.7,obj.y+Math.sin(t*3+i*2)*.7,.06,.06,'#ffe18c');}
         bot(c,obj.x,obj.y,1.17,{color:g.save.color,armor:g.save.build.armor,wheels:g.save.build.wheels,gun:g.save.build.weapon,gadget:g.save.build.gadget,angle:g.player.angle,hit:g.player.hit,swing:g.player.swing,moving:g.route.length>0,shield:g.player.invincible>0||g.boostTime>0,health:g.player.hp/g.maxHp(),reducedMotion:g.reducedMotion},t);
       }else{
