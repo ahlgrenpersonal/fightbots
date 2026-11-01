@@ -1,13 +1,14 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world80';
-import { Adventure, distance } from './engine.js?v=world80';
-import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon } from './art.js?v=world80';
-import { mountAtlas } from './atlas.js?v=world80';
-import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world80';
-import {AdventureSaves} from './adventure-saves.js?v=world80';
-import {bindHoldConfirmation} from './hold-confirm.js?v=world80';
-import {bindPowerControl,updatePowerControl} from './power-control.js?v=world80';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world81';
+import { Adventure, distance } from './engine.js?v=world81';
+import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon,atlasBot } from './art.js?v=world81';
+import { mountAtlas } from './atlas.js?v=world81';
+import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world81';
+import {AdventureSaves} from './adventure-saves.js?v=world81';
+import {bindHoldConfirmation} from './hold-confirm.js?v=world81';
+import {bindPowerControl,updatePowerControl} from './power-control.js?v=world81';
+import {atlasProgress} from './atlas-progress.js?v=world81';
 
-const buildVersion = 'world80';
+const buildVersion = 'world81';
 const SAVE_KEY='bot-adventure-save-v1';
 const adventureSaves=new AdventureSaves({storage:()=>localStorage,key:SAVE_KEY});
 const $=id=>document.getElementById(id);
@@ -84,26 +85,26 @@ function workshop(){
   }).join('')}</div><div class="panel-foot"><button class="primary pictorial-action" data-action="depart" aria-label="Go adventuring"><span>▶</span><small>Adventure</small></button></div>`);
 }
 function adventureMap(){
-  const s=game.save,region=unlockedRegion(s);
-  openPanel('map',`${head('The little big world',`${s.bosses.length} / ${REGIONS.length} relays restored · ${s.cleared.filter(id=>id.startsWith('site-')).length} power cells found`,'ADVENTURE ATLAS')}<div class="panel-body"><canvas id="atlas" class="map-canvas" aria-label="Map of fifteen regions. Select a destination." width="1200" height="960"></canvas><div class="map-key"><span>● Power cell</span><span>▣ Guardian</span><span>⌂ Workshop</span></div><div class="region-list">${REGIONS.map((reg,r)=>`<button class="region-row" data-region="${r}" ${r>region?'disabled':''}><span>${s.bosses.includes(r)?'✓':r>region?'◇':'ϟ'}</span><div><b>${reg.name}</b><small>${s.bosses.includes(r)?'Relay restored · more treasures to find':r>region?'Bridge asleep':`${cellsIn(s,r)} / ${requiredCells(r)} power cells · ${reg.boss}`}</small></div><em>${r<=region?'Go ↗':'Locked'}</em></button>`).join('')}</div></div>`);
-  const key=panel.querySelector('.map-key');key.insertAdjacentHTML('afterbegin','<span class="player-key">You</span>');key.insertAdjacentHTML('beforeend','<span>＋ Charging station</span><span style="color:#ed917b">● Patrol</span>');
-  const stations=game.world.stations.filter(st=>s.discovered.includes(st.id));
+  const s=game.save,progress=atlasProgress(s);
+  openPanel('map',`${head('The little big world',`${s.bosses.length} relays restored · ${s.cleared.filter(id=>id.startsWith('site-')).length} power cells found`,'ADVENTURE ATLAS')}<div class="panel-body"><canvas id="atlas" class="map-canvas" aria-label="Your unlocked world. Select a destination." width="1200" height="960"></canvas><div class="map-key"><span>● Power cell</span><span>▣ Guardian</span><span>⌂ Workshop</span></div><div class="region-list">${REGIONS.map((reg,r)=>({reg,r})).filter(({r})=>progress.visible.has(r)).sort((a,b)=>Number(b.r===progress.active)-Number(a.r===progress.active)||a.r-b.r).map(({reg,r})=>`<button class="region-row ${r===progress.active?'active-region':''}" data-region="${r}"><span>${r===progress.active?progress.newArea?'★':'⚑':'✓'}</span><div><b>${reg.name}</b><small>${r===progress.active&&progress.newArea?'New trail · ':''}${s.bosses.includes(r)?'Relay restored · more treasures to find':`${cellsIn(s,r)} / ${requiredCells(r)} power cells · ${reg.boss}`}</small></div><em>Go ↗</em></button>`).join('')}</div></div>`);
+  const key=panel.querySelector('.map-key');key.insertAdjacentHTML('afterbegin','<span class="bot-player-key"><canvas id="mapPlayerKey" width="80" height="80" aria-hidden="true"></canvas>You</span><span>★ Current adventure</span>');key.insertAdjacentHTML('beforeend','<span>＋ Charging station</span><span style="color:#ed917b">● Patrol</span>');
+  bot($('mapPlayerKey').getContext('2d'),40,43,64,{color:s.color,armor:s.build.armor,wheels:s.build.wheels,gun:s.build.weapon,gadget:s.build.gadget,reducedMotion:true});
+  const stations=game.world.stations.filter(st=>progress.visible.has(st.r)&&s.discovered.includes(st.id));
   panel.querySelector('.region-list').insertAdjacentHTML('afterbegin',stations.map(st=>`<button class="region-row station-row" data-station="${st.id}"><span>＋</span><div><b>Charging station</b><small>${REGIONS[st.r].name} · 2 scrap · safe zone</small></div><em>Go ↗</em></button>`).join(''));
   panel.querySelector('.region-list').insertAdjacentHTML('afterbegin',game.homes().map(h=>`<button class="region-row workshop-row" data-home="${h.id}"><span>⌂</span><div><b>${h.name}</b><small>Free repairs · walk home</small></div><em>Go ↗</em></button>`).join('')+RETURNS.filter(m=>returnActive(s,m)).map(m=>`<button class="region-row return-row" data-return="${m.id}"><span>⚑</span><div><b>${m.boss}</b><small>${REGIONS[m.r].name} · ${m.sites.filter((_,i)=>s.cleared.includes(`${m.sitePrefix}-${i}`)).length} / 3 camps</small></div><em>Go ↗</em></button>`).join(''));
   const map=$('atlas'),stage=document.createElement('div');stage.className='atlas-stage';map.before(stage);stage.append(map);
   stage.insertAdjacentHTML('afterbegin',`<div class="atlas-tools" role="group" aria-label="Map zoom"><output id="mapZoom" class="atlas-zoom" aria-label="Map zoom level">100%</output><button id="mapZoomOut" aria-label="Zoom out" title="Zoom out">−</button><button id="mapZoomIn" aria-label="Zoom in" title="Zoom in">+</button><button id="mapFit" aria-label="Show whole map" title="Show whole map">⛶</button>${s.completed?'':'<button id="mapGo" class="atlas-go" aria-label="Follow highlighted trail" title="Follow highlighted trail">➜</button>'}</div>`);
   const status=document.createElement('p');status.className='atlas-status';status.setAttribute('role','status');stage.after(status);
-  const source=document.createElement('canvas');source.width=map.width;source.height=map.height;source.getContext('2d').drawImage(map,0,0);
-  const layout=atlasLayout();
-  atlasController=mountAtlas(map,{source,initialZoom:3,maxZoom:10,contentBounds:{x:layout.ox,y:layout.oy,width:WORLD_W*layout.scale,height:WORLD_H*layout.scale},initialFocus:{x:layout.ox+game.player.x*layout.scale,y:layout.oy+game.player.y*layout.scale},onChange:zoom=>{$('mapZoom').value=`${Math.round(zoom*100)}%`;$('mapZoomOut').disabled=zoom<=1;$('mapZoomIn').disabled=zoom>=10;},onSelect:p=>{
-    const {scale,ox,oy}=atlasLayout(),x=(p.x-ox)/scale,y=(p.y-oy)/scale,r=regionAt(x,y);
+  const source=document.createElement('canvas');painter.map(source,game,{showPlayer:false});
+  atlasController=mountAtlas(map,{source,initialZoom:1,maxZoom:10,contentBounds:progress.bounds,onOverlay:(c,zoom)=>{c.save();c.translate(progress.ox+game.player.x*progress.scale,progress.oy+game.player.y*progress.scale);c.scale(1/zoom,1/zoom);atlasBot(c,0,0,s);c.restore();},onChange:zoom=>{$('mapZoom').value=`${Math.round(zoom*100)}%`;$('mapZoomOut').disabled=zoom<=1;$('mapZoomIn').disabled=zoom>=10;},onSelect:p=>{
+    const {scale,ox,oy}=progress,x=(p.x-ox)/scale,y=(p.y-oy)/scale,r=regionAt(x,y);
     if(x<0||x>=WORLD_W||y<0||y>=WORLD_H||r<0)return;
-    if(!areaUnlocked(s,r)){status.textContent=r===PANTHEON.r?'Restore every relay and complete the return missions to open the Crown Pantheon.':`Restore the ${REGIONS[r-1].name} relay to open this trail.`;return;}
+    if(!progress.visible.has(r)||!areaUnlocked(s,r))return;
     if(r===PANTHEON.r){closePanel();game.moveTo(PANTHEON.viewpoint);return;}
     const home=game.homes().find(h=>distance(h,{x,y})<3),mission=RETURNS.find(m=>returnActive(s,m)&&distance(m,{x,y})<3);
     closePanel();if(mission)goReturn(mission);else game.moveTo(home||{x,y});
   }});
-  panel.querySelector('.region-list').insertAdjacentHTML('afterbegin',`<button class="region-row" data-action="pantheon" ${pantheonUnlocked(s)?'':'disabled'}><span>♛</span><div><b>Crown Pantheon</b><small>${pantheonUnlocked(s)?game.royals.phase==='victory'?'Royal Champion · the court is restored':'Royal finale · four sentinels, then king and queen':'Restore all fifteen relays and finish the return missions'}</small></div><em>${pantheonUnlocked(s)?'Go ↗':'Locked'}</em></button>`);
+  if(pantheonUnlocked(s))panel.querySelector('.region-list').insertAdjacentHTML('afterbegin',`<button class="region-row ${progress.active===PANTHEON.r?'active-region':''}" data-action="pantheon"><span>♛</span><div><b>Crown Pantheon</b><small>${game.royals.phase==='victory'?'Royal Champion · the court is restored':'Royal finale · four sentinels, then king and queen'}</small></div><em>Go ↗</em></button>`);
   $('mapZoomIn').onclick=()=>atlasController.zoomBy(1.35);$('mapZoomOut').onclick=()=>atlasController.zoomBy(1/1.35);$('mapFit').onclick=()=>atlasController.reset();
   if($('mapGo'))$('mapGo').onclick=()=>{const walking=game.route.length>0;closePanel();if(!walking)game.goNext();};
 }

@@ -1,8 +1,9 @@
-const CACHE_NAME='bot-adventure-world80';
-const ASSETS=['./','./index.html','./styles.css?v=world80','./layout.css?v=world80','./app.js?v=world80','./data.js?v=world80','./topology.js?v=world80','./content.js?v=world80','./engine.js?v=world80','./patrols.js?v=world80','./art.js?v=world80','./atlas.js?v=world80','./manifest.webmanifest','./version.json','./assets/icon.svg','./assets/icon-192.png','./assets/icon-512.png','./refresh.html'];
-ASSETS.push('./pantheon.js?v=world80','./pantheon-art.js?v=world80','./royal-court.js?v=world80');
-ASSETS.push('./adventure-saves.js?v=world80','./hold-confirm.js?v=world80');
-ASSETS.push('./power-control.js?v=world80');
+const CACHE_NAME='bot-adventure-world81';
+const ASSETS=['./','./index.html','./styles.css?v=world81','./layout.css?v=world81','./app.js?v=world81','./data.js?v=world81','./topology.js?v=world81','./content.js?v=world81','./engine.js?v=world81','./patrols.js?v=world81','./art.js?v=world81','./atlas.js?v=world81','./manifest.webmanifest','./version.json','./assets/icon.svg','./assets/icon-192.png','./assets/icon-512.png','./refresh.html'];
+ASSETS.push('./pantheon.js?v=world81','./pantheon-art.js?v=world81','./royal-court.js?v=world81');
+ASSETS.push('./adventure-saves.js?v=world81','./hold-confirm.js?v=world81');
+ASSETS.push('./power-control.js?v=world81');
+ASSETS.push('./atlas-progress.js?v=world81');
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('bot-adventure-')&&key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{

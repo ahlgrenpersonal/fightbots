@@ -42,6 +42,8 @@ dialog[data-mode="trail"] .celebration{height:auto;aspect-ratio:5/2}
 .health-row.critical .health-heart{animation:warning-pulse 1s ease-in-out infinite}
 .health-row.critical>b{color:#ffba9f}
 .map-key{flex-wrap:wrap;gap:8px 14px}
+.map-key .bot-player-key{display:inline-flex;align-items:center;gap:3px;color:#d8efe1}.bot-player-key canvas{width:30px;height:30px}
+.region-row.active-region{border:2px solid #ffe17b;background:#d5ac3b1c}.region-row.active-region>span{color:#ffe17b}
 .map-key .player-key{display:inline-flex;align-items:center;gap:5px;color:#c4d5c9}
 .player-key::before{content:"";width:12px;height:12px;border:3px solid #173d68;border-radius:50%;background:#65ef86;outline:1px solid #f4fff8}
 .station-row{border-color:#77c6a250}.station-row span{color:#a9efd0}
