@@ -1,10 +1,10 @@
-import { MORE_REGIONS, NEW_EQUIPMENT, WORKSHOPS, RETURNS, ENCOUNTERS, LEGACY_WORKSHOPS, LEGACY_RETURNS, LEGACY_ENCOUNTERS } from './content.js?v=world77';
-import {LEGACY_TILES,WORLD_TILES,relocatePoint,relocateEntity,legacyPoint,worldGates} from './topology.js?v=world77';
-import {PANTHEON,inPantheon,buildPantheon} from './pantheon.js?v=world77';
+import { MORE_REGIONS, NEW_EQUIPMENT, WORKSHOPS, RETURNS, ENCOUNTERS, LEGACY_WORKSHOPS, LEGACY_RETURNS, LEGACY_ENCOUNTERS } from './content.js?v=world78';
+import {LEGACY_TILES,WORLD_TILES,relocatePoint,relocateEntity,legacyPoint,worldGates} from './topology.js?v=world78';
+import {PANTHEON,inPantheon,buildPantheon} from './pantheon.js?v=world78';
 export {PANTHEON};
 export { WORKSHOPS, RETURNS, ENCOUNTERS };
-export { bossProfile } from './content.js?v=world77';
-export const BUILD = 'world77';
+export { bossProfile } from './content.js?v=world78';
+export const BUILD = 'world78';
 export const REGION_W = 36;
 export const REGION_H = 44;
 export const WORLD_W = REGION_W * 5;
@@ -44,11 +44,11 @@ export const returnActive=(save,m)=>save.bosses.includes(m.unlock-1)&&!(save.ret
 export const EQUIPMENT = {
   weapon: [
     { id: 'bumper', name: 'Bumper', desc: 'A spring-loaded punch. A brave little beginning.', damage: 6, range: 1.4, rate: .65, cost: 0, gears: 0, unlock: -1, power: 1 },
-    { id: 'blaster', name: 'Blaster', desc: 'Bright energy bolts. Reach bots from a distance.', damage: 10, range: 4.2, rate: .75, cost: 16, gears: 2, unlock: -1, power: 2 },
+    { id: 'blaster', name: 'Blaster', desc: 'Bright energy bolts. Reach bots from a distance.', damage: 10, range: 3, rate: .75, cost: 16, gears: 2, unlock: -1, power: 2 },
     { id: 'saw', name: 'Buzz Saw', desc: 'A spinning steel blade. Lots of very quick hits.', damage: 12, range: 1.65, rate: .3, cost: 32, gears: 3, unlock: 0, power: 3 },
     { id: 'hammer', name: 'Thunder Hammer', desc: 'A mighty slam. Smashes several bots at once.', damage: 42, range: 1.9, rate: 1.05, cost: 55, gears: 4, unlock: 1, power: 4 },
-    { id: 'lightning', name: 'Arc Caster', desc: 'Crackling lightning jumps between nearby bots.', damage: 32, range: 4.4, rate: .65, cost: 85, gears: 5, unlock: 2, power: 5 },
-    { id: 'rocket', name: 'Rocket Launcher', desc: 'Big rockets. Big explosions. Big smiles.', damage: 105, range: 6.2, rate: 1.35, cost: 130, gears: 6, unlock: 3, power: 6 }
+    { id: 'lightning', name: 'Arc Caster', desc: 'Crackling lightning jumps between nearby bots.', damage: 32, range: 2.8, rate: .65, cost: 85, gears: 5, unlock: 2, power: 5 },
+    { id: 'rocket', name: 'Rocket Launcher', desc: 'Big rockets. Big explosions. Big smiles.', damage: 105, range: 3.2, rate: 1.35, cost: 130, gears: 6, unlock: 3, power: 6 }
   ],
   armor: [
     { id: 'light', name: 'Explorer Shell', desc: 'Light and colorful, with room to grow.', hp: 70, defense: 0, cost: 0, gears: 0, unlock: -1 },

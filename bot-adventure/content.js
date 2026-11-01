@@ -1,4 +1,4 @@
-import {relocateEntity,relocateMission} from './topology.js?v=world77';
+import {relocateEntity,relocateMission} from './topology.js?v=world78';
 const REGION_GUIDES={
   coast:['Salt air and bright harbor trails','Watch the blade fly out and come back. Keep rolling.'],
   scrapyard:['Giant magnets and mountains of spare parts','Move out of the glowing magnetic circle before the blast.'],
@@ -60,17 +60,17 @@ export const WORKSHOPS=LEGACY_WORKSHOPS.map(relocateEntity);
 export const RETURNS=LEGACY_RETURNS.map(relocateMission);
 export const NEW_EQUIPMENT={
   weapon:[
-    {id:'flame',name:'Flamethrower',desc:'A roaring fan of fire. Sweeps through a crowd.',damage:38,range:3.2,rate:.18,cost:180,gears:7,unlock:4,power:7},
-    {id:'frost',name:'Freeze Cannon',desc:'Ice bursts freeze small bots and slow big ones.',damage:70,range:5,rate:.45,cost:230,gears:8,unlock:5,power:8},
-    {id:'boomerang',name:'Boomerang Blade',desc:'A flying blade that cuts out and back again.',damage:110,range:5,rate:.7,cost:280,gears:9,unlock:6,power:9},
-    {id:'tractor',name:'Magnet Launcher',desc:'Pulls nearby bots together in a magnetic blast.',damage:90,range:4.5,rate:1,cost:330,gears:10,unlock:7,power:10},
-    {id:'drone',name:'Drone Bay',desc:'Launches a flying helper with its own blaster.',damage:70,range:5.5,rate:.35,cost:380,gears:11,unlock:8,power:11},
-    {id:'rail',name:'Rail Cannon',desc:'A brilliant shot that pierces a line of bots.',damage:220,range:7,rate:.7,cost:440,gears:12,unlock:9,power:12},
-    {id:'meteor',name:'Meteor Launcher',desc:'Calls a spectacular shower of explosive stars.',damage:360,range:6.5,rate:1.2,cost:510,gears:14,unlock:10,power:13},
-    {id:'gravity',name:'Gravity Hammer',desc:'Pulls bots inward, then launches a mighty slam.',damage:270,range:3.1,rate:.65,cost:580,gears:16,unlock:11,power:14},
-    {id:'sunbeam',name:'Sunbeam Cannon',desc:'A brilliant golden beam pierces a whole line of bots.',damage:340,range:7,rate:.7,cost:650,gears:18,unlock:12,power:15},
-    {id:'swarm',name:'Swarm Launcher',desc:'Three tiny flying bots chase enemies together.',damage:150,range:6.5,rate:.75,cost:720,gears:20,unlock:13,power:16},
-    {id:'supernova',name:'Supernova Launcher',desc:'Three star rockets burst into mighty golden shockwaves.',damage:280,range:7,rate:1.2,cost:850,gears:22,unlock:14,power:17}
+    {id:'flame',name:'Flamethrower',desc:'A roaring fan of fire. Sweeps through a crowd.',damage:38,range:2.6,rate:.18,cost:180,gears:7,unlock:4,power:7},
+    {id:'frost',name:'Freeze Cannon',desc:'Ice bursts freeze small bots and slow big ones.',damage:70,range:3,rate:.45,cost:230,gears:8,unlock:5,power:8},
+    {id:'boomerang',name:'Boomerang Blade',desc:'A flying blade that cuts out and back again.',damage:110,range:3.2,rate:.7,cost:280,gears:9,unlock:6,power:9},
+    {id:'tractor',name:'Magnet Launcher',desc:'Pulls nearby bots together in a magnetic blast.',damage:90,range:2.8,rate:1,cost:330,gears:10,unlock:7,power:10},
+    {id:'drone',name:'Drone Bay',desc:'Launches a flying helper with its own blaster.',damage:70,range:3,rate:.35,cost:380,gears:11,unlock:8,power:11},
+    {id:'rail',name:'Rail Cannon',desc:'A brilliant shot that pierces a line of bots.',damage:220,range:3.25,rate:.7,cost:440,gears:12,unlock:9,power:12},
+    {id:'meteor',name:'Meteor Launcher',desc:'Calls a spectacular shower of explosive stars.',damage:360,range:3.2,rate:1.2,cost:510,gears:14,unlock:10,power:13},
+    {id:'gravity',name:'Gravity Hammer',desc:'Pulls bots inward, then launches a mighty slam.',damage:270,range:2.6,rate:.65,cost:580,gears:16,unlock:11,power:14},
+    {id:'sunbeam',name:'Sunbeam Cannon',desc:'A brilliant golden beam pierces a whole line of bots.',damage:340,range:3.25,rate:.7,cost:650,gears:18,unlock:12,power:15},
+    {id:'swarm',name:'Swarm Launcher',desc:'Three tiny flying bots chase enemies together.',damage:150,range:3.2,rate:.75,cost:720,gears:20,unlock:13,power:16},
+    {id:'supernova',name:'Supernova Launcher',desc:'Three star rockets burst into mighty golden shockwaves.',damage:280,range:3.2,rate:1.2,cost:850,gears:22,unlock:14,power:17}
   ],
   armor:[
     {id:'bastion',name:'Bastion Armor',desc:'Thick harbor plates. Ready for a bigger adventure.',hp:300,defense:3,cost:210,gears:8,unlock:5},

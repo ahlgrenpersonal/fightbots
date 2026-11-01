@@ -1,9 +1,9 @@
-import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world77';
-import { bossProfile } from './content.js?v=world77';
-import { ReturningPatrols } from './patrols.js?v=world77';
-import {inRoyalChamber} from './pantheon.js?v=world77';
-import {RoyalCourt} from './royal-court.js?v=world77';
-import {nearestWalkable} from './data.js?v=world77';
+import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world78';
+import { bossProfile } from './content.js?v=world78';
+import { ReturningPatrols } from './patrols.js?v=world78';
+import {inRoyalChamber} from './pantheon.js?v=world78';
+import {RoyalCourt} from './royal-court.js?v=world78';
+import {nearestWalkable} from './data.js?v=world78';
 
 export const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
 export const TAP_COOLDOWN=1.5;
@@ -70,6 +70,13 @@ export class Adventure {
     }
   }
   canAttack(from,to,weapon){return !DIRECT_WEAPONS.has(weapon)||this.clearShot(from,to);}
+  inEngagementView(pos){
+    const b=this.viewBounds;if(!b)return true;
+    const x=(b.right-b.left)*.16,y=(b.bottom-b.top)*.12;
+    return pos.x>=b.left+x&&pos.x<=b.right-x&&pos.y>=b.top+y&&pos.y<=b.bottom-y;
+  }
+  playerCanAttack(e,w=stats(this.save).weapon,scale=1){return distance(this.player,e)<=w.range*scale&&this.inEngagementView(e)&&this.canAttack(this.player,e,w.id);}
+  attackLimit(w){return {x:this.player.x,y:this.player.y,radius:w.range,bounds:this.viewBounds?{...this.viewBounds}:null};}
   firingMuzzle(p,weapon,to,size=1.17,terrain=DIRECT_WEAPONS.has(weapon)){
     const muzzle=weaponMuzzle(p,weapon,size);
     if(!terrain||this.clearShot(p,muzzle)&&this.clearShot(muzzle,to))return muzzle;
@@ -101,13 +108,13 @@ export class Adventure {
   }
   focusEnemy(enemy){if(enemy.dormant||!this.enemyAwake(enemy))return;this.target=enemy.id;this.moveTo(enemy);this.target=enemy.id;}
   enemyAt(pos,tile){
-    return this.enemies.filter(e=>e.hp>0&&!e.dormant&&this.enemyAwake(e)&&(e.spawnUntil||0)<=this.time)
+    return this.enemies.filter(e=>e.hp>0&&!e.dormant&&this.enemyAwake(e)&&this.inEngagementView(e)&&(e.spawnUntil||0)<=this.time)
       .map(e=>({e,d:distance(pos,{x:e.x,y:e.y-(e.size||.8)*.15}),radius:Math.max(.4,(e.size||.8)*.5)+22/Math.max(1,tile)}))
       .filter(p=>p.d<=p.radius).sort((a,b)=>a.d/a.radius-b.d/b.radius)[0]?.e;
   }
   tapEnemy(e){
     if(this.paused||e.hp<=0||e.dormant||!this.enemyAwake(e)||e.spawnUntil>this.time)return false;
-    const w=stats(this.save).weapon,inRange=distance(this.player,e)<=w.range&&this.canAttack(this.player,e,w.id);
+    const w=stats(this.save).weapon,inRange=this.playerCanAttack(e,w);
     if(!inRange)this.focusEnemy(e);
     else{if(this.target){this.route=[];this.waypoint=null;}this.target=null;}
     this.tapSelection=e.id;
@@ -117,7 +124,7 @@ export class Adventure {
   tryPowerAttack(){
     const e=this.enemies.find(n=>n.id===this.powerTarget&&n.hp>0&&!n.dormant&&this.enemyAwake(n)),w=stats(this.save).weapon;
     if(!e){this.powerTarget=null;return false;}
-    if(this.tapCd>0||this.safeAt(this.player)||distance(this.player,e)>w.range||!this.canAttack(this.player,e,w.id))return false;
+    if(this.tapCd>0||this.safeAt(this.player)||!this.playerCanAttack(e,w))return false;
     this.powerTarget=null;this.tapCd=TAP_COOLDOWN;this.attack(e,true);return true;
   }
   goHome(){
@@ -150,7 +157,7 @@ export class Adventure {
     this.emit('toast',{text:'Charging… Safe inside the green ring.'});return true;
   }
   boost(){if(this.boostCd>0)return false;const capacitor=this.save.build.gadget==='capacitor';this.boostCd=capacitor?18:28;this.boostTime=capacitor?8:6;this.player.invincible=1;this.emit('boost');this.burst(this.player.x,this.player.y,1.2);return true;}
-  burst(x,y,radius=1,type='burst'){this.effects.push({type,x,y,radius,life:.6,max:.6});}
+  burst(x,y,radius=1,type='burst',limit){this.effects.push({type,x,y,radius,life:.6,max:.6,limit});}
   number(x,y,text,color){this.effects.push({type:'number',x,y,text,color,life:.9,max:.9});}
   hitEnemy(e,damage,kind=''){
     if(e.hp<=0||e.dormant||e.spawnUntil>this.time||!this.enemyAwake(e))return;const amount=Math.max(1,Math.round(damage*(e.type==='shield'&&!e.frozen&&!['rail','sunbeam','gravity','tractor'].includes(kind)?.7:1)));e.hp=Math.max(0,e.hp-amount);e.aggroUntil=this.time+6;e.hit=.15;this.number(e.x,e.y-.5,`${amount}`,'#fff3b5');
@@ -195,21 +202,21 @@ export class Adventure {
   }
   attack(e,power=false){
     const w=stats(this.save).weapon,p=this.player,damage=w.damage*(power?TAP_DAMAGE:AUTO_DAMAGE)*(this.boostTime>0?1.65:1);
-    if(!this.canAttack(p,e,w.id))return;
+    if(!this.playerCanAttack(e,w))return;
     if(!power)p.cd=w.rate*(this.boostTime>0?.7:1);p.swing=power?.65:.42;p.angle=Math.atan2(e.y-p.y,e.x-p.x);
     const muzzle=this.firingMuzzle(p,w.id,e);
     this.emit('attack',{weapon:w.id,power});
-    const splashDamage=damage*(power?AUTO_DAMAGE/TAP_DAMAGE:1),shotPower={power,powerTarget:e.id,splashDamage};
+    const splashDamage=damage*(power?AUTO_DAMAGE/TAP_DAMAGE:1),shotPower={power,powerTarget:e.id,splashDamage,playerRange:w.range,weaponId:w.id};
     const hit=(n,amount=damage)=>this.hitEnemy(n,amount*(power&&n!==e?AUTO_DAMAGE/TAP_DAMAGE:1),w.id);
     if(power){this.effects.push({type:'power-launch',x:muzzle.x,y:muzzle.y,tx:e.x,ty:e.y,life:.35,max:.35});if(!['blaster','rocket','frost','boomerang','drone','meteor','swarm','supernova'].includes(w.id))this.effects.push({type:'power-hit',x:e.x,y:e.y,weapon:w.id,life:.5,max:.5});}
-    const foes=this.enemies.filter(n=>n.hp>0&&!n.dormant&&this.enemyAwake(n));
+    const foes=this.enemies.filter(n=>n.hp>0&&!n.dormant&&this.enemyAwake(n)&&this.playerCanAttack(n,w));
     if(w.id==='flame'){
-      this.effects.push({type:'flame',power,x:muzzle.x,y:muzzle.y,angle:p.angle,radius:w.range,life:.24,max:.24});for(const n of foes){const angle=Math.atan2(n.y-p.y,n.x-p.x);if(distance(n,p)<=w.range&&Math.cos(angle-p.angle)>.65&&this.clearShot(p,n))hit(n);}return;
+      this.effects.push({type:'flame',power,x:muzzle.x,y:muzzle.y,angle:p.angle,radius:w.range,limit:this.attackLimit(w),life:.24,max:.24});for(const n of foes){const angle=Math.atan2(n.y-p.y,n.x-p.x);if(distance(n,p)<=w.range&&Math.cos(angle-p.angle)>.65&&this.clearShot(p,n))hit(n);}return;
     }
     if(['tractor','gravity'].includes(w.id)){
-      this.effects.push({type:'vortex',x:e.x,y:e.y,radius:2.6,life:.55,max:.55});
+      this.effects.push({type:'vortex',x:e.x,y:e.y,radius:2.6,limit:this.attackLimit(w),life:.55,max:.55});
       for(const n of foes.filter(n=>distance(n,e)<2.6)){const a=Math.atan2(e.y-n.y,e.x-n.x),step=Math.min(.8,distance(n,e)),x=n.x+Math.cos(a)*step,y=n.y+Math.sin(a)*step;if(n.type!=='boss'&&canWalk(this.world,this.save,Math.floor(x),Math.floor(y))){n.x=x;n.y=y;}hit(n);}
-      if(w.id==='gravity'){this.effects.push({type:'slam',x:e.x,y:e.y,life:.55,max:.55});this.shake=4;}return;
+      if(w.id==='gravity'){this.effects.push({type:'slam',x:e.x,y:e.y,limit:this.attackLimit(w),life:.55,max:.55});this.shake=4;}return;
     }
     if(w.id==='rail'||w.id==='sunbeam'){
       const targetForward=(e.x-muzzle.x)*Math.cos(p.angle)+(e.y-muzzle.y)*Math.sin(p.angle);
@@ -217,7 +224,7 @@ export class Adventure {
       const beamAngle=w.id==='sunbeam'&&!closeDischarge?Math.atan2(e.y-muzzle.y,e.x-muzzle.x):p.angle;
       const flareRadius=closeDischarge?Math.min(1.2,distance(e,muzzle)+.1):0;
       const tx=muzzle.x+Math.cos(beamAngle)*w.range,ty=muzzle.y+Math.sin(beamAngle)*w.range;
-      this.effects.push({type:w.id==='sunbeam'?'sunbeam':'rail',power,x:muzzle.x,y:muzzle.y,tx,ty,flareRadius,life:.3,max:.3});
+      this.effects.push({type:w.id==='sunbeam'?'sunbeam':'rail',power,x:muzzle.x,y:muzzle.y,tx,ty,flareRadius,limit:this.attackLimit(w),life:.3,max:.3});
       for(const n of foes){
         if(w.id==='sunbeam'){
           // The beam halo plus a bot's body radius defines the same visible hit corridor.
@@ -241,14 +248,14 @@ export class Adventure {
     if(['frost','boomerang','drone','meteor'].includes(w.id)){
       const kind={frost:'ice',boomerang:'blade',drone:'drone',meteor:'meteor'}[w.id];
       this.projectiles.push({x:w.id==='meteor'?e.x-1:muzzle.x,y:w.id==='meteor'?e.y-5:muzzle.y,tx:e.x,ty:e.y,target:e.id,angle:p.angle,speed:w.id==='meteor'?8:10,damage,...shotPower,kind,life:4});
-      this.effects.push({type:w.id==='frost'?'frost':w.id==='boomerang'?'blade':w.id,x:w.id==='meteor'?e.x:muzzle.x,y:w.id==='meteor'?e.y:muzzle.y,tx:e.x,ty:e.y,radius:2.3,life:.6,max:.6});return;
+      this.effects.push({type:w.id==='frost'?'frost':w.id==='boomerang'?'blade':w.id,x:w.id==='meteor'?e.x:muzzle.x,y:w.id==='meteor'?e.y:muzzle.y,tx:e.x,ty:e.y,radius:2.3,limit:this.attackLimit(w),life:.6,max:.6});return;
     }
     if(w.id==='blaster'||w.id==='rocket')this.projectiles.push({x:muzzle.x,y:muzzle.y,tx:e.x,ty:e.y,target:e.id,angle:p.angle,speed:w.id==='rocket'?6.5:11,damage,...shotPower,kind:w.id==='rocket'?'rocket':'bolt',life:3});
     else if(w.id==='lightning'){
       const chain=[e,...foes.filter(n=>n!==e&&distance(n,e)<2.8).sort((a,b)=>distance(a,e)-distance(b,e)).slice(0,3)];let from=muzzle;
       for(const [i,n] of chain.entries()){this.effects.push({type:'arc',power,x:from.x,y:from.y,tx:n.x,ty:n.y,life:.24,max:.24});hit(n,damage*(i===0?1:.72));from=n;}
     }else if(w.id==='hammer'){
-      this.effects.push({type:'slam',x:e.x,y:e.y,life:.55,max:.55});this.shake=4;
+      this.effects.push({type:'slam',x:e.x,y:e.y,limit:this.attackLimit(w),life:.55,max:.55});this.shake=4;
       for(const n of foes.filter(n=>distance(n,e)<1.9&&this.clearShot(p,n)))hit(n);
     }else{hit(e);this.burst(e.x,e.y,.25);if(w.id==='bumper'&&e.type!=='boss'){const a=Math.atan2(e.y-p.y,e.x-p.x),nx=e.x+Math.cos(a)*.25,ny=e.y+Math.sin(a)*.25;if(canWalk(this.world,this.save,Math.floor(nx),Math.floor(ny))){e.x=nx;e.y=ny;}}}
   }
@@ -289,6 +296,8 @@ export class Adventure {
       const source=sourceId&&this.enemies.find(e=>e.id===sourceId&&e.hp>0&&!e.dormant&&this.enemyAwake(e));
       if(sourceId&&!source){shot.life=0;continue;}
       const target=shot.target&&this.enemies.find(e=>e.id===shot.target&&e.hp>0&&!e.dormant);
+      const eligible=e=>this.playerCanAttack(e,{id:shot.weaponId||stats(this.save).weapon.id,range:shot.playerRange??stats(this.save).weapon.range});
+      if(!shot.enemy&&target&&!shot.returning&&!eligible(target)){shot.life=0;continue;}
       if(shot.returning&&shot.kind==='blade'){const endpoint=shot.enemy?source:p;if(!endpoint){shot.life=0;continue;}shot.tx=endpoint.x;shot.ty=endpoint.y;}
       else if(target){shot.tx=target.x;shot.ty=target.y;}
       if(shot.launch>0){
@@ -304,7 +313,7 @@ export class Adventure {
       if(shot.kind==='blade'){
         shot.hitIds ||= new Set();
         if(shot.enemy){if(!shot.hitIds.has('player')&&segmentDistance(p,from,next)<.45){shot.hitIds.add('player');this.hurt(shot.damage);}}
-        else for(const e of this.enemies)if(e.hp>0&&!e.dormant&&this.enemyAwake(e)&&!shot.hitIds.has(e.id)&&segmentDistance(e,from,next)<.5){shot.hitIds.add(e.id);this.hitEnemy(e,shot.power&&e.id!==shot.powerTarget?shot.splashDamage:shot.damage,'boomerang');if(shot.power)this.effects.push({type:'power-hit',x:e.x,y:e.y,life:.4,max:.4});}
+        else for(const e of this.enemies)if(e.hp>0&&!e.dormant&&this.enemyAwake(e)&&eligible(e)&&!shot.hitIds.has(e.id)&&segmentDistance(e,from,next)<.5){shot.hitIds.add(e.id);this.hitEnemy(e,shot.power&&e.id!==shot.powerTarget?shot.splashDamage:shot.damage,'boomerang');if(shot.power)this.effects.push({type:'power-hit',x:e.x,y:e.y,life:.4,max:.4});}
         if(arrived){if(shot.returning)shot.life=0;else{shot.returning=true;shot.target=null;shot.hitIds=new Set();shot.life=5;shot.damage*=.65;shot.splashDamage*=.65;const endpoint=shot.enemy?source:p;shot.tx=endpoint.x;shot.ty=endpoint.y;}}
         continue;
       }
@@ -318,12 +327,13 @@ export class Adventure {
         if(distance(p,shot)<radius)this.hurt(shot.damage);
       }else if(shot.kind==='rocket'||shot.kind==='meteor'){
         const nova=shot.style==='supernova',radius=nova?2.4:shot.kind==='meteor'?2.8:2;
-        if(nova)this.effects.push({type:'nova',x:shot.x,y:shot.y,radius,life:.65,max:.65});
-        else this.burst(shot.x,shot.y,shot.kind==='meteor'?2.3:1.4,'explosion');this.shake=5;
-        for(const e of this.enemies)if(e.hp>0&&distance(e,shot)<radius&&this.enemyAwake(e))this.hitEnemy(e,shot.power&&e.id!==shot.powerTarget?shot.splashDamage:shot.damage);
+        const limit=this.attackLimit({range:shot.playerRange??stats(this.save).weapon.range});
+        if(nova)this.effects.push({type:'nova',x:shot.x,y:shot.y,radius,limit,life:.65,max:.65});
+        else this.burst(shot.x,shot.y,shot.kind==='meteor'?2.3:1.4,'explosion',limit);this.shake=5;
+        for(const e of this.enemies)if(e.hp>0&&distance(e,shot)<radius&&this.enemyAwake(e)&&eligible(e))this.hitEnemy(e,shot.power&&e.id!==shot.powerTarget?shot.splashDamage:shot.damage);
         this.emit('explosion');
       }else if(shot.kind==='ice'){
-        for(const e of this.enemies)if(e.hp>0&&distance(e,shot)<1.2&&this.enemyAwake(e)&&this.clearShot(shot,e)){e.frozen=e.type==='boss'?.4:1.1;this.hitEnemy(e,shot.power&&e.id!==shot.powerTarget?shot.splashDamage:shot.damage,'frost');}
+        for(const e of this.enemies)if(e.hp>0&&distance(e,shot)<1.2&&this.enemyAwake(e)&&eligible(e)&&this.clearShot(shot,e)){e.frozen=e.type==='boss'?.4:1.1;this.hitEnemy(e,shot.power&&e.id!==shot.powerTarget?shot.splashDamage:shot.damage,'frost');}
         this.burst(shot.x,shot.y,.7,'frost');
       }else if(target)this.hitEnemy(target,shot.damage);
     }
@@ -335,7 +345,7 @@ export class Adventure {
     for(const key of ['cd','hit','swing','invincible'])p[key]=Math.max(0,p[key]-dt);
     this.boostCd=Math.max(0,this.boostCd-dt);this.boostTime=Math.max(0,this.boostTime-dt);this.shieldCd=Math.max(0,this.shieldCd-dt);this.buddyCd=Math.max(0,this.buddyCd-dt);this.shake=Math.max(0,this.shake-dt*18);
     const target=this.target&&this.enemies.find(e=>e.id===this.target&&e.hp>0);
-    if(target){const ready=distance(p,target)<=st.weapon.range*.9&&this.canAttack(p,target,st.weapon.id);if(!ready&&this.routeTimer<=0){this.route=pathfind(this.world,this.save,p,target);this.routeTimer=.65;}else if(ready)this.route=[];}
+    if(target){const ready=this.playerCanAttack(target,st.weapon,.9);if(!ready&&this.routeTimer<=0){this.route=pathfind(this.world,this.save,p,target);this.routeTimer=.65;}else if(ready)this.route=[];}
     else if(this.target)this.target=null;
     if(this.route.length){const next=this.route[0],d=distance(p,next),step=st.speed*dt*(this.boostTime>0?1.25:1);if(d<=step){p.x=next.x;p.y=next.y;this.route.shift();}else{const a=Math.atan2(next.y-p.y,next.x-p.x);p.x+=Math.cos(a)*step;p.y+=Math.sin(a)*step;if(!target)p.angle=a;}if(!this.route.length)this.waypoint=null;}
     this.discover();
@@ -345,9 +355,9 @@ export class Adventure {
     if(this.powerTarget)this.tryPowerAttack();
     const threats=this.enemies.filter(e=>!e.royal&&e.hp>0&&!e.dormant&&e.r<=unlockedRegion(this.save)&&(distance(p,e)<8||e.aggroUntil>this.time)&&this.enemyAwake(e));
     const focus=this.tapSelection||this.target;
-    const inRange=[...threats,...this.royals.units.filter(e=>this.royals.awake(e))].filter(e=>distance(p,e)<=st.weapon.range&&this.canAttack(p,e,st.weapon.id)).sort((a,b)=>(b.id===focus)-(a.id===focus)||distance(p,a)-distance(p,b));
+    const inRange=[...threats,...this.royals.units.filter(e=>this.royals.awake(e))].filter(e=>this.playerCanAttack(e,st.weapon)).sort((a,b)=>(b.id===focus)-(a.id===focus)||distance(p,a)-distance(p,b));
     if(p.cd<=0&&inRange.length&&!this.safeAt(p))this.attack(inRange[0]);
-    if(this.save.build.gadget==='buddy'&&this.buddyCd<=0&&inRange.length&&!this.safeAt(p)){const e=inRange[0];this.buddyCd=1;this.projectiles.push({x:p.x-.6,y:p.y-.6,tx:e.x,ty:e.y,target:e.id,angle:0,speed:11,damage:45*AUTO_DAMAGE,kind:'drone',life:3});this.effects.push({type:'drone',x:p.x,y:p.y,tx:e.x,ty:e.y,life:.7,max:.7});}
+    if(this.save.build.gadget==='buddy'&&this.buddyCd<=0&&inRange.length&&!this.safeAt(p)){const e=inRange[0];this.buddyCd=1;this.projectiles.push({x:p.x-.6,y:p.y-.6,tx:e.x,ty:e.y,target:e.id,angle:0,speed:11,damage:45*AUTO_DAMAGE,playerRange:st.weapon.range,weaponId:st.weapon.id,kind:'drone',life:3});this.effects.push({type:'drone',x:p.x,y:p.y,tx:e.x,ty:e.y,life:.7,max:.7});}
     for(const e of threats){
       if(e.hp<=0)continue;
       e.frozen=Math.max(0,(e.frozen||0)-dt);e.cd-=dt;e.hit=Math.max(0,e.hit-dt);e.swing=Math.max(0,e.swing-dt);const d=distance(p,e),boss=e.type==='boss';

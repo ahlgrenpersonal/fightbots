@@ -1,8 +1,8 @@
-import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world77';
-import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world77';
-import {COURT} from './pantheon.js?v=world77';
-import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world77';
-import * as worldData from './data.js?v=world77';
+import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world78';
+import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world78';
+import {COURT} from './pantheon.js?v=world78';
+import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world78';
+import * as worldData from './data.js?v=world78';
 
 export function rounded(c,x,y,w,h,r,fill,stroke,line=2) {
   c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=line;c.stroke();}
@@ -749,6 +749,7 @@ export class Painter {
   chest(x,y,t){const c=this.c;c.save();c.translate(x,y);ellipse(c,0,.15,.33,.12,'#355e572a');rounded(c,-.27,-.28,.54,.4,.06,'#e8c365','#506c54',.035);rounded(c,-.3,-.32,.6,.16,.04,'#ffdf85','#617453',.025);rounded(c,-.05,-.25,.1,.2,.02,'#698a6c');text(c,'✦',0,-.5+Math.sin(t*2)*.05,.23,'#ffedb4');c.restore();}
   gate(x,y,t){const c=this.c;c.save();c.translate(x,y);for(const v of [-2,2]){rounded(c,-.28,v-.3,.56,.7,.08,'#789c91','#385c57',.04);ellipse(c,0,v,.1,.1,'#ffcf74');}line(c,0,-1.7,0,1.7,'#c9f5ec99',.13);line(c,-.07,-1.7,-.07,1.7,'#edfff4',.025);c.restore();}
   effect(f,t,reducedMotion=this.reducedMotion){const c=this.c,p=reducedMotion?.45:Math.max(0,Math.min(1,1-f.life/(f.max||1)));if(reducedMotion)t=0;c.save();c.globalAlpha=Math.max(0,Math.min(1,f.life*5));
+    if(f.limit){const l=f.limit;c.beginPath();c.arc(l.x,l.y,l.radius,0,Math.PI*2);c.clip();if(l.bounds){const b=l.bounds,x=(b.right-b.left)*.16,y=(b.bottom-b.top)*.12;c.beginPath();c.rect(b.left+x,b.top+y,b.right-b.left-x*2,b.bottom-b.top-y*2);c.clip();}}
     if(f.type==='power-hit'||f.type==='power-launch'){
       const impact=f.type==='power-hit',r=impact?.4+p*.7:.16+p*.3;c.translate(f.x,f.y);c.globalAlpha*=1-p;
       ring(c,0,0,r,'#174464',.14);ring(c,0,0,r,'#a0ffdf',.065);novaStar(c,0,0,r*.5,'#fff6bf','#3a8a8c',.03);
@@ -767,7 +768,7 @@ export class Painter {
       const tx=f.tx??f.x,ty=f.ty??f.y,dx=tx-f.x,dy=ty-f.y;
       c.beginPath();c.moveTo(f.x,f.y);c.quadraticCurveTo((f.x+tx)/2-dy*.18,(f.y+ty)/2+dx*.18,tx,ty);c.strokeStyle='#477f8866';c.lineWidth=.035;c.stroke();
     }else if(f.type==='vortex'){
-      const radius=f.radius||1.8;ellipse(c,f.x,f.y,radius,radius*.65,f.enemy?'#ee8ba32b':'#80dac52b');
+      const radius=f.radius||1.8;if(!f.limit)ellipse(c,f.x,f.y,radius,radius*.65,f.enemy?'#ee8ba32b':'#80dac52b');
       for(let j=0;j<3;j++){c.beginPath();for(let i=0;i<=40;i++){const v=i/40,r=radius*(1-v*.83),a=t*3+j*Math.PI*2/3+v*5;const x=f.x+Math.cos(a)*r,y=f.y+Math.sin(a)*r*.65;i?c.lineTo(x,y):c.moveTo(x,y);}c.strokeStyle=f.enemy?(j%2?'#ffe4ba':'#d66b90'):j%2?'#e3ffdb':'#8cd8d7';c.lineWidth=.045;c.stroke();}ellipse(c,f.x,f.y,.16,.13,'#f3ffe0');
     }else if(f.type==='sunbeam'){
       const tx=f.tx??f.x,ty=f.ty??f.y,a=Math.atan2(ty-f.y,tx-f.x),length=Math.hypot(tx-f.x,ty-f.y);
