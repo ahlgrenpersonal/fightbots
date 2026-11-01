@@ -1,10 +1,10 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world75';
-import { Adventure, distance } from './engine.js?v=world75';
-import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon } from './art.js?v=world75';
-import { mountAtlas } from './atlas.js?v=world75';
-import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world75';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world76';
+import { Adventure, distance } from './engine.js?v=world76';
+import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon } from './art.js?v=world76';
+import { mountAtlas } from './atlas.js?v=world76';
+import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world76';
 
-const buildVersion = 'world75';
+const buildVersion = 'world76';
 const SAVE_KEY='bot-adventure-save-v1';
 const $=id=>document.getElementById(id);
 $('buildLabel').textContent=buildVersion;
@@ -62,6 +62,8 @@ game.onEvent=e=>{
   if(e.type==='crafted'){tone(500,.3,'triangle',.05,1400);toast(`${e.part.name} assembled!`);persist();}
   if(e.type==='equip'){tone(350,.08,'triangle',.025,500);persist();}
   if(e.type==='boost'){tone(250,.4,'triangle',.04,900);toast('Power surge!');}
+  if(e.type==='royal-stage'){persist();banner(e.phase==='guards'?'The four sentinels awaken!':e.phase==='awakening'?'The royal pair is awakening…':'The king and queen are coming!');tone(100,.6,'triangle',.035,350);}
+  if(e.type==='royal-victory'){persist();openPanel('royal-victory',`${head('Royal Champion!','The king, queen and all four sentinels are defeated.','THE ROYAL FINALE')}<div class="panel-body"><canvas id="rewardBot" class="celebration" width="700" height="280"></canvas><p class="dialog-copy">The ancient court is yours. All your progress and equipment are saved. +250 scrap · +12 parts</p><div class="pause-actions"><button class="primary pictorial-action" data-action="close"><span>♛</span><small>Explore</small></button><button class="secondary pictorial-action" data-action="home"><span>⚙</span><small>Build</small></button></div></div>`);}
 };
 function closePanel(){atlasController?.destroy();atlasController=null;if(panel.open)panel.close();panelMode=null;game.paused=false;last=performance.now();persist();}
 function openPanel(mode,html){atlasController?.destroy();atlasController=null;game.paused=true;panelMode=mode;panel.dataset.mode=mode;$('panelContent').innerHTML=html;if(!panel.open)panel.showModal();panel.scrollTop=0;drawPanels();}
@@ -97,7 +99,7 @@ function adventureMap(){
     const home=game.homes().find(h=>distance(h,{x,y})<3),mission=RETURNS.find(m=>returnActive(s,m)&&distance(m,{x,y})<3);
     closePanel();if(mission)goReturn(mission);else game.moveTo(home||{x,y});
   }});
-  panel.querySelector('.region-list').insertAdjacentHTML('afterbegin',`<button class="region-row" data-action="pantheon" ${pantheonUnlocked(s)?'':'disabled'}><span>♛</span><div><b>Crown Pantheon</b><small>${pantheonUnlocked(s)?'The royal court sleeps · a glimpse of the next adventure':'Restore all fifteen relays and finish the return missions'}</small></div><em>${pantheonUnlocked(s)?'Go ↗':'Locked'}</em></button>`);
+  panel.querySelector('.region-list').insertAdjacentHTML('afterbegin',`<button class="region-row" data-action="pantheon" ${pantheonUnlocked(s)?'':'disabled'}><span>♛</span><div><b>Crown Pantheon</b><small>${pantheonUnlocked(s)?game.royals.phase==='victory'?'Royal Champion · the court is restored':'Royal finale · four sentinels, then king and queen':'Restore all fifteen relays and finish the return missions'}</small></div><em>${pantheonUnlocked(s)?'Go ↗':'Locked'}</em></button>`);
   $('mapZoomIn').onclick=()=>atlasController.zoomBy(1.35);$('mapZoomOut').onclick=()=>atlasController.zoomBy(1/1.35);$('mapFit').onclick=()=>atlasController.reset();
   if($('mapGo'))$('mapGo').onclick=()=>{const walking=game.route.length>0;closePanel();if(!walking)game.goNext();};
 }
@@ -127,7 +129,7 @@ function showReturnComplete(){
 function showGuardian(r){
   const pair=Object.entries(EQUIPMENT).flatMap(([type,parts])=>parts.filter(p=>p.unlock===r).map(p=>({type,p}))).find(({p})=>p.id===REGIONS[r].reward)||Object.entries(EQUIPMENT).flatMap(([type,parts])=>parts.filter(p=>p.unlock===r).map(p=>({type,p})))[0];
   const discovery=pair?`<canvas id="rewardWeapon" class="celebration" width="700" height="280" data-reward="${pair.p.id}" data-type="${pair.type}"></canvas><h2 style="font-size:21px;margin:8px 0">${pair.p.name} blueprint</h2><p class="dialog-copy">${pair.p.desc} Your new blueprint is waiting at the workshop.</p>`:'<canvas class="celebration" id="rewardBot" width="700" height="280"></canvas>';
-  if(r===REGIONS.length-1){openPanel('victory',`${head('You lit up the whole world!','Fifteen relays. One extraordinary little bot.','ADVENTURE COMPLETE')}<div class="panel-body">${discovery}<div class="completed-stats"><div><b>${game.save.totalBots}</b><span>bots defeated</span></div><div><b>${game.save.cleared.length}</b><span>cells discovered</span></div><div><b>${game.save.owned.length}</b><span>parts built</span></div></div><p class="dialog-copy">An ancient path has opened beyond Starfall. A king, a queen and four royal guardians sleep inside the Crown Pantheon. Their next adventure is still to come.</p><div class="pause-actions"><button class="primary pictorial-action" data-action="pantheon" aria-label="Visit the sleeping royal court"><span>♛</span><small>Discover</small></button><button class="secondary pictorial-action" data-action="home" aria-label="Build at the nearest workshop"><span>⚙</span><small>Build</small></button></div></div>`);return;}
+  if(r===REGIONS.length-1){openPanel('victory',`${head('All fifteen relays restored!','One final royal challenge awaits.','THE ANCIENT PATH OPENS')}<div class="panel-body">${discovery}<div class="completed-stats"><div><b>${game.save.totalBots}</b><span>bots defeated</span></div><div><b>${game.save.cleared.length}</b><span>cells discovered</span></div><div><b>${game.save.owned.length}</b><span>parts built</span></div></div><p class="dialog-copy">Beyond Starfall, the Crown Pantheon waits. Watch the sleeping court at the seal, then choose when to open it. Four sentinels defend the royal pair. Bring your strongest equipment; the king and queen slowly repair themselves.</p><div class="pause-actions"><button class="primary pictorial-action" data-action="pantheon" aria-label="Visit the royal court"><span>♛</span><small>Discover</small></button><button class="secondary pictorial-action" data-action="home" aria-label="Build at the nearest workshop"><span>⚙</span><small>Build</small></button></div></div>`);return;}
   const mission=RETURNS.find(m=>returnActive(game.save,m)),next=mission?`${mission.boss} has appeared in ${REGIONS[mission.r].name}`:`${REGIONS[r+1].name} is now open`;
   openPanel('guardian',`${head('A relay comes to life!',next,'BIG DISCOVERY')}<div class="panel-body">${discovery}<div class="pause-actions"><button class="primary pictorial-action" data-action="home" aria-label="Build at the nearest workshop"><span>⚙</span><small>Build</small></button><button class="secondary pictorial-action" data-action="next" aria-label="Explore the next trail"><span>${mission?'⚑':'▶'}</span><small>Explore</small></button></div></div>`);
   tone(500,.5,'triangle',.04,1500);
@@ -167,11 +169,12 @@ $('pause').onclick=pauseMenu;$('map').onclick=adventureMap;
 $('home').onclick=workshop;$('workshop').onclick=workshop;$('boost').onclick=()=>game.boost();
 $('sound').onclick=()=>{game.save.sound=!game.save.sound;tone(700);persist();};
 let interaction='';
-$('interact').onclick=()=>{if(interaction==='home')workshop();else if(interaction==='repair')game.repair();else if(interaction==='guardian'){const r=regionAt(game.player.x,game.player.y);toast(REGIONS[r].hint);game.moveTo(relayFor(r));}};
+$('interact').onclick=()=>{if(interaction==='royal'){if(game.royals.start())persist();}else if(interaction==='home')workshop();else if(interaction==='repair')game.repair();else if(interaction==='guardian'){const r=regionAt(game.player.x,game.player.y);toast(REGIONS[r].hint);game.moveTo(relayFor(r));}};
 let pressed=false,pressPoint;
 $('world').addEventListener('pointerdown',e=>{if(game.paused)return;pressed=true;pressPoint={x:e.clientX,y:e.clientY};const rect=$('world').getBoundingClientRect(),pos=painter.screenToWorld(e.clientX-rect.left,e.clientY-rect.top);const enemy=game.enemies.filter(n=>n.hp>0&&!n.dormant&&distance(n,pos)<.7).sort((a,b)=>distance(a,pos)-distance(b,pos))[0],station=game.world.stations.find(s=>s.r<=unlockedRegion(game.save)&&distance(s,pos)<1.8);if(station)game.moveTo(station);else if(enemy)game.focusEnemy(enemy);else game.moveTo(pos);$('world').setPointerCapture(e.pointerId);});
 $('world').addEventListener('pointermove',e=>{if(!pressed||game.paused||Math.hypot(e.clientX-pressPoint.x,e.clientY-pressPoint.y)<20)return;const rect=$('world').getBoundingClientRect();game.moveTo(painter.screenToWorld(e.clientX-rect.left,e.clientY-rect.top));pressPoint={x:e.clientX,y:e.clientY};});
 for(const event of ['pointerup','pointercancel'])$('world').addEventListener(event,()=>pressed=false);
+$('world').addEventListener('pointerdown',e=>{if(game.paused||!game.royals.ready)return;const r=$('world').getBoundingClientRect(),p=painter.screenToWorld(e.clientX-r.left,e.clientY-r.top);if(distance(p,{x:162.5,y:245.5})<1.5){e.preventDefault();e.stopImmediatePropagation();game.royals.start();persist();}},true);
 window.addEventListener('keydown',e=>{if(panel.open)return;const directions={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],w:[0,-1],s:[0,1],a:[-1,0],d:[1,0]};if(directions[e.key]){e.preventDefault();const [dx,dy]=directions[e.key];game.moveTo({x:Math.floor(game.player.x)+dx+.5,y:Math.floor(game.player.y)+dy+.5});}if(e.code==='Space'){e.preventDefault();game.boost();}if(e.key==='Escape')pauseMenu();});
 window.addEventListener('resize',()=>painter.resize());
 document.addEventListener('visibilitychange',()=>{if(document.hidden){wasPaused=game.paused;game.paused=true;persist();}else{game.paused=panel.open||wasPaused;last=performance.now();painter.resize();}});
@@ -188,9 +191,10 @@ function hud(){
   $('bossHud').hidden=!fight;if(fight){$('bossName').textContent=fight.name;$('bossHealth').style.width=`${fight.health*100}%`;}
   interaction='';
   if(game.isHome())interaction='home';
+  else if(game.royals.observing)interaction='royal';
   else if(game.stationNear()&&game.player.hp<max-1&&!game.charging)interaction='repair';
   else if(r>=0&&r<REGIONS.length&&distance(game.player,relayFor(r))>4&&distance(game.player,relayFor(r))<6&&game.bossAwake(r))interaction='guardian';
-  $('interact').hidden=!interaction;$('interact').textContent={home:'⌂ Home workshop · free repairs',repair:'＋ Recharge · ◆ 2',guardian:'ϟ Guardian ahead'}[interaction]||'';
+  $('interact').hidden=!interaction;$('interact').disabled=interaction==='royal'&&!game.royals.ready;$('interact').textContent=interaction==='royal'?game.royals.ready?'⚔ Open the gate':'◉ '+Math.ceil(5-game.royals.inspect):{home:'⌂ Home workshop · free repairs',repair:'＋ Recharge · ◆ 2',guardian:'ϟ Guardian ahead'}[interaction]||'';
 }
 function loop(now){const dt=Math.min(.06,(now-last)/1000);last=now;game.viewBounds={left:painter.camera.x-painter.w/painter.tile/2,right:painter.camera.x+painter.w/painter.tile/2,top:painter.camera.y-painter.h/painter.tile*.51,bottom:painter.camera.y+painter.h/painter.tile*.49};game.tick(dt);painter.draw(game,game.time,dt);if(frame++%5===0)hud();if(panel.open&&frame%3===0)drawPanels();if(now-lastSave>2200){persist();lastSave=now;}requestAnimationFrame(loop);}
 hud();requestAnimationFrame(loop);

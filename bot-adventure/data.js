@@ -1,10 +1,10 @@
-import { MORE_REGIONS, NEW_EQUIPMENT, WORKSHOPS, RETURNS, ENCOUNTERS, LEGACY_WORKSHOPS, LEGACY_RETURNS, LEGACY_ENCOUNTERS } from './content.js?v=world75';
-import {LEGACY_TILES,WORLD_TILES,relocatePoint,relocateEntity,legacyPoint,worldGates} from './topology.js?v=world75';
-import {PANTHEON,inPantheon,buildPantheon} from './pantheon.js?v=world75';
+import { MORE_REGIONS, NEW_EQUIPMENT, WORKSHOPS, RETURNS, ENCOUNTERS, LEGACY_WORKSHOPS, LEGACY_RETURNS, LEGACY_ENCOUNTERS } from './content.js?v=world76';
+import {LEGACY_TILES,WORLD_TILES,relocatePoint,relocateEntity,legacyPoint,worldGates} from './topology.js?v=world76';
+import {PANTHEON,inPantheon,buildPantheon} from './pantheon.js?v=world76';
 export {PANTHEON};
 export { WORKSHOPS, RETURNS, ENCOUNTERS };
-export { bossProfile } from './content.js?v=world75';
-export const BUILD = 'world75';
+export { bossProfile } from './content.js?v=world76';
+export const BUILD = 'world76';
 export const REGION_W = 36;
 export const REGION_H = 44;
 export const WORLD_W = REGION_W * 5;
@@ -132,6 +132,12 @@ function legacyRoad(x,y) {
   return Math.abs(y-(p.y+22.5))<1.2||Math.abs(x-(p.x+18.5))<1.2;
 }
 export function isRoad(x,y){const p=legacyPoint({x,y});return !!p&&legacyRoad(p.x,p.y);}
+export function enemyHealth(r,type){
+  const base=r<5?[13,28,55,95,165][r]:180+(r-5)*28;
+  const original=base*(['tank','carrier'].includes(type)?1.6:1);
+  const heavy=[420,420,600,650,700,850,1100,1150,1400,1650][r-5]||0;
+  return Math.max(original,['tank','carrier'].includes(type)?heavy:type==='shield'?heavy*.8:0);
+}
 export function makeWorld() {
   // Build established sectors in their original coordinates, then relocate them intact.
   const WORLD_W=324,WORLD_H=132,REGION_TILES=LEGACY_TILES,REGION_LAYOUT=LEGACY_TILES.map(t=>t[0]);
@@ -158,7 +164,7 @@ export function makeWorld() {
         const offset=formation===0?[Math.cos(a)*1.45,Math.sin(a)*1.45]:formation===1?[(j-(n-1)/2)*.7,(j%2?1:-1)*.9]:formation===2?[Math.cos(a)*1.8,Math.sin(a)*.85]:[(j%2?1:-1)*1.35,(Math.floor(j/2)-1)*1.1];
         const ex = x + .5 + offset[0], ey = y + .5 + offset[1];
         const type = r<5?(j === n - 1 && r > 0 ? 'ranged' : j % 3 === 2 ? 'tank' : 'scout'):['scout','shield','hopper','medic','carrier','burrow','sentry'][(r+j+wave)%7];
-        const hp = (r<5?[13,28,55,95,165][r]:180+(r-5)*28) * (type==='tank'||type==='carrier'?1.6:1);
+        const hp = enemyHealth(r,type);
         const enemy={ id: `${id}-${wave}-${j}`, site: id, wave, dormant: wave > 0, r, x: ex, y: ey, homeX: ex, homeY: ey, hp, maxHp: hp, type, damage:r<5?[2,3,4,5,6][r]:7+Math.floor((r-5)*.7), cd: hash(i,j,r) * 2, hit: 0, swing: 0, angle: 0 };
         enemies.push(enemy);
         if(type==='carrier')for(let k=0;k<2;k++)enemies.push({...enemy,id:`${enemy.id}-mini-${k}`,type:'hopper',spawnParent:enemy.id,dormant:true,hp:hp*.2,maxHp:hp*.2,x:ex+(k-.5)*.4,homeX:ex+(k-.5)*.4});

@@ -1,4 +1,4 @@
-import {PANTHEON,COURT,COLUMNS,STAIRWAY,TERRACE} from './pantheon.js?v=world75';
+import {PANTHEON,COURT,COLUMNS,STAIRWAY,TERRACE} from './pantheon.js?v=world76';
 const INK='#304955',GOLD='#e4bf67',LIGHT='#fff1bd';
 function shape(c,points,fill,stroke=INK,width=.045){c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fillStyle=fill;c.fill();if(stroke){c.strokeStyle=stroke;c.lineWidth=width;c.stroke();}}
 function oval(c,x,y,rx,ry,fill,stroke=null,width=.04){c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fillStyle=fill;c.fill();if(stroke){c.strokeStyle=stroke;c.lineWidth=width;c.stroke();}}
@@ -91,8 +91,10 @@ export function templeArchitecture(c){
   }
   c.restore();
 }
-export function sleepingRoyal(c,p,t){
+export function sleepingRoyal(c,p,t,options={}){
   c.save();c.translate(p.x,p.y);c.scale(p.size/80,p.size/80);
+  const awake=!!p.awake,charging=!!p.charging;
+  if(awake&&p.moving&&!charging)c.translate(0,Math.sin(t*10)*1.2);
   const queen=p.role==='queen',king=p.role==='king',guard=!king&&!queen;
   const body=king?'#c65547':queen?'#9283c5':'#5c99a2',trim=queen?'#f0e5b4':GOLD;
   const R=(x,y,w,h,fill,stroke=INK,lw=2)=>{c.beginPath();c.roundRect(x,y,w,h,Math.min(6,w/4));c.fillStyle=fill;c.fill();if(stroke){c.strokeStyle=stroke;c.lineWidth=lw;c.stroke();}};
@@ -101,21 +103,22 @@ export function sleepingRoyal(c,p,t){
   // Cloaks, articulated feet and broad shoulder armor give the monarchs a silhouette of their own.
   if(!guard){shape(c,[[-29,-23],[-44,35],[0,27],[44,35],[29,-23]],queen?'#514b7f':'#7f3346',trim,2);for(const side of [-1,1])L(side*27,-12,side*34,29,queen?'#9183bd':'#ae5260',2);}
   for(const side of [-1,1]){R(side*25-10,7,20,28,'#355665');for(let y=13;y<34;y+=6)L(side*25-7,y,side*25+7,y,'#adc5be',2);R(side*25-13,27,26,9,trim);}
-  const gradient=c.createLinearGradient(-26,-25,29,25);gradient.addColorStop(0,queen?'#d4c8ed':king?'#f28a64':'#a0ccc7');gradient.addColorStop(.55,body);gradient.addColorStop(1,queen?'#6c6497':king?'#913c48':'#3d6c7e');
+  const gradient=c.createLinearGradient(-26,-25,29,25);gradient.addColorStop(0,p.hit>0?'#fff4cf':queen?'#d4c8ed':king?'#f28a64':'#a0ccc7');gradient.addColorStop(.55,p.hit>0?'#fff0cb':body);gradient.addColorStop(1,queen?'#6c6497':king?'#913c48':'#3d6c7e');
   R(-30,-29,60,58,'#304b58');R(-25,-25,50,50,gradient);R(-21,-22,42,6,'#ffffff35',null);
   for(const side of [-1,1]){
     shape(c,[[side*25,-24],[side*40,-17],[side*39,1],[side*26,6]],trim,INK,2);
     L(side*30,-19,side*35,-14,LIGHT,2);oval(c,side*32,-6,2.5,2.5,queen?'#99f9de':'#d47c54');
   }
   // Closed curved eyelids, dim cool cores: unmistakably asleep, not hostile.
-  for(const side of [-1,1]){R(side*11-8,-15,16,14,'#273d50',null);c.beginPath();c.arc(side*11,-11,5.5,0,Math.PI);c.strokeStyle='#c9efdf';c.lineWidth=2.7;c.stroke();}
+  for(const side of [-1,1]){R(side*11-8,-15,16,14,'#273d50',null);if(awake){oval(c,side*11,-8,6,6.5,'#fff6d8');oval(c,side*11+Math.cos(p.angle)*1.7,-8+Math.sin(p.angle)*1.7,2.7,3,'#284353');oval(c,side*11-1,-10,1.5,1.5,'#fff');}else{c.beginPath();c.arc(side*11,-11,5.5,0,Math.PI);c.strokeStyle='#c9efdf';c.lineWidth=2.7;c.stroke();}}
   R(-12,7,24,7,'#263f50',null);for(let i=0;i<3;i++)L(-7+i*7,9,-7+i*7,12,'#8fc1c5',1.5);
   if(guard){
     R(-28,-34,56,11,trim);shape(c,[[-17,-34],[-15,-45],[13,-45],[18,-34]],'#a75155',INK,2);for(let x=-10;x<=10;x+=5)L(x,-44,x,-35,'#ea9c71',2);
     // A Roman tower shield and resting spear, not the player's weapon silhouettes.
     shape(c,[[-51,-7],[-25,-7],[-25,25],[-38,36],[-51,25]],'#3d686f','#e8d18c',3.5);
     L(-38,-2,-38,26,GOLD,4);shape(c,[[-45,9],[-38,3],[-31,9],[-38,21]],'#d7dfc1',null);
-    L(45,28,45,-49,'#354e60',6);L(44,26,44,-49,'#d3dccb',2.5);shape(c,[[37,-45],[45,-65],[53,-45]],'#e5e6ce',INK,2.5);
+    if(awake&&options.drawWeapon){c.save();c.translate(Math.cos(p.angle)<0?-27:27,10);c.rotate(p.angle);c.scale(.75,.75);options.drawWeapon(c,p.weapon,t,p.swing>0?p.swing:charging?.12:0);c.restore();}
+    else{L(45,28,45,-49,'#354e60',6);L(44,26,44,-49,'#d3dccb',2.5);shape(c,[[37,-45],[45,-65],[53,-45]],'#e5e6ce',INK,2.5);}
   }else{
     R(-22,18,44,8,trim);oval(c,0,21,5,5,queen?'#9ef6d7':'#ffbd65',INK,1.5);
     if(king){
@@ -127,10 +130,13 @@ export function sleepingRoyal(c,p,t){
       // Deep round muzzles project from long barrel housings, not flat armrests.
       for(const side of [-1,1]){
         const x=side*41;
-        R(x-12,-15,24,42,'#566b77',INK,3);R(x-9,-12,7,32,'#8ea6aa',null);
-        for(const y of [-5,8,19])R(x-13,y,26,5,'#cba55e',INK,1.5);
-        oval(c,x,29,14,11,'#dcb66b',INK,2.6);oval(c,x,29,10,7.3,'#152e43','#f4d993',1.4);oval(c,x,30,5.8,3.5,'#293f50');
-        L(x-6,-10,x+6,-10,'#dd8d5f',3);
+        c.save();c.translate(x,-2);if(awake)c.rotate(p.angle-Math.PI/2);
+        R(-12,-13,24,42,'#566b77',INK,3);R(-9,-10,7,32,'#8ea6aa',null);
+        for(const y of [-3,10,21])R(-13,y,26,5,'#cba55e',INK,1.5);
+        oval(c,0,31,14,11,'#dcb66b',INK,2.6);oval(c,0,31,10,7.3,'#152e43','#f4d993',1.4);oval(c,0,32,5.8,3.5,awake&&charging?'#f4a56b':'#293f50');
+        L(-6,-8,6,-8,'#dd8d5f',3);
+        if(awake&&p.swing>0){shape(c,[[-9,38],[-4,49],[0,62],[5,48],[9,38]],'#ffb354',null);shape(c,[[-4,38],[0,52],[4,38]],'#fff3bb',null);}
+        c.restore();
       }
       shape(c,[[-7,16],[-11,10],[-7,3],[-3,7],[1,-1],[8,8],[7,16]],'#f4c16d','#8e4547',1.5);
     }else{
@@ -139,17 +145,28 @@ export function sleepingRoyal(c,p,t){
       for(const side of [-1,1]){shape(c,[[side*27,-20],[side*42,-31],[side*38,-3],[side*28,7]],'#d5e4ce',GOLD,2);L(side*30,-17,side*36,-22,'#8db7b0',2);}
       L(45,31,45,-44,INK,5);L(44,30,44,-44,GOLD,2.5);
       shape(c,[[45,-65],[56,-49],[45,-33],[34,-49]],'#a8f1d8',trim,2);shape(c,[[45,-65],[45,-33],[34,-49]],'#68b9b4',null);L(45,-62,52,-49,'#f2ffeb',2);
+      if(awake&&(charging||p.swing>0)){
+        oval(c,45,-49,charging?17+Math.sin(t*9)*2:24,charging?17+Math.sin(t*9)*2:24,'#b7adff30','#dcfff0',1.5);
+        for(let j=0;j<3;j++){const a=t*3+j*Math.PI*2/3;oval(c,45+Math.cos(a)*21,-49+Math.sin(a)*21,3,3,'#e7ccff');}
+      }
     }
   }
   c.restore();
+  if(awake){
+    const width=p.size*.8,y=p.y-p.size*.94;box(c,p.x-width/2,y,width,.15,'#213e51',null);box(c,p.x-width/2+.025,y+.025,Math.max(0,width-.05)*p.hp/p.maxHp,.1,p.healing?'#a0e9a8':'#f3b46c',null);
+    if(p.healing)for(const side of [-1,1]){const x=p.x+side*p.size*.37,y=p.y-p.size*.25-Math.sin(t*2)*.1;line(c,x-.13,y,x+.13,y,'#b8ffc2',.07);line(c,x,y-.13,x,y+.13,'#b8ffc2',.07);}
+    return;
+  }
   // Quiet sleep bubbles, with a crescent that reads without knowing letters.
   const sx=p.x+p.size*.43,sy=p.y-p.size*.77,ss=guard?.12:.23;
   oval(c,sx-.2,sy+.3,ss*.25,ss*.25,'#e3f4dd88');oval(c,sx-.1,sy+.15,ss*.45,ss*.45,'#e3f4ddaa');
   oval(c,sx,sy,ss,ss,'#d5eacb');oval(c,sx+ss*.42,sy-ss*.22,ss*.8,ss*.8,'#6b878c');
 }
 export function templeColumns(c){for(const p of COLUMNS)column(c,p);}
-export function templeSeal(c,t){
+export function templeSeal(c,t,state={}){
+  if(state.phase&&state.phase!=='sleeping'&&state.opening>1.4){if(state.phase==='victory')crown(c,162.5,240,2.4);return;}
   c.save();c.translate(162.5,246.65);
+  if(state.phase&&state.phase!=='sleeping')c.globalAlpha=Math.max(0,1-state.opening/1.4);
   const field=c.createLinearGradient(0,-2.4,0,0);field.addColorStop(0,'#b8f4e71c');field.addColorStop(.6,'#b8f4e755');field.addColorStop(1,'#c8fff180');
   box(c,-2.55,-2.4,5.1,2.4,field,null);
   for(let i=0;i<7;i++){const x=-2.3+i*.76;line(c,x,-2.3,x,0,'#c7fff046',.035);}
@@ -162,6 +179,12 @@ export function templeSeal(c,t){
   oval(c,0,-1.2,.71,.71,'#25495c',GOLD,.07);
   c.beginPath();c.arc(0,-1.42,.22,Math.PI,0);c.strokeStyle='#fff0ba';c.lineWidth=.1;c.stroke();
   box(c,-.32,-1.44,.64,.5,GOLD,INK,.055);oval(c,0,-1.23,.055,.07,'#304955');
+  if(state.inspect>0){
+    oval(c,0,-1.2,.68,.68,'#25495c');
+    if(state.ready){line(c,-.3,-1.5,.3,-.9,'#fff2bc',.09);line(c,.3,-1.5,-.3,-.9,'#fff2bc',.09);}
+    else{c.font='700 .62px sans-serif';c.textAlign='center';c.fillStyle='#fff2bc';c.fillText(String(Math.ceil(5-state.inspect)),0,-.98);}
+    for(let i=0;i<5;i++)oval(c,(i-2)*.27,-.18,.075,.075,state.inspect>=i+1?'#f4df9b':'#5c8c96');
+  }
   const shimmer=(t*.12)%1;c.globalAlpha=Math.sin(shimmer*Math.PI)*.32;line(c,-2.4,-2.3+shimmer*2.2,2.4,-2.3+shimmer*2.2,'#f4fff2',.07);
   c.restore();
 }

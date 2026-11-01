@@ -1,4 +1,4 @@
-import { WORKSHOPS, RETURNS, returnActive, regionAt, canWalk } from './data.js?v=world75';
+import { WORKSHOPS, RETURNS, returnActive, regionAt, canWalk, enemyHealth } from './data.js?v=world76';
 
 export const PATROL_DELAY=300;
 export const WORKSHOP_REFUGE=12;
@@ -34,8 +34,8 @@ export class ReturningPatrols {
   enemy(site,round,index){
     const base=this.templates.get(site.id)[index];
     const pool=site.r<3?['scout','ranged','tank','scout','ranged']:['scout','ranged','shield','hopper','sentry'];
-    const type=pool[(index+round)%pool.length],baseHp=site.r<5?[13,28,55,95,165][site.r]:180+(site.r-5)*28;
-    const hp=Math.round(baseHp*(type==='tank'?1.6:1)*(1+(round%3)*.12));
+    const type=pool[(index+round)%pool.length];
+    const hp=Math.round(enemyHealth(site.r,type)*(1+(round%3)*.12));
     return {id:`patrol-${site.id}-${round}-${index}`,patrolSite:site.id,patrolIndex:index,r:site.r,
       x:base.x,y:base.y,homeX:base.x,homeY:base.y,hp,maxHp:hp,type,damage:Math.min(12,3+site.r),
       cd:1+index*.2,hit:0,swing:0,angle:0,dormant:false};

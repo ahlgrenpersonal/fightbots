@@ -1,7 +1,9 @@
-import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world75';
-import { bossProfile } from './content.js?v=world75';
-import { ReturningPatrols } from './patrols.js?v=world75';
-import {inRoyalChamber} from './pantheon.js?v=world75';
+import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world76';
+import { bossProfile } from './content.js?v=world76';
+import { ReturningPatrols } from './patrols.js?v=world76';
+import {inRoyalChamber} from './pantheon.js?v=world76';
+import {RoyalCourt} from './royal-court.js?v=world76';
+import {nearestWalkable} from './data.js?v=world76';
 
 export const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -19,19 +21,21 @@ export class Adventure {
   constructor(save=freshSave(),onEvent=()=>{}) {
     this.save=migrateSiteProgress(migrateWorldLayout(save));this.onEvent=onEvent;this.world=makeWorld();
     this.player={...save.position,hp:Math.max(1,Math.min(save.hp,stats(save).hp)),angle:0,cd:0,hit:0,swing:0,invincible:2};
-    if(regionAt(this.player.x,this.player.y)===PANTHEON.r&&!canWalk(this.world,save,Math.floor(this.player.x),Math.floor(this.player.y)))Object.assign(this.player,pantheonUnlocked(save)?PANTHEON.viewpoint:HOME);
     this.enemies=this.world.enemies.filter(e=>!save.kills.includes(e.id)&&!save.cleared.includes(e.site)&&!(e.returnId?save.returns.includes(e.returnId):!e.encounterId&&e.type==='boss'&&save.bosses.includes(e.r)));
     for(const e of this.enemies)if(e.dormant&&(e.spawnParent?save.kills.includes(e.spawnParent):!this.enemies.some(n=>n.site===e.site&&n.wave===0&&n.hp>0)))e.dormant=false;
     this.route=[];this.loot=[];this.projectiles=[];this.effects=[];this.telegraphs=[];this.target=null;this.waypoint=null;
     this.time=0;this.boostTime=0;this.boostCd=0;this.shieldCd=0;this.buddyCd=0;this.shake=0;this.paused=false;this.reducedMotion=false;this.routeTimer=0;this.charging=null;this.headingHome=false;
+    this.royals=new RoyalCourt(this);
+    if(regionAt(this.player.x,this.player.y)===PANTHEON.r&&!canWalk(this.world,save,Math.floor(this.player.x),Math.floor(this.player.y)))Object.assign(this.player,pantheonUnlocked(save)?this.royals.sealed?PANTHEON.viewpoint:nearestWalkable(this.world,save,this.player):HOME);
     this.patrols=new ReturningPatrols(this);
     this.discover();
   }
   emit(type,data={}){this.onEvent({type,...data});}
-  snapshot(){this.patrols.snapshot();this.save.position={x:this.player.x,y:this.player.y};this.save.hp=this.player.hp;return this.save;}
+  snapshot(){this.patrols.snapshot();this.royals.snapshot();this.save.position={x:this.player.x,y:this.player.y};this.save.hp=this.player.hp;return this.save;}
   maxHp(){return stats(this.save).hp;}
   bossAwake(r){return !this.save.bosses.includes(r)&&cellsIn(this.save,r)>=requiredCells(r)&&r<=unlockedRegion(this.save);}
   bossFight(){
+    const royal=this.royals.hud();if(royal)return royal;
     const r=regionAt(this.player.x,this.player.y),key=e=>e.encounterId||e.returnId||`guardian-${e.r}`;
     const nearby=this.enemies.filter(e=>e.type==='boss'&&e.r===r&&e.hp>0&&!e.dormant&&this.enemyAwake(e)&&distance(e,this.player)<7).sort((a,b)=>distance(a,this.player)-distance(b,this.player));
     const first=nearby[0];if(!first)return null;
@@ -44,9 +48,9 @@ export class Adventure {
   isHome(){return !!this.homeNear();}
   homeRoutes(){return this.homes().map(home=>({home,route:pathfind(this.world,this.save,this.player,home)})).filter(p=>p.route.length||(Math.floor(this.player.x)===Math.floor(p.home.x)&&Math.floor(this.player.y)===Math.floor(p.home.y))).sort((a,b)=>a.route.length-b.route.length);}
   nearestHome(){return this.homeRoutes()[0]?.home||this.homes()[0];}
-  enemyAwake(e){if(e.r>unlockedRegion(this.save))return false;if(e.patrolSite)return this.patrols.awake(e);if(e.encounterId)return true;if(!e.returnId)return e.type!=='boss'||this.bossAwake(e.r);const m=RETURNS.find(m=>m.id===e.returnId);return returnActive(this.save,m)&&(e.type!=='boss'||m.sites.every((_,i)=>this.save.cleared.includes(`${m.sitePrefix}-${i}`)));}
+  enemyAwake(e){if(e.royal)return this.royals.awake(e);if(e.r>unlockedRegion(this.save))return false;if(e.patrolSite)return this.patrols.awake(e);if(e.encounterId)return true;if(!e.returnId)return e.type!=='boss'||this.bossAwake(e.r);const m=RETURNS.find(m=>m.id===e.returnId);return returnActive(this.save,m)&&(e.type!=='boss'||m.sites.every((_,i)=>this.save.cleared.includes(`${m.sitePrefix}-${i}`)));}
   stationNear(radius=1.1){return this.world.stations.find(s=>s.r<=unlockedRegion(this.save)&&distance(this.player,s)<radius);}
-  safeAt(pos){return regionAt(pos.x,pos.y)===PANTHEON.r||this.homes().some(h=>distance(pos,h)<2.6)||this.world.stations.some(s=>s.r<=unlockedRegion(this.save)&&distance(pos,s)<2.25);}
+  safeAt(pos){return regionAt(pos.x,pos.y)===PANTHEON.r?this.royals?.safeAt(pos)!==false:this.homes().some(h=>distance(pos,h)<2.6)||this.world.stations.some(s=>s.r<=unlockedRegion(this.save)&&distance(pos,s)<2.25);}
   clearShot(from,to){
     let x=Math.floor(from.x),y=Math.floor(from.y);const tx=Math.floor(to.x),ty=Math.floor(to.y);
     const dx=to.x-from.x,dy=to.y-from.y,sx=Math.sign(dx),sy=Math.sign(dy),ix=dx?Math.abs(1/dx):Infinity,iy=dy?Math.abs(1/dy):Infinity;
@@ -83,7 +87,7 @@ export class Adventure {
   discover(){const r=regionAt(this.player.x,this.player.y);if(r>=0&&!this.save.visited.includes(r)){this.save.visited.push(r);this.emit('region',{r});}for(const s of this.world.stations)if(s.r<=unlockedRegion(this.save)&&distance(this.player,s)<6&&!this.save.discovered.includes(s.id)){this.save.discovered.push(s.id);this.emit('toast',{text:'Charging station discovered!'});}}
   moveTo(pos){
     if(!areaUnlocked(this.save,regionAt(pos.x,pos.y))){this.emit('toast',{text:regionAt(pos.x,pos.y)===PANTHEON.r?'Restore every relay and finish the return missions to open the ancient pantheon.':'Restore this region\'s relay to open the next trail.'});return false;}
-    if(inRoyalChamber(pos.x,pos.y)){this.emit('toast',{text:'The royal court is sealed. More adventures will open it.'});return this.moveTo(PANTHEON.stairTop);}
+    if(inRoyalChamber(pos.x,pos.y)&&this.royals.sealed){this.emit('toast',{text:'Approach the seal, watch the court, then choose when to begin.'});return this.moveTo(PANTHEON.stairTop);}
     let to={x:Math.floor(pos.x)+.5,y:Math.floor(pos.y)+.5};
     if(!canWalk(this.world,this.save,Math.floor(to.x),Math.floor(to.y))){
       const neighbors=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if(canWalk(this.world,this.save,Math.floor(to.x)+dx,Math.floor(to.y)+dy))neighbors.push({x:to.x+dx,y:to.y+dy});
@@ -127,6 +131,7 @@ export class Adventure {
   hitEnemy(e,damage,kind=''){
     if(e.hp<=0||e.dormant||e.spawnUntil>this.time||!this.enemyAwake(e))return;const amount=Math.max(1,Math.round(damage*(e.type==='shield'&&!e.frozen&&!['rail','sunbeam','gravity','tractor'].includes(kind)?.7:1)));e.hp=Math.max(0,e.hp-amount);e.aggroUntil=this.time+6;e.hit=.15;this.number(e.x,e.y-.5,`${amount}`,'#fff3b5');
     if(e.hp<=0){
+      if(e.royal){this.royals.defeated(e);return;}
       this.burst(e.x,e.y,e.type==='boss'?1.4:.45,e.type==='boss'?'explosion':'burst');
       if(e.patrolSite){this.patrols.defeated(e);this.emit('defeat',{boss:false});return;}
       this.save.kills.push(e.id);this.save.totalBots++;
@@ -231,10 +236,10 @@ export class Adventure {
   releaseBoss(a,e){
     e.swing=.5;
     const from={x:a.ox,y:a.oy},to={x:a.x,y:a.y},w=a.weapon;
-    const fx=(type,extra={})=>this.effects.push({type,x:from.x,y:from.y,tx:to.x,ty:to.y,angle:a.angle,radius:a.radius,life:.6,max:.6,enemy:true,weapon:w,...extra});
+    const fx=(type,extra={})=>this.effects.push({type,x:from.x,y:from.y,tx:to.x,ty:to.y,angle:a.angle,radius:a.radius,life:.6,max:.6,enemy:true,weapon:w,royal:a.royal,...extra});
     if(['blaster','rocket','frost','boomerang','meteor','drone'].includes(w)){
       const kind={blaster:'bolt',rocket:'rocket',frost:'ice',boomerang:'blade',meteor:'meteor',drone:'drone'}[w];
-      this.projectiles.push({x:w==='meteor'?to.x-1:from.x,y:w==='meteor'?to.y-5:from.y,tx:to.x,ty:to.y,angle:a.angle,speed:w==='meteor'?6:4,damage:a.damage,kind,enemy:true,bossSource:e.id,weapon:w,radius:a.radius,life:5});
+      this.projectiles.push({x:w==='meteor'?to.x-1:from.x,y:w==='meteor'?to.y-5:from.y,tx:to.x,ty:to.y,angle:a.angle,speed:w==='meteor'?6:4,damage:a.damage,kind,enemy:true,bossSource:e.id,weapon:w,radius:a.radius,royal:a.royal,life:5});
       if(w==='drone')fx('drone');return;
     }
     if(w==='rail'){
@@ -297,7 +302,7 @@ export class Adventure {
     this.projectiles=this.projectiles.filter(s=>s.life>0);
   }
   tick(dt){
-    if(this.paused)return;dt=Math.min(dt,.06);this.time+=dt;this.save.playSeconds+=dt;
+    if(this.paused)return;dt=Math.max(0,Math.min(dt,.06));this.time+=dt;this.save.playSeconds+=dt;
     const p=this.player,st=stats(this.save);this.routeTimer-=dt;
     for(const key of ['cd','hit','swing','invincible'])p[key]=Math.max(0,p[key]-dt);
     this.boostCd=Math.max(0,this.boostCd-dt);this.boostTime=Math.max(0,this.boostTime-dt);this.shieldCd=Math.max(0,this.shieldCd-dt);this.buddyCd=Math.max(0,this.buddyCd-dt);this.shake=Math.max(0,this.shake-dt*18);
@@ -308,8 +313,9 @@ export class Adventure {
     this.discover();
     if(this.headingHome&&this.isHome()&&!this.route.length){this.headingHome=false;this.player.hp=this.maxHp();this.emit('home-arrived');}
     for(const e of this.enemies)e.active=false;
-    const threats=this.enemies.filter(e=>e.hp>0&&!e.dormant&&e.r<=unlockedRegion(this.save)&&(distance(p,e)<8||e.aggroUntil>this.time)&&this.enemyAwake(e));
-    const inRange=threats.filter(e=>distance(p,e)<=st.weapon.range&&this.canAttack(p,e,st.weapon.id)).sort((a,b)=>distance(p,a)-distance(p,b));
+    this.royals.tick(dt);
+    const threats=this.enemies.filter(e=>!e.royal&&e.hp>0&&!e.dormant&&e.r<=unlockedRegion(this.save)&&(distance(p,e)<8||e.aggroUntil>this.time)&&this.enemyAwake(e));
+    const inRange=[...threats,...this.royals.units.filter(e=>this.royals.awake(e))].filter(e=>distance(p,e)<=st.weapon.range&&this.canAttack(p,e,st.weapon.id)).sort((a,b)=>distance(p,a)-distance(p,b));
     if(p.cd<=0&&inRange.length&&!this.safeAt(p))this.attack(inRange[0]);
     if(this.save.build.gadget==='buddy'&&this.buddyCd<=0&&inRange.length&&!this.safeAt(p)){const e=inRange[0];this.buddyCd=1;this.projectiles.push({x:p.x-.6,y:p.y-.6,tx:e.x,ty:e.y,target:e.id,angle:0,speed:11,damage:45,kind:'drone',life:3});this.effects.push({type:'drone',x:p.x,y:p.y,tx:e.x,ty:e.y,life:.7,max:.7});}
     for(const e of threats){
@@ -349,7 +355,7 @@ export class Adventure {
     for(const a of this.telegraphs){
       if(a.bossSource){
         const boss=this.enemies.find(e=>e.id===a.bossSource&&e.hp>0&&this.enemyAwake(e));
-        if(!boss||!boss.active||this.safeAt(p)||distance(boss,{x:boss.homeX,y:boss.homeY})>7){a.life=0;continue;}
+        if(!boss||!boss.active||this.safeAt(p)||!boss.royal&&distance(boss,{x:boss.homeX,y:boss.homeY})>7){a.life=0;continue;}
         a.life-=dt;if(a.life<=0&&!boss.frozen)this.releaseBoss(a,boss);continue;
       }
       const burrower=a.burrowSource&&this.enemies.find(e=>e.id===a.burrowSource&&e.hp>0&&!e.dormant&&this.enemyAwake(e));
