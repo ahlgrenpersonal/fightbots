@@ -1,9 +1,9 @@
-import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world82';
-import { bossProfile } from './content.js?v=world82';
-import { ReturningPatrols } from './patrols.js?v=world82';
-import {inRoyalChamber} from './pantheon.js?v=world82';
-import {RoyalCourt} from './royal-court.js?v=world82';
-import {nearestWalkable} from './data.js?v=world82';
+import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world83';
+import { bossProfile } from './content.js?v=world83';
+import { ReturningPatrols } from './patrols.js?v=world83';
+import {inRoyalChamber} from './pantheon.js?v=world83';
+import {RoyalCourt} from './royal-court.js?v=world83';
+import {nearestWalkable} from './data.js?v=world83';
 
 export const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
 export const TAP_COOLDOWN=1.5;

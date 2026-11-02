@@ -35,6 +35,12 @@ dialog[data-mode="trail"] .celebration{height:auto;aspect-ratio:5/2}
 .atlas-status{margin:0;color:var(--gold);font-size:12px;line-height:1.5}.atlas-status:not(:empty){margin:8px 4px}
 .console{position:static;transform:none;width:100%;max-width:none;border-radius:0;padding-top:6px;padding-bottom:calc(4px + max(0px,var(--safe-bottom,env(safe-area-inset-bottom,0px)) - 20px));background:var(--ink);box-shadow:none}
 .console .tools{max-width:530px;margin:auto}.health-row{max-width:530px;margin:0 auto 4px}
+.console .tools{grid-template-columns:repeat(3,minmax(0,1fr));max-width:390px;gap:12px}
+.region-progress{display:flex!important;gap:3px;margin-top:4px!important;align-items:center;min-height:10px}.region-progress i{display:block;width:7px;height:9px;border-radius:2px;border:1px solid #9dbab2;background:#38524f;flex-shrink:0}.region-progress i.filled{background:#ffd35c;border-color:#ffe9a1}
+.region-progress[hidden]{display:none!important}
+dialog[data-mode="workshop"][data-details="false"] .extra-details{display:none}
+.workshop-info{font-size:23px;flex-shrink:0;margin-left:auto;width:44px;height:44px}.panel-head .workshop-info+.close{margin-left:0}
+.other-destinations{border-top:1px solid #ffffff24;margin-top:14px;padding-top:8px}.other-destinations>summary{cursor:pointer;padding:12px 4px;min-height:44px;color:#bdd8cf;font-size:13px;font-weight:700}.current-destination{width:100%;margin-bottom:10px;min-height:54px}.current-destination>span{font-size:28px}.current-destination em{font-size:27px}
 .boss-hud{top:10px;left:12px;right:12px;max-width:360px}
 .toast{top:10px}.toast.boss-active{top:78px}
 .interact{bottom:14px;padding:11px 18px;min-height:48px}

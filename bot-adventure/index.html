@@ -10,13 +10,13 @@
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=world82">
-  <link rel="stylesheet" href="layout.css?v=world82">
+  <link rel="stylesheet" href="styles.css?v=world83">
+  <link rel="stylesheet" href="layout.css?v=world83">
 </head>
 <body>
   <main id="game">
     <header class="topbar">
-      <div class="brand"><span class="brand-mark">B<span>+</span></span><div><b>BOT ADVENTURE</b><span class="brand-meta"><span id="regionName">Clover Fields</span><small id="buildLabel" aria-label="Game build"></small></span></div></div>
+      <div class="brand"><span class="brand-mark">B<span>+</span></span><div><b>BOT ADVENTURE</b><span class="brand-meta"><span id="regionName">Clover Fields</span><small id="buildLabel" aria-label="Game build" hidden></small></span><span id="regionProgress" class="region-progress" role="img" hidden></span></div></div>
       <div class="wallet" aria-label="Scrap"><span class="scrap-symbol">◆</span><b id="scrapCount">0</b></div>
       <button id="pause" class="icon-button" title="Pause" aria-label="Pause">Ⅱ</button>
     </header>
@@ -30,15 +30,15 @@
     <footer class="console">
       <div class="health-row"><span class="health-heart">♥</span><div class="health-track"><i id="healthFill"></i></div><b id="healthText">60 / 60</b><span id="weaponLabel">Bumper</span></div>
       <nav class="tools" aria-label="Adventure controls">
-        <button id="home" title="Return to your free workshop"><span>⌂</span><b>Home</b></button>
+        <button id="home" title="Return to your free workshop" hidden><span>⌂</span><b>Home</b></button>
         <button id="map" title="Adventure map"><span>◇</span><b>Map</b></button>
         <button id="boost" class="boost" title="Power boost"><span>ϟ</span><b id="boostLabel">Power</b></button>
         <button id="workshop" title="Build and equip your bot"><span>⚙</span><b>Build</b></button>
-        <button id="sound" title="Toggle sound" aria-label="Turn sound on"><span>♪</span><b id="soundLabel">Sound off</b></button>
+        <button id="sound" title="Toggle sound" aria-label="Turn sound on" hidden><span>♪</span><b id="soundLabel">Sound off</b></button>
       </nav>
     </footer>
   </main>
   <dialog id="panel" aria-labelledby="panelTitle"><div id="panelContent"></div></dialog>
-  <script type="module" src="app.js?v=world82"></script>
+  <script type="module" src="app.js?v=world83"></script>
 </body>
 </html>

@@ -1,9 +1,10 @@
-import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world82';
-import {atlasProgress,regionEdges} from './atlas-progress.js?v=world82';
-import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world82';
-import {COURT} from './pantheon.js?v=world82';
-import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world82';
-import * as worldData from './data.js?v=world82';
+import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world83';
+import {atlasProgress,regionEdges} from './atlas-progress.js?v=world83';
+import {atlasSiteVisible} from './quiet-ui.js?v=world83';
+import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world83';
+import {COURT} from './pantheon.js?v=world83';
+import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world83';
+import * as worldData from './data.js?v=world83';
 
 export function rounded(c,x,y,w,h,r,fill,stroke,line=2) {
   c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=line;c.stroke();}
@@ -832,7 +833,7 @@ export class Painter {
       c.beginPath();c.ellipse(f.x,f.y,p*1.8,p*.9,0,0,Math.PI*2);c.strokeStyle='#ffe794';c.lineWidth=.1*(1-p);c.stroke();for(let i=0;i<5;i++){const a=i*1.25;line(c,f.x+Math.cos(a)*p*.3,f.y+Math.sin(a)*p*.3,f.x+Math.cos(a)*p*1.5,f.y+Math.sin(a)*p*.8,'#f4e5b2',.035);}
     }c.restore();
   }
-  map(canvas,g,{showPlayer=true}={}){const c=canvas.getContext('2d'),w=600,h=760;canvas.width=w*2;canvas.height=h*2;c.scale(2,2);c.fillStyle='#19393c';c.fillRect(0,0,w,h);const progress=atlasProgress(g.save),{scale:s,ox,oy,visible,active,newArea}=progress,markerScale=.8;
+  map(canvas,g,{showPlayer=true,detail=false}={}){const c=canvas.getContext('2d'),w=600,h=760;canvas.width=w*2;canvas.height=h*2;c.scale(2,2);c.fillStyle='#19393c';c.fillRect(0,0,w,h);const progress=atlasProgress(g.save),{scale:s,ox,oy,visible,active,newArea}=progress,markerScale=.8,goal=g.nextObjective?.();
     for(let y=0;y<WORLD_H;y++)for(let x=0;x<WORLD_W;x++){const r=regionAt(x,y);if(!visible.has(r))continue;c.fillStyle=g.world.water.has(`${x},${y}`)?(REGIONS[r]?.water||'#64a8b5'):areaInfo(r).ground;c.fillRect(ox+x*s,oy+y*s,s+.1,s+.1);if(r>=0&&r<REGIONS.length&&isRoad(x+.5,y+.5)){c.fillStyle=REGIONS[r].path;c.fillRect(ox+x*s,oy+y*s,s+.1,s+.1);}}
     for(const p of g.world.props)if(visible.has(regionAt(p.x,p.y))&&p.type==='mountain'&&(p.r===2||hash(Math.floor(p.x),Math.floor(p.y))<.04)){
       const x=ox+p.x*s,y=oy+p.y*s;c.beginPath();c.moveTo(x-4,y+2);c.lineTo(x,y-5);c.lineTo(x+4,y+2);c.closePath();c.fillStyle='#607e91';c.fill();c.beginPath();c.moveTo(x-1.7,y-2);c.lineTo(x,y-5);c.lineTo(x+1.7,y-2);c.closePath();c.fillStyle='#f0ffff';c.fill();
@@ -861,9 +862,9 @@ export class Painter {
       if(r===active){const cx=ox+x*s,cy=oy+y*s+REGIONS[r].name.split(' ').length*11+25;ellipse(c,cx,cy,11,11,'#173d48');text(c,newArea?'★':'⚑',cx,cy+5,17,'#ffe17b');}
     }
     const returning=new Set(g.enemies.filter(e=>e.patrolSite&&e.hp>0).map(e=>e.patrolSite));
-    for(const site of g.world.sites){if(site.r>unlockedRegion(g.save)||!returnVisible(g.save,site))continue;const done=g.save.cleared.includes(site.id),patrol=returning.has(site.id),x=ox+site.x*s,y=oy+site.y*s;ellipse(c,x,y,(patrol?5.2:3.8)*markerScale,(patrol?5.2:3.8)*markerScale,patrol?'#ed917b':done?'#d8f0b5':site.returnId?'#e8d3ff':'#ffdc7d');c.strokeStyle=site.returnId?'#8550c2':'#203b38';c.lineWidth=(site.returnId?2.5:1.5)*markerScale;c.stroke();if(patrol)for(const dx of [-1.7,1.7])ellipse(c,x+dx*markerScale,y-.7*markerScale,.8*markerScale,.8*markerScale,'#203b38');}
+    for(const site of g.world.sites){if(site.r>unlockedRegion(g.save)||!returnVisible(g.save,site)||!atlasSiteVisible(site,{detail,goal}))continue;const done=g.save.cleared.includes(site.id),patrol=detail&&returning.has(site.id),x=ox+site.x*s,y=oy+site.y*s;ellipse(c,x,y,(patrol?5.2:3.8)*markerScale,(patrol?5.2:3.8)*markerScale,patrol?'#ed917b':done?'#d8f0b5':site.returnId?'#e8d3ff':'#ffdc7d');c.strokeStyle=site.returnId?'#8550c2':'#203b38';c.lineWidth=(site.returnId?2.5:1.5)*markerScale;c.stroke();if(patrol)for(const dx of [-1.7,1.7])ellipse(c,x+dx*markerScale,y-.7*markerScale,.8*markerScale,.8*markerScale,'#203b38');}
     for(let r=0;r<REGIONS.length;r++){
-      if(!visible.has(r))continue;
+      if(!visible.has(r)||!detail&&g.save.bosses.includes(r))continue;
       const p=relayFor(r),x=ox+p.x*s,y=oy+p.y*s;c.save();c.translate(x,y);c.scale(markerScale,markerScale);rounded(c,-5,-7,10,14,2,g.save.bosses.includes(r)?'#a7f4cd':'#ee9578','#34534b',1);text(c,g.save.bosses.includes(r)?'✓':'!',0,3,10,'#1b3c38');c.restore();
     }
     for(const st of g.world.stations)if(visible.has(st.r)&&g.save.discovered.includes(st.id)){c.save();c.translate(ox+st.x*s,oy+st.y*s);c.scale(markerScale,markerScale);rounded(c,-5,-5,10,10,2,'#edffe3','#326f59',1);text(c,'+',0,4,12,'#327859');c.restore();}

@@ -52,7 +52,7 @@ export class AtlasGesture {
   }
 }
 
-export function mountAtlas(canvas,{source,onSelect,onChange,onOverlay,initialFocus,initialZoom=1,maxZoom=3,contentBounds}){
+export function mountAtlas(canvas,{source,onSelect,onChange,onOverlay,onBeforeDraw,initialFocus,initialZoom=1,maxZoom=3,contentBounds}){
   const view=new AtlasView({initialFocus,initialZoom,maxZoom,contentBounds}),gesture=new AtlasGesture(view),events=new AbortController();
   const options={signal:events.signal};
   const point=e=>{const r=canvas.getBoundingClientRect();return {x:(e.clientX-r.left)*ATLAS_WIDTH/r.width,y:(e.clientY-r.top)*ATLAS_HEIGHT/r.height};};
@@ -62,6 +62,7 @@ export function mountAtlas(canvas,{source,onSelect,onChange,onOverlay,initialFoc
     if(canvas.width!==w)canvas.width=w;if(canvas.height!==h)canvas.height=h;
     const c=canvas.getContext('2d');c.setTransform(w/ATLAS_WIDTH,0,0,h/ATLAS_HEIGHT,0,0);
     c.fillStyle='#19393c';c.fillRect(0,0,ATLAS_WIDTH,ATLAS_HEIGHT);
+    onBeforeDraw?.(view.zoom);
     c.translate(view.x,view.y);c.scale(view.zoom,view.zoom);c.drawImage(source,0,0,ATLAS_WIDTH,ATLAS_HEIGHT);
     onOverlay?.(c,view.zoom);
     onChange(view.zoom);

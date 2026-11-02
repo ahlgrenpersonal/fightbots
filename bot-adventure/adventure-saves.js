@@ -1,4 +1,4 @@
-import {BUILD,freshSave,REGIONS,EQUIPMENT,areaInfo,regionAt} from './data.js?v=world82';
+import {BUILD,freshSave,REGIONS,EQUIPMENT,areaInfo,regionAt} from './data.js?v=world83';
 
 export function validAdventure(s){
   if(!s||s.schema!==1||!s.build||!s.position||!Number.isFinite(s.position.x)||!Number.isFinite(s.position.y))return false;

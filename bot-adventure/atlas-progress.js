@@ -1,4 +1,4 @@
-import {REGIONS,REGION_TILES,REGION_W,REGION_H,RETURNS,PANTHEON,areaUnlocked,pantheonUnlocked,returnActive,unlockedRegion} from './data.js?v=world82';
+import {REGIONS,REGION_TILES,REGION_W,REGION_H,RETURNS,PANTHEON,areaUnlocked,pantheonUnlocked,returnActive,unlockedRegion} from './data.js?v=world83';
 
 export function atlasProgress(save){
   const visible=new Set(REGIONS.map((_,r)=>r).filter(r=>areaUnlocked(save,r)||save.bosses.includes(r)));
