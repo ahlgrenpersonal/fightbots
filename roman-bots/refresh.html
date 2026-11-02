@@ -1,0 +1,3 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#163e41"><title>Roman Bots Update</title><body style="background:#163e41;color:#eaf5e4;font:16px system-ui;padding:32px"><p>Updating Roman Bots…</p><script type="module">
+const scope=new URL('./',location.href).href;for(const reg of await navigator.serviceWorker.getRegistrations())if(reg.scope===scope)await reg.unregister();for(const key of await caches.keys())if(key.startsWith('roman-bots-'))await caches.delete(key);location.replace('./index.html?fresh='+Date.now());
+</script></body></html>
