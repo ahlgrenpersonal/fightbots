@@ -1,4 +1,4 @@
-export const BUILD='roman08';
+export const BUILD='roman09';
 export const HEALTH_ASSISTS=[{bonus:0,winRate:65},{bonus:15,winRate:78},{bonus:50,winRate:92},{bonus:100,winRate:96},{bonus:200,winRate:98}];
 export const normalizeHealthBonus=value=>HEALTH_ASSISTS.some(option=>option.bonus===value)?value:50;
 export const WIDTH=10,HEIGHT=15;
