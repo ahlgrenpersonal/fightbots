@@ -1,9 +1,9 @@
-const CACHE='roman-bots-roman09',ASSETS=['./','./index.html','./styles.css?v=roman09','./app.js?v=roman09','./data.js?v=roman09','./engine.js?v=roman09','./art.js?v=roman09','./geometry.js?v=roman09','./icons.js?v=roman09','./manifest.webmanifest','./version.json','./refresh.html','./assets/icon-192.png','./assets/icon-512.png','./assets/courtyard-theme.wav'];
+const CACHE='roman-bots-roman10',ASSETS=['./','./index.html','./styles.css?v=roman10','./app.js?v=roman10','./data.js?v=roman10','./engine.js?v=roman10','./art.js?v=roman10','./geometry.js?v=roman10','./icons.js?v=roman10','./manifest.webmanifest','./version.json','./refresh.html','./assets/icon-192.png','./assets/icon-512.png','./assets/courtyard-theme.mp3'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('roman-bots-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{
   const url=new URL(event.request.url),scope=new URL('./',self.location.href);if(event.request.method!=='GET'||url.origin!==scope.origin||!url.pathname.startsWith(scope.pathname))return;
-  if(url.pathname===new URL('./assets/courtyard-theme.wav',scope).pathname&&event.request.headers?.get('range')){
+  if(url.pathname===new URL('./assets/courtyard-theme.mp3',scope).pathname&&event.request.headers?.get('range')){
     event.respondWith(audioRange(event.request));return;
   }
   if(url.pathname.endsWith('/version.json')){event.respondWith(fetch(event.request,{cache:'no-store'}));return;}
@@ -21,5 +21,5 @@ async function audioRange(request){
   const start=match[1]?Number(match[1]):Math.max(0,length-Number(match[2]));
   const end=match[1]&&match[2]?Math.min(length-1,Number(match[2])):length-1;
   if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start>end||start>=length)return new Response(null,{status:416,headers:{'Content-Range':`bytes */${length}`}});
-  return new Response(bytes.slice(start,end+1),{status:206,headers:{'Content-Type':'audio/wav','Accept-Ranges':'bytes','Content-Range':`bytes ${start}-${end}/${length}`,'Content-Length':String(end-start+1)}});
+  return new Response(bytes.slice(start,end+1),{status:206,headers:{'Content-Type':'audio/mpeg','Accept-Ranges':'bytes','Content-Range':`bytes ${start}-${end}/${length}`,'Content-Length':String(end-start+1)}});
 }
