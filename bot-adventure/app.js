@@ -1,14 +1,14 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world81';
-import { Adventure, distance } from './engine.js?v=world81';
-import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon,atlasBot } from './art.js?v=world81';
-import { mountAtlas } from './atlas.js?v=world81';
-import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world81';
-import {AdventureSaves} from './adventure-saves.js?v=world81';
-import {bindHoldConfirmation} from './hold-confirm.js?v=world81';
-import {bindPowerControl,updatePowerControl} from './power-control.js?v=world81';
-import {atlasProgress} from './atlas-progress.js?v=world81';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, visibleEquipment, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world82';
+import { Adventure, distance } from './engine.js?v=world82';
+import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon,atlasBot } from './art.js?v=world82';
+import { mountAtlas } from './atlas.js?v=world82';
+import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world82';
+import {AdventureSaves} from './adventure-saves.js?v=world82';
+import {bindHoldConfirmation} from './hold-confirm.js?v=world82';
+import {bindPowerControl,updatePowerControl} from './power-control.js?v=world82';
+import {atlasProgress} from './atlas-progress.js?v=world82';
 
-const buildVersion = 'world81';
+const buildVersion = 'world82';
 const SAVE_KEY='bot-adventure-save-v1';
 const adventureSaves=new AdventureSaves({storage:()=>localStorage,key:SAVE_KEY});
 const $=id=>document.getElementById(id);
@@ -78,8 +78,8 @@ function workshop(){
   if(!game.isHome()){closePanel();game.goHome();toast('Heading to the workshop. Free repairs at home.');return;}
   game.repair();
   const tabs=Object.keys(EQUIPMENT);const s=game.save;
-  openPanel('workshop',`${head(game.homeNear().name,'Fully repaired. Ready for something new.','SAFE & SOUND')}${workbenchHTML()}<div class="inventory-line"><span>Scrap <b>◆ ${s.scrap}</b></span><span>Parts <b>⚙ ${s.gears}</b></span><span>${s.bosses.length} / ${REGIONS.length} relays</span></div><div class="tabs" role="tablist" aria-label="Equipment categories">${tabs.map(type=>`<button role="tab" aria-label="${type}" aria-selected="${type===workTab}" class="${type===workTab?'active':''}" data-tab="${type}"><canvas width="88" height="72" data-category="${type}" aria-hidden="true"></canvas><small>${{weapon:'Weapons',armor:'Armor',wheels:'Wheels',gadget:'Gear'}[type]}</small></button>`).join('')}</div><div class="items">${EQUIPMENT[workTab].map(p=>{
-    const owned=s.owned.includes(p.id),equipped=s.build[workTab]===p.id,can=available(s,p),afford=s.scrap>=p.cost&&s.gears>=p.gears;
+  openPanel('workshop',`${head(game.homeNear().name,'Fully repaired. Ready for something new.','SAFE & SOUND')}${workbenchHTML()}<div class="inventory-line"><span>Scrap <b>◆ ${s.scrap}</b></span><span>Parts <b>⚙ ${s.gears}</b></span><span>${s.bosses.length} / ${REGIONS.length} relays</span></div><div class="tabs" role="tablist" aria-label="Equipment categories">${tabs.map(type=>`<button role="tab" aria-label="${type}" aria-selected="${type===workTab}" class="${type===workTab?'active':''}" data-tab="${type}"><canvas width="88" height="72" data-category="${type}" aria-hidden="true"></canvas><small>${{weapon:'Weapons',armor:'Armor',wheels:'Wheels',gadget:'Gear'}[type]}</small></button>`).join('')}</div><div class="items">${visibleEquipment(s,workTab).map(p=>{
+    const owned=s.owned.includes(p.id),equipped=s.build[workTab]===p.id,can=owned||available(s,p),afford=s.scrap>=p.cost&&s.gears>=p.gears;
     const lock=p.unlock>=0?`Blueprint: ${REGIONS[p.unlock].boss}`:'Find gears at salvage sites';
     return `<article class="item ${equipped?'equipped':''} ${can?'':'locked'} ${!owned&&!afford?'unaffordable':''}"><canvas width="136" height="136" data-item="${p.id}" aria-label="${p.name}"></canvas><div><h3>${p.name}</h3><p>${p.desc}</p><small>${!can?lock:owned?equipped?'Equipped · yours forever':'Built · yours forever':`◆ ${p.cost} scrap + ⚙ ${p.gears} gears`}</small></div><button data-part="${p.id}" aria-label="${equipped?'Equipped':!can?'Locked':owned?'Equip':'Build'} ${p.name}" title="${equipped?'Equipped':!can?'Locked':owned?'Equip':'Build'}" ${!can||equipped||(!owned&&!afford)?'disabled':''}>${equipped?'✓':!can?'<span class="lock-icon" aria-hidden="true"></span>':owned?'↥':'+'}</button></article>`;
   }).join('')}</div><div class="panel-foot"><button class="primary pictorial-action" data-action="depart" aria-label="Go adventuring"><span>▶</span><small>Adventure</small></button></div>`);

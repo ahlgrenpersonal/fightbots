@@ -1,10 +1,10 @@
-import { MORE_REGIONS, NEW_EQUIPMENT, WORKSHOPS, RETURNS, ENCOUNTERS, LEGACY_WORKSHOPS, LEGACY_RETURNS, LEGACY_ENCOUNTERS } from './content.js?v=world81';
-import {LEGACY_TILES,WORLD_TILES,relocatePoint,relocateEntity,legacyPoint,worldGates} from './topology.js?v=world81';
-import {PANTHEON,inPantheon,buildPantheon} from './pantheon.js?v=world81';
+import { MORE_REGIONS, NEW_EQUIPMENT, WORKSHOPS, RETURNS, ENCOUNTERS, LEGACY_WORKSHOPS, LEGACY_RETURNS, LEGACY_ENCOUNTERS } from './content.js?v=world82';
+import {LEGACY_TILES,WORLD_TILES,relocatePoint,relocateEntity,legacyPoint,worldGates} from './topology.js?v=world82';
+import {PANTHEON,inPantheon,buildPantheon} from './pantheon.js?v=world82';
 export {PANTHEON};
 export { WORKSHOPS, RETURNS, ENCOUNTERS };
-export { bossProfile } from './content.js?v=world81';
-export const BUILD = 'world81';
+export { bossProfile } from './content.js?v=world82';
+export const BUILD = 'world82';
 export const REGION_W = 36;
 export const REGION_H = 44;
 export const WORLD_W = REGION_W * 5;
@@ -257,6 +257,7 @@ export const areaUnlocked=(save,r)=>r===PANTHEON.r?pantheonUnlocked(save):r>=0&&
 export const areaInfo=r=>r===PANTHEON.r?PANTHEON:REGIONS[r];
 export function cellsIn(save,r) { return new Set(save.cleared.filter(id=>{const m=/^site-(\d+)-(\d+)$/.exec(id);return m&&Number(m[1])===r&&Number(m[2])<requiredCells(r);})).size; }
 export function available(save,part) { return part.unlock < 0 || save.bosses.includes(part.unlock); }
+export function visibleEquipment(save,type) { return EQUIPMENT[type].filter(part=>save.owned.includes(part.id)||available(save,part)); }
 export function canWalk(world,save,x,y) {
   const r=regionAt(x,y);
   return x>=1 && y>=1 && x<WORLD_W-1 && y<WORLD_H-1 && areaUnlocked(save,r) && !world.blocks.has(`${x},${y}`);
