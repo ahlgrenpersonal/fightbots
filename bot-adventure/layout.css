@@ -35,7 +35,7 @@ dialog[data-mode="trail"] .celebration{height:auto;aspect-ratio:5/2}
 .atlas-status{margin:0;color:var(--gold);font-size:12px;line-height:1.5}.atlas-status:not(:empty){margin:8px 4px}
 .console{position:static;transform:none;width:100%;max-width:none;border-radius:0;padding-top:6px;padding-bottom:calc(4px + max(0px,var(--safe-bottom,env(safe-area-inset-bottom,0px)) - 20px));background:var(--ink);box-shadow:none}
 .console .tools{max-width:530px;margin:auto}.health-row{max-width:530px;margin:0 auto 4px}
-.console .tools{grid-template-columns:repeat(3,minmax(0,1fr));max-width:390px;gap:12px}
+.console .tools{grid-template-columns:repeat(4,minmax(0,1fr));max-width:440px;gap:8px}
 .region-progress{display:flex!important;gap:3px;margin-top:4px!important;align-items:center;min-height:10px}.region-progress i{display:block;width:7px;height:9px;border-radius:2px;border:1px solid #9dbab2;background:#38524f;flex-shrink:0}.region-progress i.filled{background:#ffd35c;border-color:#ffe9a1}
 .region-progress[hidden]{display:none!important}
 dialog[data-mode="workshop"][data-details="false"] .extra-details{display:none}

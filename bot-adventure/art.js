@@ -1,11 +1,11 @@
-import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world84';
-import {atlasProgress,regionEdges} from './atlas-progress.js?v=world84';
-import {atlasSiteVisible} from './quiet-ui.js?v=world84';
-import {boatArt,dockArt} from './boat-art.js?v=world84';
-import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world84';
-import {COURT} from './pantheon.js?v=world84';
-import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world84';
-import * as worldData from './data.js?v=world84';
+import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world85';
+import {atlasProgress,regionEdges} from './atlas-progress.js?v=world85';
+import {atlasSiteVisible} from './quiet-ui.js?v=world85';
+import {boatArt,dockArt} from './boat-art.js?v=world85';
+import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world85';
+import {COURT} from './pantheon.js?v=world85';
+import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world85';
+import * as worldData from './data.js?v=world85';
 
 export function rounded(c,x,y,w,h,r,fill,stroke,line=2) {
   c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=line;c.stroke();}

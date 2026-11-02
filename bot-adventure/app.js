@@ -1,15 +1,15 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, visibleEquipment, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world84';
-import { Adventure, distance } from './engine.js?v=world84';
-import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon,atlasBot } from './art.js?v=world84';
-import { mountAtlas } from './atlas.js?v=world84';
-import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world84';
-import {AdventureSaves} from './adventure-saves.js?v=world84';
-import {bindHoldConfirmation} from './hold-confirm.js?v=world84';
-import {bindPowerControl,updatePowerControl} from './power-control.js?v=world84';
-import {atlasProgress} from './atlas-progress.js?v=world84';
-import {localProgress} from './quiet-ui.js?v=world84';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, visibleEquipment, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world85';
+import { Adventure, distance } from './engine.js?v=world85';
+import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon,atlasBot } from './art.js?v=world85';
+import { mountAtlas } from './atlas.js?v=world85';
+import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world85';
+import {AdventureSaves} from './adventure-saves.js?v=world85';
+import {bindHoldConfirmation} from './hold-confirm.js?v=world85';
+import {bindPowerControl,updatePowerControl} from './power-control.js?v=world85';
+import {atlasProgress} from './atlas-progress.js?v=world85';
+import {localProgress} from './quiet-ui.js?v=world85';
 
-const buildVersion = 'world84';
+const buildVersion = 'world85';
 const SAVE_KEY='bot-adventure-save-v1';
 const adventureSaves=new AdventureSaves({storage:()=>localStorage,key:SAVE_KEY});
 const $=id=>document.getElementById(id);
@@ -44,9 +44,28 @@ document.fonts?.ready.then(()=>painter.resize());
 game.reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const panel=$('panel');let panelMode=null,atlasController=null,workTab='weapon',workshopDetails=false,toastTimer,bannerTimer,frame=0,last=performance.now(),lastSave=0,wasPaused=false,holdCleanup=null,switchingSave=false;
 let audio;
+let musicUnlocked=false;
+function soundContext(){
+  if(!audio){
+    audio=new(window.AudioContext||window.webkitAudioContext)();
+    const source=audio.createMediaElementSource($('music')),gain=audio.createGain();
+    gain.gain.value=.28;source.connect(gain);gain.connect(audio.destination);
+  }
+  return audio;
+}
+function syncMusic(){
+  const music=$('music');
+  if(!game.save.sound||document.hidden){music.pause();audio?.suspend().catch(()=>{});return;}
+  if(!musicUnlocked)return;
+  try{soundContext().resume().catch(()=>{});if(music.paused)music.play().catch(()=>{});}catch{}
+}
+function unlockMusic(event){if(event.isTrusted){musicUnlocked=true;syncMusic();}}
+document.addEventListener('pointerup',unlockMusic,{passive:true});
+document.addEventListener('click',unlockMusic,{passive:true});
+document.addEventListener('keydown',unlockMusic);
 function tone(freq=400,duration=.09,type='sine',volume=.035,slide=0){
-  if(!game.save.sound)return;
-  try{audio||=new(window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();const o=audio.createOscillator(),v=audio.createGain();o.type=type;o.frequency.setValueAtTime(freq,audio.currentTime);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(30,slide),audio.currentTime+duration);v.gain.setValueAtTime(volume,audio.currentTime);v.gain.exponentialRampToValueAtTime(.001,audio.currentTime+duration);o.connect(v).connect(audio.destination);o.start();o.stop(audio.currentTime+duration);}catch{}
+  if(!game.save.sound||document.hidden)return;
+  try{soundContext().resume().catch(()=>{});const o=audio.createOscillator(),v=audio.createGain();o.type=type;o.frequency.setValueAtTime(freq,audio.currentTime);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(30,slide),audio.currentTime+duration);v.gain.setValueAtTime(volume,audio.currentTime);v.gain.exponentialRampToValueAtTime(.001,audio.currentTime+duration);o.connect(v).connect(audio.destination);o.start();o.stop(audio.currentTime+duration);}catch{}
 }
 function toast(message){$('toast').textContent=message;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),3200);}
 function banner(title,detail=''){const n=$('announcement');n.replaceChildren();const main=document.createElement('div');main.textContent=title;n.append(main);if(detail){const sub=document.createElement('small');sub.textContent=detail;n.append(sub);}n.hidden=false;clearTimeout(bannerTimer);bannerTimer=setTimeout(()=>n.hidden=true,3500);}
@@ -209,7 +228,7 @@ panel.addEventListener('click',e=>{
   if(action==='next'){closePanel();game.goNext();}
   if(action==='pantheon'&&pantheonUnlocked(game.save)){closePanel();game.moveTo(PANTHEON.viewpoint);}
 });
-panel.addEventListener('change',e=>{if(e.target.id==='gentle')game.save.gentle=e.target.checked;if(e.target.id==='audio'){game.save.sound=e.target.checked;tone(700);}persist();});
+panel.addEventListener('change',e=>{if(e.target.id==='gentle')game.save.gentle=e.target.checked;if(e.target.id==='audio'){game.save.sound=e.target.checked;syncMusic();tone(700);}persist();});
 function drawPanels(){
   const t=game.time;
   const preview=$('botPreview');if(preview){const r=preview.getBoundingClientRect(),dpr=Math.min(devicePixelRatio,2);if(preview.width!==Math.round(r.width*dpr)||preview.height!==Math.round(r.height*dpr)){preview.width=Math.round(r.width*dpr);preview.height=Math.round(r.height*dpr);}const c=preview.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,r.width,r.height);const width=r.width,size=Math.min(102,(width*.6-8)/.98);rounded(c,12,137,width-24,13,5,'#43615b');rounded(c,17,131,width-34,9,3,'#829f8a');for(let i=0;i<4;i++){c.fillStyle='#d5b95f';c.fillRect(22+i*(width-40)/4,140,10,2);}bot(c,width*.38,132-size*.39,size,{color:game.save.color,armor:game.save.build.armor,wheels:game.save.build.wheels,gun:game.save.build.weapon,angle:-.25},t);}
@@ -223,7 +242,7 @@ $('pause').onclick=pauseMenu;$('map').onclick=adventureMap;
 $('home').onclick=workshop;$('workshop').onclick=workshop;
 function activatePower(){if(!game.paused)game.boost();updatePowerControl($('boost'),$('boostLabel'),game);}
 bindPowerControl($('boost'),activatePower);
-$('sound').onclick=()=>{game.save.sound=!game.save.sound;tone(700);persist();};
+$('sound').onclick=()=>{game.save.sound=!game.save.sound;syncMusic();tone(700);persist();};
 let interaction='';
 $('interact').onclick=()=>{if(interaction==='royal'){if(game.royals.start())persist();}else if(interaction==='home')workshop();else if(interaction==='repair')game.repair();else if(interaction==='guardian'){const r=regionAt(game.player.x,game.player.y);toast(REGIONS[r].hint);game.moveTo(relayFor(r));}};
 let pressed=false,pressPoint;
@@ -233,7 +252,7 @@ for(const event of ['pointerup','pointercancel'])$('world').addEventListener(eve
 $('world').addEventListener('pointerdown',e=>{if(game.paused||!game.royals.ready)return;const r=$('world').getBoundingClientRect(),p=painter.screenToWorld(e.clientX-r.left,e.clientY-r.top);if(distance(p,{x:162.5,y:245.5})<1.5){e.preventDefault();e.stopImmediatePropagation();game.royals.start();persist();}},true);
 window.addEventListener('keydown',e=>{if(panel.open)return;const directions={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],w:[0,-1],s:[0,1],a:[-1,0],d:[1,0]};if(directions[e.key]){e.preventDefault();const [dx,dy]=directions[e.key];game.moveTo({x:Math.floor(game.player.x)+dx+.5,y:Math.floor(game.player.y)+dy+.5});}if(e.code==='Space'){e.preventDefault();game.boost();}if(e.key==='Escape')pauseMenu();});
 window.addEventListener('resize',()=>painter.resize());
-document.addEventListener('visibilitychange',()=>{if(document.hidden){wasPaused=game.paused;game.paused=true;persist();}else{game.paused=panel.open||wasPaused;last=performance.now();painter.resize();}});
+document.addEventListener('visibilitychange',()=>{syncMusic();if(document.hidden){wasPaused=game.paused;game.paused=true;persist();}else{game.paused=panel.open||wasPaused;last=performance.now();painter.resize();}});
 window.addEventListener('pagehide',persist);
 function hud(){
   const s=game.save,r=regionAt(game.player.x,game.player.y),max=game.maxHp(),current=Math.ceil(game.player.hp);

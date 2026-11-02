@@ -10,8 +10,8 @@
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=world84">
-  <link rel="stylesheet" href="layout.css?v=world84">
+  <link rel="stylesheet" href="styles.css?v=world85">
+  <link rel="stylesheet" href="layout.css?v=world85">
 </head>
 <body>
   <main id="game">
@@ -34,11 +34,12 @@
         <button id="map" title="Adventure map"><span>◇</span><b>Map</b></button>
         <button id="boost" class="boost" title="Power boost"><span>ϟ</span><b id="boostLabel">Power</b></button>
         <button id="workshop" title="Build and equip your bot"><span>⚙</span><b>Build</b></button>
-        <button id="sound" title="Toggle sound" aria-label="Turn sound on" hidden><span>♪</span><b id="soundLabel">Sound off</b></button>
+        <button id="sound" title="Toggle sound" aria-label="Turn sound on"><span>♪</span><b id="soundLabel">Sound off</b></button>
       </nav>
     </footer>
   </main>
   <dialog id="panel" aria-labelledby="panelTitle"><div id="panelContent"></div></dialog>
-  <script type="module" src="app.js?v=world84"></script>
+  <audio id="music" src="assets/adventure-theme.mp3" preload="auto" loop hidden></audio>
+  <script type="module" src="app.js?v=world85"></script>
 </body>
 </html>
