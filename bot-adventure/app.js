@@ -1,15 +1,15 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, visibleEquipment, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world83';
-import { Adventure, distance } from './engine.js?v=world83';
-import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon,atlasBot } from './art.js?v=world83';
-import { mountAtlas } from './atlas.js?v=world83';
-import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world83';
-import {AdventureSaves} from './adventure-saves.js?v=world83';
-import {bindHoldConfirmation} from './hold-confirm.js?v=world83';
-import {bindPowerControl,updatePowerControl} from './power-control.js?v=world83';
-import {atlasProgress} from './atlas-progress.js?v=world83';
-import {localProgress} from './quiet-ui.js?v=world83';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, visibleEquipment, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world84';
+import { Adventure, distance } from './engine.js?v=world84';
+import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon,atlasBot } from './art.js?v=world84';
+import { mountAtlas } from './atlas.js?v=world84';
+import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world84';
+import {AdventureSaves} from './adventure-saves.js?v=world84';
+import {bindHoldConfirmation} from './hold-confirm.js?v=world84';
+import {bindPowerControl,updatePowerControl} from './power-control.js?v=world84';
+import {atlasProgress} from './atlas-progress.js?v=world84';
+import {localProgress} from './quiet-ui.js?v=world84';
 
-const buildVersion = 'world83';
+const buildVersion = 'world84';
 const SAVE_KEY='bot-adventure-save-v1';
 const adventureSaves=new AdventureSaves({storage:()=>localStorage,key:SAVE_KEY});
 const $=id=>document.getElementById(id);
@@ -34,7 +34,7 @@ function load(){
   }catch{return base;}
 }
 const game=new Adventure(load());
-Object.assign(game.player,nearestWalkable(game.world,game.save,game.player));
+if(!game.boats.riding)Object.assign(game.player,nearestWalkable(game.world,game.save,game.player));
 const painter=new Painter($('world'));painter.resize();painter.camera={x:game.player.x,y:game.player.y};if(regionAt(game.player.x,game.player.y)===PANTHEON.r)painter.follow(game,10);
 const worldSizeObserver=new ResizeObserver(()=>painter.resize());
 worldSizeObserver.observe($('playfield'));
@@ -227,7 +227,7 @@ $('sound').onclick=()=>{game.save.sound=!game.save.sound;tone(700);persist();};
 let interaction='';
 $('interact').onclick=()=>{if(interaction==='royal'){if(game.royals.start())persist();}else if(interaction==='home')workshop();else if(interaction==='repair')game.repair();else if(interaction==='guardian'){const r=regionAt(game.player.x,game.player.y);toast(REGIONS[r].hint);game.moveTo(relayFor(r));}};
 let pressed=false,pressPoint;
-$('world').addEventListener('pointerdown',e=>{if(game.paused)return;pressPoint={x:e.clientX,y:e.clientY};const rect=$('world').getBoundingClientRect(),pos=painter.screenToWorld(e.clientX-rect.left,e.clientY-rect.top),enemy=game.enemyAt(pos,painter.tile),station=game.world.stations.find(s=>s.r<=unlockedRegion(game.save)&&distance(s,pos)<1.8);pressed=!enemy;if(enemy)game.tapEnemy(enemy);else if(station)game.moveTo(station);else game.moveTo(pos);$('world').setPointerCapture(e.pointerId);});
+$('world').addEventListener('pointerdown',e=>{if(game.paused)return;pressPoint={x:e.clientX,y:e.clientY};const rect=$('world').getBoundingClientRect(),pos=painter.screenToWorld(e.clientX-rect.left,e.clientY-rect.top),boat=game.boats.at(pos),enemy=game.enemyAt(pos,painter.tile),station=game.world.stations.find(s=>s.r<=unlockedRegion(game.save)&&distance(s,pos)<1.8);pressed=!enemy&&!boat;if(boat){if(game.boats.riding)game.moveTo(boat);else game.boats.board(boat);}else if(enemy)game.tapEnemy(enemy);else if(station)game.moveTo(station);else game.moveTo(pos);$('world').setPointerCapture(e.pointerId);});
 $('world').addEventListener('pointermove',e=>{if(!pressed||game.paused||Math.hypot(e.clientX-pressPoint.x,e.clientY-pressPoint.y)<20)return;const rect=$('world').getBoundingClientRect();game.moveTo(painter.screenToWorld(e.clientX-rect.left,e.clientY-rect.top));pressPoint={x:e.clientX,y:e.clientY};});
 for(const event of ['pointerup','pointercancel'])$('world').addEventListener(event,()=>pressed=false);
 $('world').addEventListener('pointerdown',e=>{if(game.paused||!game.royals.ready)return;const r=$('world').getBoundingClientRect(),p=painter.screenToWorld(e.clientX-r.left,e.clientY-r.top);if(distance(p,{x:162.5,y:245.5})<1.5){e.preventDefault();e.stopImmediatePropagation();game.royals.start();persist();}},true);

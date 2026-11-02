@@ -1,9 +1,10 @@
-import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world83';
-import { bossProfile } from './content.js?v=world83';
-import { ReturningPatrols } from './patrols.js?v=world83';
-import {inRoyalChamber} from './pantheon.js?v=world83';
-import {RoyalCourt} from './royal-court.js?v=world83';
-import {nearestWalkable} from './data.js?v=world83';
+import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world84';
+import { bossProfile } from './content.js?v=world84';
+import { ReturningPatrols } from './patrols.js?v=world84';
+import {inRoyalChamber} from './pantheon.js?v=world84';
+import {RoyalCourt} from './royal-court.js?v=world84';
+import {nearestWalkable} from './data.js?v=world84';
+import {Boats} from './boats.js?v=world84';
 
 export const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
 export const TAP_COOLDOWN=1.5;
@@ -30,12 +31,13 @@ export class Adventure {
     this.time=0;this.boostTime=0;this.boostCd=0;this.shieldCd=0;this.buddyCd=0;this.shake=0;this.paused=false;this.reducedMotion=false;this.routeTimer=0;this.charging=null;this.headingHome=false;
     this.tapCd=0;this.powerTarget=null;this.tapSelection=null;
     this.royals=new RoyalCourt(this);
+    this.boats=new Boats(this);
     if(regionAt(this.player.x,this.player.y)===PANTHEON.r&&!canWalk(this.world,save,Math.floor(this.player.x),Math.floor(this.player.y)))Object.assign(this.player,pantheonUnlocked(save)?this.royals.sealed?PANTHEON.viewpoint:nearestWalkable(this.world,save,this.player):HOME);
     this.patrols=new ReturningPatrols(this);
     this.discover();
   }
   emit(type,data={}){this.onEvent({type,...data});}
-  snapshot(){this.patrols.snapshot();this.royals.snapshot();this.save.position={x:this.player.x,y:this.player.y};this.save.hp=this.player.hp;return this.save;}
+  snapshot(){this.patrols.snapshot();this.royals.snapshot();this.boats.snapshot();this.save.position={x:this.player.x,y:this.player.y};this.save.hp=this.player.hp;return this.save;}
   maxHp(){return stats(this.save).hp;}
   bossAwake(r){return !this.save.bosses.includes(r)&&cellsIn(this.save,r)>=requiredCells(r)&&r<=unlockedRegion(this.save);}
   bossFight(){
@@ -50,11 +52,11 @@ export class Adventure {
   homes(){return WORKSHOPS.filter(h=>h.r<=unlockedRegion(this.save));}
   homeNear(){return this.homes().find(h=>distance(this.player,h)<2.6);}
   isHome(){return !!this.homeNear();}
-  homeRoutes(){return this.homes().map(home=>({home,route:pathfind(this.world,this.save,this.player,home)})).filter(p=>p.route.length||(Math.floor(this.player.x)===Math.floor(p.home.x)&&Math.floor(this.player.y)===Math.floor(p.home.y))).sort((a,b)=>a.route.length-b.route.length);}
+  homeRoutes(){return this.homes().map(home=>({home,route:(this.boats.riding?this.boats.routeToLand(home):pathfind(this.world,this.save,this.player,home))||[]})).filter(p=>p.route.length||(Math.floor(this.player.x)===Math.floor(p.home.x)&&Math.floor(this.player.y)===Math.floor(p.home.y))).sort((a,b)=>a.route.length-b.route.length);}
   nearestHome(){return this.homeRoutes()[0]?.home||this.homes()[0];}
   enemyAwake(e){if(e.royal)return this.royals.awake(e);if(e.r>unlockedRegion(this.save))return false;if(e.patrolSite)return this.patrols.awake(e);if(e.encounterId)return true;if(!e.returnId)return e.type!=='boss'||this.bossAwake(e.r);const m=RETURNS.find(m=>m.id===e.returnId);return returnActive(this.save,m)&&(e.type!=='boss'||m.sites.every((_,i)=>this.save.cleared.includes(`${m.sitePrefix}-${i}`)));}
   stationNear(radius=1.1){return this.world.stations.find(s=>s.r<=unlockedRegion(this.save)&&distance(this.player,s)<radius);}
-  safeAt(pos){return regionAt(pos.x,pos.y)===PANTHEON.r?this.royals?.safeAt(pos)!==false:this.homes().some(h=>distance(pos,h)<2.6)||this.world.stations.some(s=>s.r<=unlockedRegion(this.save)&&distance(pos,s)<2.25);}
+  safeAt(pos){if(this.boats?.riding&&pos===this.player)return true;return regionAt(pos.x,pos.y)===PANTHEON.r?this.royals?.safeAt(pos)!==false:this.homes().some(h=>distance(pos,h)<2.6)||this.world.stations.some(s=>s.r<=unlockedRegion(this.save)&&distance(pos,s)<2.25);}
   clearShot(from,to){
     let x=Math.floor(from.x),y=Math.floor(from.y);const tx=Math.floor(to.x),ty=Math.floor(to.y);
     const dx=to.x-from.x,dy=to.y-from.y,sx=Math.sign(dx),sy=Math.sign(dy),ix=dx?Math.abs(1/dx):Infinity,iy=dy?Math.abs(1/dy):Infinity;
@@ -75,7 +77,7 @@ export class Adventure {
     const x=(b.right-b.left)*.16,y=(b.bottom-b.top)*.12;
     return pos.x>=b.left+x&&pos.x<=b.right-x&&pos.y>=b.top+y&&pos.y<=b.bottom-y;
   }
-  playerCanAttack(e,w=stats(this.save).weapon,scale=1){return distance(this.player,e)<=w.range*scale&&this.inEngagementView(e)&&this.canAttack(this.player,e,w.id);}
+  playerCanAttack(e,w=stats(this.save).weapon,scale=1){return !this.boats?.riding&&distance(this.player,e)<=w.range*scale&&this.inEngagementView(e)&&this.canAttack(this.player,e,w.id);}
   attackLimit(w){return {x:this.player.x,y:this.player.y,radius:w.range,bounds:this.viewBounds?{...this.viewBounds}:null};}
   firingMuzzle(p,weapon,to,size=1.17,terrain=DIRECT_WEAPONS.has(weapon)){
     const muzzle=weaponMuzzle(p,weapon,size);
@@ -98,6 +100,8 @@ export class Adventure {
   discover(){const r=regionAt(this.player.x,this.player.y);if(r>=0&&!this.save.visited.includes(r)){this.save.visited.push(r);this.emit('region',{r});}for(const s of this.world.stations)if(s.r<=unlockedRegion(this.save)&&distance(this.player,s)<6&&!this.save.discovered.includes(s.id)){this.save.discovered.push(s.id);this.emit('toast',{text:'Charging station discovered!'});}}
   moveTo(pos){
     if(!areaUnlocked(this.save,regionAt(pos.x,pos.y))){this.emit('toast',{text:regionAt(pos.x,pos.y)===PANTHEON.r?'Restore every relay and finish the return missions to open the ancient pantheon.':'Restore this region\'s relay to open the next trail.'});return false;}
+    if(this.boats.riding||this.boats.lakeAt(pos))return this.boats.moveTo(pos);
+    this.boats.pending=null;
     if(inRoyalChamber(pos.x,pos.y)&&this.royals.sealed){this.emit('toast',{text:'Approach the seal, watch the court, then choose when to begin.'});return this.moveTo(PANTHEON.stairTop);}
     let to={x:Math.floor(pos.x)+.5,y:Math.floor(pos.y)+.5};
     if(!canWalk(this.world,this.save,Math.floor(to.x),Math.floor(to.y))){
@@ -114,6 +118,7 @@ export class Adventure {
   }
   tapEnemy(e){
     if(this.paused||e.hp<=0||e.dormant||!this.enemyAwake(e)||e.spawnUntil>this.time)return false;
+    if(this.boats.riding)return this.moveTo(e);
     const w=stats(this.save).weapon,inRange=this.playerCanAttack(e,w);
     if(!inRange)this.focusEnemy(e);
     else{if(this.target){this.route=[];this.waypoint=null;}this.target=null;}
@@ -131,7 +136,7 @@ export class Adventure {
     const choice=this.homeRoutes()[0];if(!choice)return false;this.moveTo(choice.home);this.headingHome=this.route.length>0;return this.headingHome;
   }
   rescueHome(){
-    const home=this.nearestHome();this.player.x=home.x;this.player.y=home.y;this.player.hp=this.maxHp();this.player.invincible=3;
+    const home=this.nearestHome();this.boats.cancel();this.player.x=home.x;this.player.y=home.y;this.player.hp=this.maxHp();this.player.invincible=3;
     this.route=[];this.target=null;this.powerTarget=null;this.tapSelection=null;this.waypoint=null;this.projectiles=[];this.telegraphs=[];this.charging=null;this.headingHome=false;
     this.emit('home');
   }
@@ -344,10 +349,13 @@ export class Adventure {
     const p=this.player,st=stats(this.save);this.routeTimer-=dt;this.tapCd=Math.max(0,this.tapCd-dt);
     for(const key of ['cd','hit','swing','invincible'])p[key]=Math.max(0,p[key]-dt);
     this.boostCd=Math.max(0,this.boostCd-dt);this.boostTime=Math.max(0,this.boostTime-dt);this.shieldCd=Math.max(0,this.shieldCd-dt);this.buddyCd=Math.max(0,this.buddyCd-dt);this.shake=Math.max(0,this.shake-dt*18);
+    this.boats.beforeMove();
     const target=this.target&&this.enemies.find(e=>e.id===this.target&&e.hp>0);
     if(target){const ready=this.playerCanAttack(target,st.weapon,.9);if(!ready&&this.routeTimer<=0){this.route=pathfind(this.world,this.save,p,target);this.routeTimer=.65;}else if(ready)this.route=[];}
     else if(this.target)this.target=null;
-    if(this.route.length){const next=this.route[0],d=distance(p,next),step=st.speed*dt*(this.boostTime>0?1.25:1);if(d<=step){p.x=next.x;p.y=next.y;this.route.shift();}else{const a=Math.atan2(next.y-p.y,next.x-p.x);p.x+=Math.cos(a)*step;p.y+=Math.sin(a)*step;if(!target)p.angle=a;}if(!this.route.length)this.waypoint=null;}
+    let arrived;
+    if(this.route.length){const next=this.route[0],d=distance(p,next),step=(this.boats.riding?3.2:st.speed)*dt*(this.boostTime>0?1.25:1);if(d<=step){p.x=next.x;p.y=next.y;this.route.shift();arrived=next;}else{const a=Math.atan2(next.y-p.y,next.x-p.x);p.x+=Math.cos(a)*step;p.y+=Math.sin(a)*step;if(!target)p.angle=a;}if(!this.route.length)this.waypoint=null;}
+    this.boats.afterMove(arrived);
     this.discover();
     if(this.headingHome&&this.isHome()&&!this.route.length){this.headingHome=false;this.player.hp=this.maxHp();this.emit('home-arrived');}
     for(const e of this.enemies)e.active=false;
@@ -430,7 +438,7 @@ export class Adventure {
   nearestSite(){const r=unlockedRegion(this.save);return this.world.sites.filter(s=>!s.returnId&&s.r===r&&!this.save.cleared.includes(s.id)).sort((a,b)=>distance(a,this.player)-distance(b,this.player))[0];}
   nextObjective(){if(pantheonUnlocked(this.save))return PANTHEON.viewpoint;const m=RETURNS.find(m=>returnActive(this.save,m));if(m)return this.world.sites.find(s=>s.returnId===m.id&&!this.save.cleared.includes(s.id))||m;const r=unlockedRegion(this.save);return this.nearestSite()||relayFor(r);}
   guideRoute(){
-    const route=this.route.length?this.route:this.save.completed&&(!pantheonUnlocked(this.save)||this.save.visited.includes(PANTHEON.r))?[]:pathfind(this.world,this.save,this.player,this.nextObjective());
+    const route=this.route.length?this.route:this.save.completed&&(!pantheonUnlocked(this.save)||this.save.visited.includes(PANTHEON.r))?[]:this.boats.riding?this.boats.routeToLand(this.nextObjective())||[]:pathfind(this.world,this.save,this.player,this.nextObjective());
     return route.length?[this.player,...route]:[];
   }
   goNext(){return this.moveTo(this.nextObjective());}

@@ -1,10 +1,11 @@
-const CACHE_NAME='bot-adventure-world83';
-const ASSETS=['./','./index.html','./styles.css?v=world83','./layout.css?v=world83','./app.js?v=world83','./data.js?v=world83','./topology.js?v=world83','./content.js?v=world83','./engine.js?v=world83','./patrols.js?v=world83','./art.js?v=world83','./atlas.js?v=world83','./manifest.webmanifest','./version.json','./assets/icon.svg','./assets/icon-192.png','./assets/icon-512.png','./refresh.html'];
-ASSETS.push('./pantheon.js?v=world83','./pantheon-art.js?v=world83','./royal-court.js?v=world83');
-ASSETS.push('./adventure-saves.js?v=world83','./hold-confirm.js?v=world83');
-ASSETS.push('./power-control.js?v=world83');
-ASSETS.push('./atlas-progress.js?v=world83');
-ASSETS.push('./quiet-ui.js?v=world83');
+const CACHE_NAME='bot-adventure-world84';
+const ASSETS=['./','./index.html','./styles.css?v=world84','./layout.css?v=world84','./app.js?v=world84','./data.js?v=world84','./topology.js?v=world84','./content.js?v=world84','./engine.js?v=world84','./patrols.js?v=world84','./art.js?v=world84','./atlas.js?v=world84','./manifest.webmanifest','./version.json','./assets/icon.svg','./assets/icon-192.png','./assets/icon-512.png','./refresh.html'];
+ASSETS.push('./pantheon.js?v=world84','./pantheon-art.js?v=world84','./royal-court.js?v=world84');
+ASSETS.push('./adventure-saves.js?v=world84','./hold-confirm.js?v=world84');
+ASSETS.push('./power-control.js?v=world84');
+ASSETS.push('./atlas-progress.js?v=world84');
+ASSETS.push('./quiet-ui.js?v=world84');
+ASSETS.push('./boats.js?v=world84','./boat-art.js?v=world84');
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('bot-adventure-')&&key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{
