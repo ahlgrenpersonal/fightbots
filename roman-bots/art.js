@@ -1,4 +1,4 @@
-import { actionPose, bowGrip, shieldOpening } from './geometry.js?v=roman19';
+import { actionPose, bowGrip, shieldOpening } from './geometry.js?v=roman20';
 const TAU = Math.PI * 2;
 const INK = '#314b50';
 const GOLD = '#d8ae54';
@@ -425,7 +425,15 @@ function robotBody(c, unit, colors, time, aim, bob, battle = false) {
   c.beginPath(); c.moveTo(-6, -8); c.quadraticCurveTo(0, -3, 6, -8);
   c.strokeStyle = '#a6d7cd'; c.lineWidth = 1.8; c.stroke();
   // Helmet brim stays above the visor, so no facing direction hides the eyes.
-  if (unit.faction === 'highland') {
+  if (unit.faction === 'punic') {
+    path(c,[[-29,-30],[-28,-45],[-14,-58],[14,-58],[28,-45],[29,-30]],metal(c,-25,-58,25,-30,'#fff1c7','#c9a35c','#7c6b43'),INK,3);
+    path(c,[[-21,-52],[-14,-65],[14,-65],[21,-52]],'#934c79',INK,2);
+    for(let x=-12;x<=12;x+=6)line(c,x,-62,x,-53,'#e3a0b8',1.8);
+    box(c,-30,-34,60,7,2,'#ebce8a',INK,2);
+    for(const s of [-1,1])path(c,[[s*23,-32],[s*29,-30],[s*25,-11],[s*18,-17]],'#d3af6c',INK,2);
+    oval(c,0,-47,5,6,'#44c9c6',INK,1.4);
+    if(unit.boss){path(c,[[-32,-57],[-34,-82],[-16,-72],[0,-94],[16,-72],[34,-82],[32,-57]],GOLD,INK,3);oval(c,0,-76,6,7,'#bda1f4',INK,2);}
+  } else if (unit.faction === 'highland') {
     path(c,[[-29,-30],[-25,-47],[-10,-57],[10,-57],[25,-47],[29,-30]],metal(c,-25,-57,24,-30,'#f9e1a4','#b78848','#6e694c'),INK,3);
     line(c,-22,-38,22,-38,'#fff0c0',2);
     path(c,[[-5,-56],[-7,-71],[0,-79],[7,-71],[5,-56]],'#46b5b1',INK,2);

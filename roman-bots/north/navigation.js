@@ -9,13 +9,14 @@ export function previewRoute(game,p){
 export function nextDestination(game,home=false){
   if(home)return game.world.HOME;
   if(!game.prologueComplete)return {x:33,y:142,kind:'arena'};
+  if(game.alive(0).some(u=>u.hp/u.maxHp<.25))return game.nearestCamp();
   const {CAMPS,ENCOUNTERS}=game.world;
   const camp=CAMPS.find(c=>!game.state.camps.includes(c.id));
   if(camp){
     const remaining=ENCOUNTERS.filter(e=>camp.required?.includes(e.id)&&!game.state.completed.includes(e.id));
     return remaining.sort((a,b)=>distance(a,game.leader())-distance(b,game.leader()))[0]||camp;
   }
-  return ENCOUNTERS.find(e=>e.kind==='boss'&&!game.state.completed.includes(e.id))||game.world.HOME;
+  return ENCOUNTERS.find(e=>e.kind==='boss'&&!game.state.completed.includes(e.id))||game.frontier;
 }
 export function hintPoint(game,destination){
   const route=previewRoute(game,destination);
@@ -35,9 +36,9 @@ function posts(world){
   const chosen=[];
   for(const p of points){
     if(chosen.length>=16)break;
-    if(!world.passable(p.x,p.y)||chosen.some(q=>distance(p,q)<12))continue;
+    if(!world.passable(p.x,p.y)||!p.ship&&chosen.some(q=>distance(p,q)<12))continue;
     const camp=[...world.CAMPS].sort((a,b)=>distance(a,p)-distance(b,p))[0];
-    const target=distance(p,world.HOME)<18?world.HOME:camp;
+    const target=p.destination||(distance(p,world.HOME)<18?world.HOME:camp);
     const path=world.findPath(p,target),toward=path[Math.min(5,path.length-1)]||target;
     chosen.push({...p,home:target===world.HOME,angle:Math.atan2(toward.y-p.y,toward.x-p.x)});
   }
@@ -51,7 +52,8 @@ export function drawSignposts(c,world,bounds){
     c.fillStyle='#eadca5';c.strokeStyle='#426a63';c.lineWidth=.05;c.beginPath();c.roundRect(-.6,-1.5,1.2,.68,.08);c.fill();c.stroke();
     c.save();c.translate(.28,-1.14);c.rotate(p.angle);c.strokeStyle='#236e68';c.lineWidth=.055;c.beginPath();c.moveTo(-.18,0);c.lineTo(.18,0);c.lineTo(.06,-.13);c.moveTo(.18,0);c.lineTo(.06,.13);c.stroke();c.restore();
     c.strokeStyle='#236e68';c.lineWidth=.05;c.beginPath();
-    if(p.home){c.moveTo(-.43,-1.03);c.lineTo(-.43,-1.25);c.lineTo(-.27,-1.37);c.lineTo(-.11,-1.25);c.lineTo(-.11,-1.03);c.closePath();}
+    if(p.ship){c.moveTo(-.48,-1.13);c.lineTo(-.39,-.99);c.lineTo(-.15,-.99);c.lineTo(-.06,-1.13);c.closePath();c.moveTo(-.27,-1.15);c.lineTo(-.27,-1.4);c.lineTo(-.1,-1.17);c.lineTo(-.27,-1.17);}
+    else if(p.home){c.moveTo(-.43,-1.03);c.lineTo(-.43,-1.25);c.lineTo(-.27,-1.37);c.lineTo(-.11,-1.25);c.lineTo(-.11,-1.03);c.closePath();}
     else{c.moveTo(-.48,-1.02);c.lineTo(-.27,-1.39);c.lineTo(-.06,-1.02);c.closePath();c.moveTo(-.32,-1.02);c.lineTo(-.27,-1.15);c.lineTo(-.22,-1.02);}
     c.stroke();c.restore();
   }

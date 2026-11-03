@@ -1,27 +1,33 @@
-import {Battle,distance} from '../engine.js?v=roman19';
-import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman19';
-import * as NORTH from './world.js?v=roman19';
-import * as WEST from './west-world.js?v=roman19';
-import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman19';
+import {Battle,distance} from '../engine.js?v=roman20';
+import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman20';
+import * as NORTH from './world.js?v=roman20';
+import * as WEST from './west-world.js?v=roman20';
+import * as SOUTH from './south-world.js?v=roman20';
+import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman20';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const number=(n,a,b,f=a)=>Number.isFinite(n)?clamp(n,a,b):f;
 const integer=(n,a,b,f=a)=>Math.floor(number(n,a,b,f));
 const point=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y);
-const worlds={north:NORTH,west:WEST};
+const worlds={north:NORTH,west:WEST,south:SOUTH};
+const allCamps=()=>Object.values(worlds).flatMap(w=>w.CAMPS);
+const allEncounters=()=>Object.values(worlds).flatMap(w=>w.ENCOUNTERS);
 export const WEST_GATE=Object.freeze({x:6,y:138});
+export const SOUTH_DOCK=Object.freeze({x:16,y:144});
 const defaults=()=>[{weapon:'sword',shield:'tower'},{weapon:'hammer',shield:'none'},{weapon:'bow',shield:'none'},{weapon:'sword',shield:'round'},{weapon:'spear',shield:'none'}];
 export const UPGRADE_PRICES=Object.freeze({weapon:[100,240,420],armor:[80,200,360],utility:[120,260]});
 function cleanSave(saved){
   const s=saved&&typeof saved==='object'?saved:{};
-  const world=worlds[s.region==='west'?'west':'north'];
-  const ids=new Set([...NORTH.ENCOUNTERS,...WEST.ENCOUNTERS].map(e=>e.id));
+  const world=Object.hasOwn(worlds,s.region)?worlds[s.region]:NORTH;
+  const ids=new Set(allEncounters().map(e=>e.id));
   const completed=[...new Set(Array.isArray(s.completed)?s.completed.filter(id=>ids.has(id)):[])];
-  const camps=[...new Set(Array.isArray(s.camps)?s.camps.filter(id=>[...NORTH.CAMPS,...WEST.CAMPS].some(c=>c.id===id)):[])];
+  const camps=[...new Set(Array.isArray(s.camps)?s.camps.filter(id=>allCamps().some(c=>c.id===id)):[])];
   const prologueRound=integer(s.prologueRound,0,15,s.version===1?15:0);
-  return {version:3,region:s.region==='west'&&prologueRound>=PROLOGUE_ROUNDS?'west':'north',prologueRound,squad:defaults().map((slot,i)=>normalizeSlot(Array.isArray(s.squad)?s.squad[i]||slot:slot)),squadSize:s.squadSize===5?5:3,
+  const region=prologueRound>=PROLOGUE_ROUNDS&&['west','south'].includes(s.region)?s.region:'north';
+  const voyage=prologueRound>=PROLOGUE_ROUNDS&&((region==='north'&&s.voyage?.to==='south')||(region==='south'&&s.voyage?.to==='north'))?{to:s.voyage.to,remaining:number(s.voyage.remaining,0,14,14)}:null;
+  return {version:4,region,voyage,prologueRound,squad:defaults().map((slot,i)=>normalizeSlot(Array.isArray(s.squad)?s.squad[i]||slot:slot)),squadSize:s.squadSize===5?5:3,
     weaponTier:integer(s.weaponTier,0,3),armorTier:integer(s.armorTier,0,3),utility:s.utility==='charge'?'charge':'repair',utilityTier:integer(s.utilityTier,0,2),
-    coins:integer(s.coins,0,100000),camps,refuges:[...new Set([...camps,...(Array.isArray(s.refuges)?s.refuges.filter(id=>[...NORTH.CAMPS,...WEST.CAMPS].some(c=>c.id===id)):[])])],completed,conquered:NORTH.CAMPS.every(c=>camps.includes(c.id))&&completed.includes('north-king'),westConquered:WEST.CAMPS.every(c=>camps.includes(c.id))&&completed.includes(WEST.ENCOUNTERS.find(e=>e.kind==='boss')?.id),
+    coins:integer(s.coins,0,100000),camps,refuges:[...new Set([...camps,...(Array.isArray(s.refuges)?s.refuges.filter(id=>allCamps().some(c=>c.id===id)):[])])],completed,conquered:NORTH.CAMPS.every(c=>camps.includes(c.id))&&completed.includes('north-king'),westConquered:WEST.CAMPS.every(c=>camps.includes(c.id))&&completed.includes(WEST.ENCOUNTERS.find(e=>e.kind==='boss')?.id),southConquered:SOUTH.CAMPS.every(c=>camps.includes(c.id))&&completed.includes(SOUTH.ENCOUNTERS.find(e=>e.kind==='boss')?.id),
     position:point(s.position)?{x:number(s.position.x,.5,world.WIDTH-.5),y:number(s.position.y,.5,world.HEIGHT-.5)}:{...world.HOME},
     health:Array.from({length:5},(_,i)=>number(Array.isArray(s.health)?s.health[i]:undefined,0,1,1)),utilityLeft:integer(s.utilityLeft,0,1+integer(s.utilityTier,0,2),1+integer(s.utilityTier,0,2)),utilityCd:number(s.utilityCd,0,45),chargeTime:number(s.chargeTime,0,20),recoveries:integer(s.recoveries,0,100000)};
 }
@@ -45,19 +51,33 @@ export class Campaign extends Battle {
   checkFinished(){}
   get world(){return worlds[this.state?.region]||NORTH;}
   get western(){return this.state?.region==='west';}
-  get regionComplete(){return this.western?this.state.westConquered:this.state.conquered;}
+  get southern(){return this.state?.region==='south';}
+  get voyage(){return this.state?.voyage;}
+  get regionComplete(){return this.southern?this.state.southConquered:this.western?this.state.westConquered:this.state.conquered;}
+  get frontier(){return this.state.region==='north'&&this.state.conquered?(!this.state.westConquered?WEST_GATE:!this.state.southConquered?SOUTH_DOCK:this.world.HOME):this.world.HOME;}
   get sealsReady(){return this.world.CAMPS.every(c=>this.state.camps.includes(c.id));}
   safe(x,y){return this.world.isSafe({x,y});}
   crossGate(){
+    if(this.southern||this.voyage)return false;
     const gate=this.western?this.world.HOME:WEST_GATE;
     if(this.paused||this.trial||!this.prologueComplete||this.activeEncounter||!this.leader()||distance(this.leader(),gate)>3)return false;
-    this.state.region=this.western?'north':'west';
+    const region=this.western?'north':'west';
+    this.enterRegion(region,region==='west'?WEST.HOME:WEST_GATE);return true;
+  }
+  enterRegion(region,arrival){
+    this.state.region=region;
     this.bounds={minX:.5,maxX:this.world.WIDTH-.5,minY:.5,maxY:this.world.HEIGHT-.5};
     this.travelGoal=null;this.goal=null;this.focus=null;this.pendingPower=null;this.focusOwner=null;this.pendingOwner=null;
     this.units=this.units.filter(u=>u.team===0);this.projectiles=[];this.effects=[];this.paths.clear();
-    this.placeSquad(this.western?this.world.HOME:WEST_GATE);
+    this.placeSquad(arrival);
     this.state.position={x:this.leader().x,y:this.leader().y};
-    this.emit('region',{region:this.state.region});return true;
+    this.emit('region',{region:this.state.region});
+  }
+  boardShip(){
+    if(this.paused||this.trial||this.western||this.voyage||!this.prologueComplete||this.activeEncounter||!this.leader()||distance(this.leader(),this.southern?SOUTH.HOME:SOUTH_DOCK)>3)return false;
+    this.state.voyage={to:this.southern?'north':'south',remaining:14};this.travelGoal=null;this.goal=null;this.focus=null;this.pendingPower=null;this.focusOwner=null;this.pendingOwner=null;this.paths.clear();
+    for(const u of this.units){u.action=null;u.target=null;u.retreat=null;}
+    this.emit('voyage',{to:this.state.voyage.to});return true;
   }
   boundX(v){const x=super.boundX(v);return this.state&&!this.prologueComplete?clamp(x,5,47):x;}
   boundY(v){const y=super.boundY(v);return this.state&&!this.prologueComplete?clamp(y,132,145.5):y;}
@@ -217,6 +237,7 @@ export class Campaign extends Battle {
   }
   damageMultiplier(attacker){return attacker.team===0?(1+this.state.weaponTier*.25)*(this.chargeTime>0?2:1):attacker.damageScale??.55;}
   moveTo(p){
+    if(this.voyage||this.paused)return false;
     if(this.trial){if(!point(p)||this.paused)return false;const result=this.trial.moveTo(p);this.syncTrial();return result;}
     if(!point(p)||!this.leader())return false;
     if(!this.prologueComplete)p=cityPoint(p);
@@ -228,6 +249,7 @@ export class Campaign extends Battle {
     return true;
   }
   tapEnemy(enemy){
+    if(this.voyage)return false;
     if(this.trial){if(this.paused||!this.trial.units.includes(enemy))return false;const result=this.trial.tapEnemy(enemy);this.syncTrial();return result;}
     if(!enemy||!this.units.includes(enemy)||enemy.hp<=0||enemy.team!==1||this.safe(enemy.x,enemy.y))return false;
     this.travelGoal=null;return super.tapEnemy(enemy);
@@ -240,7 +262,7 @@ export class Campaign extends Battle {
     return super.tryPower();
   }
   beginEncounter(e){
-    if(this.trial||!this.prologueComplete)return false;
+    if(this.voyage||this.trial||!this.prologueComplete)return false;
     e=this.world.ENCOUNTERS.find(candidate=>candidate.id===e?.id);if(!e)return false;
     if(this.activeEncounter||this.state.completed.includes(e.id))return false;
     if(e.kind==='boss'&&!this.sealsReady)return false;
@@ -255,16 +277,19 @@ export class Campaign extends Battle {
     this.units=this.units.filter(u=>u.team===0);this.projectiles=[];this.wave++;this.paths.clear();
     const kingWave=e.kind==='boss'&&this.wave===integer(e.waves,2,3,3);
     const count=kingWave?3:integer(e.count,5,6,5),stage=integer(e.stage,0,4);
-    const roster=Array.from({length:5},(_,i)=>this.western?{weapon:i===0?'bow':i===2?'spear':i===4?'hammer':'sword',shield:i===1?'round':'none'}:{weapon:i%3===0?'bow':'sword',shield:'none'});
+    const roster=Array.from({length:5},(_,i)=>this.southern?{weapon:i===0?'bow':i===2?'spear':i===4?'hammer':'sword',shield:i===1?'round':i===3&&e.kind==='elite'?'tower':'none'}:this.western?{weapon:i===0?'bow':i===2?'spear':i===4?'hammer':'sword',shield:i===1?'round':'none'}:{weapon:i%3===0?'bow':'sword',shield:'none'});
     const factory=new Battle(this.state.squad,roster,{seed:this.seed,healthBonus:0,bounds:this.bounds});
     const templates=factory.units.filter(u=>u.team===1);
     for(let i=0;i<count;i++){
       const u={...templates[i%5],id:`forest-${++this.serial}`,index:i,captain:i===0,boss:kingWave&&i===0,buddy:null,action:null,target:null};
-      if(kingWave)Object.assign(u,normalizeSlot(i===0?{weapon:'hammer',shield:'none'}:i===1?{weapon:'sword',shield:this.western?'tower':'none'}:{weapon:'bow',shield:'none'}));
+      u.champion=this.southern&&!kingWave&&this.wave===e.waves&&i<(e.champions||0);
+      if(u.champion)Object.assign(u,normalizeSlot(i===0?{weapon:'hammer',shield:'none'}:{weapon:'bow',shield:'none'}));
+      if(kingWave)Object.assign(u,normalizeSlot(i===0?{weapon:'hammer',shield:'none'}:i===1?{weapon:'sword',shield:this.western||this.southern?'tower':'none'}:{weapon:'bow',shield:'none'}));
       const a=i/count*Math.PI*2,p=this.world.nearestWalkable({x:this.boundX(e.x+Math.cos(a)*2.3),y:this.boundY(e.y+Math.sin(a)*2.3)})||e;
       if(!this.validPosition(p,1))continue;
       Object.assign(u,{x:p.x,y:p.y});
-      u.maxHp=u.boss?WEAPONS[u.weapon].hp*(1+stage*.18)*10:WEAPONS[u.weapon].hp*.58*(1+stage*.22)*(e.kind==='boss'&&!kingWave?1.8:1);if(this.western)u.maxHp*=1.15;u.hp=u.maxHp;
+      u.maxHp=u.boss?WEAPONS[u.weapon].hp*(1+stage*.18)*10:WEAPONS[u.weapon].hp*.58*(1+stage*.22)*(e.kind==='boss'&&!kingWave?1.8:1);if(this.western||this.southern)u.maxHp*=1.15;u.hp=u.maxHp;
+      if(u.champion){u.maxHp*=3.2;u.hp=u.maxHp;}
       u.damageScale=u.boss?.60:.24+stage*.035;u.forestWeapon=u.weapon;this.units.push(u);
     }
     this.refreshPartners();this.separateBodies();
@@ -274,7 +299,7 @@ export class Campaign extends Battle {
     if(!this.state.completed.includes(e.id)){
       this.state.completed.push(e.id);const reward=integer(e.reward,0,500,35+integer(e.stage,0,3)*15);this.state.coins=Math.min(100000,this.state.coins+reward);
       this.emit('cleared',{id:e.id,reward});
-      if(e.kind==='boss'){this.state[this.western?'westConquered':'conquered']=true;this.emit('complete',{id:e.id,region:this.state.region});}
+      if(e.kind==='boss'){this.state[this.southern?'southConquered':this.western?'westConquered':'conquered']=true;this.emit('complete',{id:e.id,region:this.state.region});}
     }
     this.activeEncounter=null;this.waveAt=null;this.units=this.units.filter(u=>u.team===0);this.projectiles=[];
   }
@@ -297,7 +322,7 @@ export class Campaign extends Battle {
     this.placeSquad(camp);this.state.recoveries++;this.syncActive();this.emit('recovered',{id:camp.id});
   }
   nearbyCamp(){
-    if(this.trial)return null;
+    if(this.trial||this.voyage)return null;
     const leader=this.leader();if(!leader||!this.safe(leader.x,leader.y))return null;
     return [this.world.HOME,...this.world.CAMPS].find(c=>distance(c,leader)<3.5)||null;
   }
@@ -342,6 +367,7 @@ export class Campaign extends Battle {
     this.state.squadSize=size;this.placeSquad(this.nearbyCamp()||this.world.HOME);this.refreshPartners();return true;
   }
   useUtility(){
+    if(this.voyage)return false;
     if(this.trial&&this.trial.phase!=='battle')return false;
     if(this.utilityCd>0||this.state.utility==='repair'&&this.state.utilityLeft<=0||!this.leader()||this.paused)return false;
     if(this.state.utility==='repair'&&!this.alive(0).some(u=>u.hp<u.maxHp))return false;
@@ -355,6 +381,7 @@ export class Campaign extends Battle {
   }
   tick(dt){
     if(this.paused||!Number.isFinite(dt)||dt<=0)return;dt=Math.min(dt,.05);
+    if(this.voyage){this.time+=dt;this.voyage.remaining=Math.max(0,this.voyage.remaining-dt);if(this.voyage.remaining===0){const region=this.voyage.to;this.state.voyage=null;this.enterRegion(region,region==='south'?SOUTH.HOME:SOUTH_DOCK);}return;}
     if(this.trial){this.time+=dt;this.utilityCd=Math.max(0,this.utilityCd-dt);this.chargeTime=Math.max(0,this.chargeTime-dt);this.trial.chargeTime=this.chargeTime;this.trial.paused=this.paused;this.trial.tick(dt);this.syncTrial();return;}
     this.celebrationTime=Math.max(0,this.celebrationTime-dt);
     this.utilityCd=Math.max(0,this.utilityCd-dt);

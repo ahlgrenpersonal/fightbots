@@ -1,5 +1,6 @@
 // Lucide icons, ISC/MIT. Notices are in THIRD_PARTY_LICENSES.txt.
 const paths={
+  ship:'<path d="M12 2v8M8 3h8v7M4 10h16l2 7-10 5-10-5zM2 17c2 0 2 2 4 2s2-2 4-2 2 2 4 2 2-2 4-2 2 2 4 2"/>',
   compass:'<path d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36z"/><circle cx="12" cy="12" r="10"/>',
   home:'<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
   map:'<path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/>',
