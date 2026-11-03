@@ -9,7 +9,7 @@ export const CAMPS = Object.freeze([
   Object.freeze({ id: 'pine-watch', x: 14, y: 44, name: 'Pinecrest Watch' })
 ]);
 export const KING = Object.freeze({ x: 26, y: 10 });
-export const SIGNPOSTS=Object.freeze([...[[27,132],[24,98],[13,85],[26,66],[38,50],[26,30]].map(([x,y])=>({x,y})),{x:23,y:142,ship:true,destination:{x:16,y:144}}]);
+export const SIGNPOSTS=Object.freeze([...[[27,132],[24,98],[13,85],[26,66],[38,50],[26,30]].map(([x,y])=>({x,y})),{x:23,y:142,ship:true,destination:{x:16,y:144}},{x:40,y:133,ship:true,destination:{x:46,y:133}}]);
 export const BRIDGES = Object.freeze([
   Object.freeze({ left: 1, top: 63, right: 13, bottom: 66 }),
   Object.freeze({ left: 38, top: 98, right: 50, bottom: 101 })

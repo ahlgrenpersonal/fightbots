@@ -1,8 +1,9 @@
-const CACHE='roman-bots-roman20',ASSETS=['./','./index.html','./styles.css?v=roman20','./app.js?v=roman20','./data.js?v=roman20','./engine.js?v=roman20','./art.js?v=roman20','./geometry.js?v=roman20','./icons.js?v=roman20','./manifest.webmanifest','./version.json','./refresh.html','./assets/icon-192.png','./assets/icon-512.png','./assets/courtyard-theme.mp3','./north/index.html','./north/north.css?v=roman20','./north/north.js?v=roman20','./north/campaign.js?v=roman20','./north/world.js?v=roman20','./north/scenery.js?v=roman20'];
-ASSETS.push('./north/prologue.js?v=roman20','./north/city.js?v=roman20');
-ASSETS.push('./north/west-world.js?v=roman20','./north/west-scenery.js?v=roman20');
-ASSETS.push('./north/navigation.js?v=roman20');
-ASSETS.push('./north/south-world.js?v=roman20','./north/south-scenery.js?v=roman20');
+const CACHE='roman-bots-roman21',ASSETS=['./','./index.html','./styles.css?v=roman21','./app.js?v=roman21','./data.js?v=roman21','./engine.js?v=roman21','./art.js?v=roman21','./geometry.js?v=roman21','./icons.js?v=roman21','./manifest.webmanifest','./version.json','./refresh.html','./assets/icon-192.png','./assets/icon-512.png','./assets/courtyard-theme.mp3','./north/index.html','./north/north.css?v=roman21','./north/north.js?v=roman21','./north/campaign.js?v=roman21','./north/world.js?v=roman21','./north/scenery.js?v=roman21'];
+ASSETS.push('./north/prologue.js?v=roman21','./north/city.js?v=roman21');
+ASSETS.push('./north/west-world.js?v=roman21','./north/west-scenery.js?v=roman21');
+ASSETS.push('./north/navigation.js?v=roman21');
+ASSETS.push('./north/south-world.js?v=roman21','./north/south-scenery.js?v=roman21');
+ASSETS.push('./north/east-world.js?v=roman21','./north/east-scenery.js?v=roman21');
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('roman-bots-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{

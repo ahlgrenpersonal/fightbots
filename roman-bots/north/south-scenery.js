@@ -1,6 +1,6 @@
-import * as world from './south-world.js?v=roman20';
-import { drawBot } from '../art.js?v=roman20';
-import { normalizeSlot } from '../data.js?v=roman20';
+import * as world from './south-world.js?v=roman21';
+import { drawBot } from '../art.js?v=roman21';
+import { normalizeSlot } from '../data.js?v=roman21';
 
 const { WIDTH, HEIGHT, HOME, KING, CAMPS, ENCOUNTERS, LANDSCAPES, LANDMARKS, tileAt, passable } = world;
 const TAU = Math.PI * 2;

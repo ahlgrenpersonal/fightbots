@@ -1,7 +1,7 @@
-import { WIDTH, HEIGHT, HOME, CAMPS, ENCOUNTERS, KING, BRIDGES, LANDMARKS, LANDSCAPES, ROUTES, tileAt, passable } from './west-world.js?v=roman20';
-import { drawBot } from '../art.js?v=roman20';
-import { normalizeSlot } from '../data.js?v=roman20';
-import { citizen } from './scenery.js?v=roman20';
+import { WIDTH, HEIGHT, HOME, CAMPS, ENCOUNTERS, KING, BRIDGES, LANDMARKS, LANDSCAPES, ROUTES, tileAt, passable } from './west-world.js?v=roman21';
+import { drawBot } from '../art.js?v=roman21';
+import { normalizeSlot } from '../data.js?v=roman21';
+import { citizen } from './scenery.js?v=roman21';
 
 const TAU = Math.PI * 2;
 const INK = '#354d50';
