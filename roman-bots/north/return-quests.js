@@ -1,8 +1,8 @@
-import * as NORTH from './world.js?v=roman25';
-import * as WEST from './west-world.js?v=roman25';
-import * as SOUTH from './south-world.js?v=roman25';
+import * as NORTH from './world.js?v=roman26';
+import * as WEST from './west-world.js?v=roman26';
+import * as SOUTH from './south-world.js?v=roman26';
 
-export const HARBOR_FRONT=Object.freeze({left:38,top:132,right:47.8,bottom:139.5});
+export const HARBOR_FRONT=Object.freeze({left:38,top:120,right:47.8,bottom:129.5});
 export const inHarbor=p=>!!p&&p.x>=HARBOR_FRONT.left&&p.x<=HARBOR_FRONT.right&&p.y>=HARBOR_FRONT.top&&p.y<=HARBOR_FRONT.bottom;
 function quest(id,region,kind,sites,{hpScale=1.4,waves=3,stage=3}={}){
   return Object.freeze({id,region,kind,encounters:Object.freeze(sites.map((p,i)=>Object.freeze({
@@ -21,7 +21,7 @@ export const REVOLT=quest('highland-revolt','west','revolt',westSites,{hpScale:1
 const southSites=[2,1,0].flatMap(stage=>SOUTH.ENCOUNTERS.filter(e=>e.stage===stage&&[0,2,6,10,12].includes(Number(e.id.split('-').at(-1))-1)));
 export const PIRATES=quest('coastal-pirates','south','pirates',southSites,{hpScale:1.15});
 export const INVASION=quest('harbor-defense','north','invasion',[
-  {x:45,y:133},{x:41,y:136},{x:45,y:138},{x:40,y:133},{x:44,y:136},{x:43,y:134}
+  {x:45,y:122},{x:41,y:125},{x:45,y:127},{x:40,y:122},{x:44,y:125},{x:43,y:123}
 ],{hpScale:1.5,waves:6,stage:4});
 export const RETURN_QUESTS=Object.freeze([PLUNDERERS,REVOLT,PIRATES,INVASION]);
 export const questFinished=(state,q)=>q.encounters.every(e=>state.completed.includes(e.id));

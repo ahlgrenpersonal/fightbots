@@ -1,4 +1,6 @@
 export const BOT_SIZE = 1.08;
+export const botScale = unit => unit.boss ? 1.5 : unit.champion ? 1.2 : 1;
+export const botSize = unit => BOT_SIZE * botScale(unit);
 const clamp = n => Math.max(0, Math.min(1, n));
 const ease = n => { n = clamp(n); return n * n * (3 - 2 * n); };
 
@@ -34,6 +36,7 @@ export function bowGrip(unit, pose = actionPose(unit)) {
 export function bowReleasePoint(unit) {
   const contact = unit.action ? { ...unit, action: { ...unit.action, elapsed: unit.action.hitTime } } : unit;
   const grip = bowGrip(contact);
-  return { x: unit.x + (grip.x + Math.cos(grip.angle) * 53 * grip.scale) * BOT_SIZE / 100,
-    y: unit.y + (grip.y + Math.sin(grip.angle) * 53 * grip.scale) * BOT_SIZE / 100 };
+  const size = botSize(unit);
+  return { x: unit.x + (grip.x + Math.cos(grip.angle) * 53 * grip.scale) * size / 100,
+    y: unit.y + (grip.y + Math.sin(grip.angle) * 53 * grip.scale) * size / 100 };
 }

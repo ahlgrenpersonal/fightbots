@@ -1,7 +1,7 @@
-import {drawQuestAtlas} from './quest-art.js?v=roman25';
-import * as world from './south-world.js?v=roman25';
-import { drawBot } from '../art.js?v=roman25';
-import { normalizeSlot } from '../data.js?v=roman25';
+import {drawQuestAtlas} from './quest-art.js?v=roman26';
+import * as world from './south-world.js?v=roman26';
+import { drawBot } from '../art.js?v=roman26';
+import { normalizeSlot } from '../data.js?v=roman26';
 
 const { WIDTH, HEIGHT, HOME, KING, CAMPS, ENCOUNTERS, LANDSCAPES, LANDMARKS, tileAt, passable } = world;
 const TAU = Math.PI * 2;
@@ -285,6 +285,45 @@ function ground(c, b, time) {
     else for (let y = bridge.top; y < bridge.bottom; y += .6) line(c, bridge.left, y, bridge.right, y, '#729b9b', .035);
   }
 }
+function perimeterTerrain(c, b, time) {
+  // Cell-sized, low silhouettes survive where full trees cannot fit. Keep every
+  // stroke inside blocking cells so roads and reserved fighting ground stay bare.
+  for (let y = Math.max(0, Math.floor(b.top)); y < Math.min(HEIGHT, Math.ceil(b.bottom)); y++) for (let x = Math.max(0, Math.floor(b.left)); x < Math.min(WIDTH, Math.ceil(b.right)); x++) {
+    const k = zone(y);
+    if (k === 3 || !blocked(x, y) || ![[0, 1], [0, -1], [-1, 0], [1, 0]].some(([dx, dy]) => passable(x + dx + .5, y + dy + .5))) continue;
+    const n = hash(x + 47, y - 13);
+    c.save(); c.translate(x, y);
+    oval(c, .5, .74, .4, .13, '#31545325');
+    if (k === 2) {
+      line(c, .51, .76, .48, .44, '#697669', .065);
+      line(c, .49, .62, .27, .47, '#697669', .045);
+      for (const [xx, yy, r] of [[.29, .45, .19], [.65, .46, .23], [.48, .32, .24]]) {
+        oval(c, xx, yy, r, .14, yy < .4 ? '#a3c68d' : '#679779');
+        line(c, xx - .07, yy, xx + .06, yy - .035, '#d3dfb0', .025);
+      }
+      if (n > .45) for (const xx of [.34, .64]) oval(c, xx, .48, .035, .045, '#51486b');
+    } else if (k === 1) {
+      for (let i = 0; i < 3; i++) {
+        const xx = .26 + i * .23, yy = .27 + hash(i, n) * .13, sway = Math.sin(time * .8 + x + i) * .025;
+        line(c, xx, .75, xx + sway, yy, '#5d8c76', .035);
+        oval(c, xx + sway, yy, .045, .11, i === 1 ? '#dd9fba' : '#f8eceb');
+      }
+    } else if (k === 0) {
+      poly(c, [[.12, .63], [.23, .46], [.43, .48], [.51, .67], [.35, .78], [.14, .75]], '#8eb5a5', INK, .025);
+      poly(c, [[.23, .46], [.43, .48], [.51, .58], [.28, .59], [.12, .63]], '#d2dfc7');
+      for (const [xx, yy] of [[.65, .38], [.8, .46], [.58, .55]]) line(c, .7, .73, xx, yy, '#548a70', .045);
+      oval(c, .76, .75, .11, .055, '#d9d9bc');
+    } else {
+      rect(c, .13, .44, .33, .27, '#b6cbc4');
+      rect(c, .13, .4, .33, .09, '#f0edde');
+      rect(c, .5, .56, .36, .2, '#cbd8ce');
+      rect(c, .5, .52, .36, .08, '#f5f0e1');
+      line(c, .17, .59, .4, .59, '#5296a5', .045);
+      line(c, .55, .66, .79, .66, '#79a8ab', .03);
+    }
+    c.restore();
+  }
+}
 function redrockTerrain(c, b) {
   const region = districts[3];
   if (!region || b.bottom <= region.top || b.top >= region.bottom) return;
@@ -552,7 +591,7 @@ export function drawLandscape(c, { bounds = { left: 0, top: 0, right: WIDTH, bot
   if (b.right <= b.left || b.bottom <= b.top) return;
   c.save(); c.beginPath(); c.rect(b.left, b.top, b.right - b.left, b.bottom - b.top); c.clip();
   c.lineJoin = 'round'; c.lineCap = 'round';
-  ground(c, b, time); redrockTerrain(c, b);
+  ground(c, b, time); perimeterTerrain(c, b, time); redrockTerrain(c, b);
   harborEntrance(c, b, time); citadelEntrance(c, b, state, time);
   scenery(c, b, time);
   southernPalace(c, b, state, time);
@@ -649,7 +688,7 @@ export function drawAtlas(c, w, h, state = {}, player) {
   }
   const next = objective(state);
   if (next && shownAt(next.y)) beacon(c, next.x, next.y, 0, 5 / scale);
-  drawQuestAtlas(c,{quest:state.returnQuest,completed:state.completed,scale,top:view.top,bottom:view.bottom});
+  drawQuestAtlas(c,{quest:state.returnQuest,target:state.returnQuestTarget,completed:state.completed,scale,top:view.top,bottom:view.bottom});
   if (Number.isFinite(player?.x) && Number.isFinite(player?.y) && shownAt(player.y)) {
     c.save(); c.translate(player.x, player.y); c.scale(1 / scale, 1 / scale);
     oval(c, 0, 0, 17, 17, '#234d54'); oval(c, 0, 0, 15, 15, GOLD); oval(c, 0, 0, 12, 12, '#edf5e1');

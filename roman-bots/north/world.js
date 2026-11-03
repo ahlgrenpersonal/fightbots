@@ -3,6 +3,7 @@
 export const WIDTH = 52;
 export const HEIGHT = 148;
 export const HOME = Object.freeze({ id: 'home', x: 26, y: 138, name: 'Laurel Haven' });
+export const ATLAS_SIGN = Object.freeze({ id: 'world-board', x: 29, y: 136 });
 export const CAMPS = Object.freeze([
   Object.freeze({ id: 'west-watch', x: 12, y: 112, name: 'Laurel Watch' }),
   Object.freeze({ id: 'lake-watch', x: 40, y: 78, name: 'Silverwater Watch' }),

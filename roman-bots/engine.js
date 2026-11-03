@@ -1,5 +1,5 @@
-import {WEAPONS,SHIELDS,normalizeSquad} from './data.js?v=roman25';
-import {bowReleasePoint,shieldOpening} from './geometry.js?v=roman25';
+import {WEAPONS,SHIELDS,normalizeSquad} from './data.js?v=roman26';
+import {bowReleasePoint,shieldOpening,botScale} from './geometry.js?v=roman26';
 
 export const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 export const BODY_SPACING=1.4;
@@ -45,8 +45,10 @@ export class Battle {
     if(id!==this.activeId){this.activeId=id;this.goal=null;this.focus=null;this.pendingPower=null;this.focusOwner=null;this.pendingOwner=null;this.emit('promotion',{id});}
     if(this.focus&&!this.units.some(u=>u.id===this.focus&&u.hp>0)){this.focus=null;this.pendingPower=null;}
   }
-  refreshPartners(){
+  refreshPartners({resetTeam=null}={}){
     for(const team of [0,1]){
+      // Workshop role changes rebuild one team; ordinary ticks retain live pairs.
+      if(team===resetTeam)for(const u of this.units.filter(u=>u.team===team))u.buddy=null;
       const units=this.alive(team),valid=u=>units.find(v=>v.id===u.buddy&&v!==u);
       for(const u of units)if(!valid(u))u.buddy=null;
       const pair=(a,b)=>{a.buddy=b.id;b.buddy=a.id;};
@@ -88,10 +90,13 @@ export class Battle {
   }
   moveTo(point){if(this.phase==='finished')return false;this.goal={x:this.boundX(point.x),y:this.boundY(point.y)};this.focus=null;this.pendingPower=null;return true;}
   enemyAt(point,tile=40){
-    const foes=this.alive(1),body=foes.filter(u=>Math.abs(u.x-point.x)<=(u.captain?.47:.38)&&point.y>=u.y-(u.captain?.88:u.weapon==='spear'?.97:.73)&&point.y<=u.y+.43);
+    const foes=this.alive(1),body=foes.filter(u=>{
+      const scale=botScale(u),top=u.boss?1.08:u.champion?.98:u.captain?.88:u.weapon==='spear'?.97:.73;
+      return Math.abs(u.x-point.x)<=(u.captain?.47:.38)*scale&&point.y>=u.y-top*scale&&point.y<=u.y+.43*scale;
+    });
     // Upright sprites overlap: the front robot's helmet covers the rear one's feet.
     if(body.length)return body.sort((a,b)=>b.y-a.y)[0];
-    return foes.map(u=>({u,d:distance({x:u.x,y:u.y-.18},point)})).filter(p=>p.d<.48+18/Math.max(1,tile)).sort((a,b)=>a.d-b.d)[0]?.u;
+    return foes.map(u=>({u,d:distance({x:u.x,y:u.y-.18*botScale(u)},point)})).filter(p=>p.d<.48*botScale(p.u)+18/Math.max(1,tile)).sort((a,b)=>a.d-b.d)[0]?.u;
   }
   tapEnemy(enemy){
     if(this.paused||this.phase==='finished'||!enemy||enemy.hp<=0||enemy.team!==1)return false;

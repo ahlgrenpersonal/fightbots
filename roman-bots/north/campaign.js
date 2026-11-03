@@ -1,11 +1,11 @@
-import {Battle,distance,BODY_SPACING} from '../engine.js?v=roman25';
-import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman25';
-import * as NORTH from './world.js?v=roman25';
-import * as WEST from './west-world.js?v=roman25';
-import * as SOUTH from './south-world.js?v=roman25';
-import * as EAST from './east-world.js?v=roman25';
-import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman25';
-import {RETURN_QUESTS,INVASION,activeReturnQuest,questFinished,inHarbor,HARBOR_FRONT} from './return-quests.js?v=roman25';
+import {Battle,distance,BODY_SPACING} from '../engine.js?v=roman26';
+import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman26';
+import * as NORTH from './world.js?v=roman26';
+import * as WEST from './west-world.js?v=roman26';
+import * as SOUTH from './south-world.js?v=roman26';
+import * as EAST from './east-world.js?v=roman26';
+import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman26';
+import {RETURN_QUESTS,INVASION,activeReturnQuest,questFinished,inHarbor,HARBOR_FRONT} from './return-quests.js?v=roman26';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const number=(n,a,b,f=a)=>Number.isFinite(n)?clamp(n,a,b):f;
@@ -31,13 +31,15 @@ function cleanSave(saved){
   const ids=new Set(allEncounters().map(e=>e.id));
   const completed=[...new Set(Array.isArray(s.completed)?s.completed.filter(id=>ids.has(id)):[])];
   const camps=[...new Set(Array.isArray(s.camps)?s.camps.filter(id=>allCamps().some(c=>c.id===id)):[])];
-  const prologueRound=integer(s.prologueRound,0,15,s.version===1?15:0);
+  // Retain the save field for compatibility; adventures no longer have trials.
+  const prologueRound=PROLOGUE_ROUNDS;
+  const leavingTutorial=Number.isInteger(s.prologueRound)&&s.prologueRound<PROLOGUE_ROUNDS;
   const region=prologueRound>=PROLOGUE_ROUNDS&&['west','south','east'].includes(s.region)?s.region:'north';
   const voyage=prologueRound>=PROLOGUE_ROUNDS&&((region==='north'&&['south','east'].includes(s.voyage?.to))||(['south','east'].includes(region)&&s.voyage?.to==='north'))?{to:s.voyage.to,remaining:number(s.voyage.remaining,0,14,14)}:null;
-  return {version:4,region,voyage,prologueRound,squad:defaults().map((slot,i)=>normalizeSlot(Array.isArray(s.squad)?s.squad[i]||slot:slot)),squadSize:s.squadSize===5?5:3,
+  return {version:4,region:leavingTutorial?'north':region,voyage:leavingTutorial?null:voyage,prologueRound,needsLoadout:!saved||leavingTutorial||s.needsLoadout===true,squad:defaults().map((slot,i)=>normalizeSlot(Array.isArray(s.squad)?s.squad[i]||slot:slot)),squadSize:!leavingTutorial&&s.squadSize===5?5:3,
     weaponTier:integer(s.weaponTier,0,3),armorTier:integer(s.armorTier,0,3),utility:s.utility==='charge'?'charge':'repair',utilityTier:integer(s.utilityTier,0,2),
     coins:integer(s.coins,0,100000),camps,refuges:[...new Set([...camps,...(Array.isArray(s.refuges)?s.refuges.filter(id=>allCamps().some(c=>c.id===id)):[])])],completed,conquered:NORTH.CAMPS.every(c=>camps.includes(c.id))&&completed.includes('north-king'),westConquered:WEST.CAMPS.every(c=>camps.includes(c.id))&&completed.includes(WEST.ENCOUNTERS.find(e=>e.kind==='boss')?.id),southConquered:SOUTH.CAMPS.every(c=>camps.includes(c.id))&&completed.includes(SOUTH.ENCOUNTERS.find(e=>e.kind==='boss')?.id),eastConquered:EAST.CAMPS.every(c=>camps.includes(c.id))&&completed.includes('east-king'),
-    position:point(s.position)?{x:number(s.position.x,.5,world.WIDTH-.5),y:number(s.position.y,.5,world.HEIGHT-.5)}:{...world.HOME},
+    position:leavingTutorial?{...NORTH.HOME}:point(s.position)?{x:number(s.position.x,.5,world.WIDTH-.5),y:number(s.position.y,.5,world.HEIGHT-.5)}:{...world.HOME},
     health:Array.from({length:5},(_,i)=>number(Array.isArray(s.health)?s.health[i]:undefined,0,1,1)),utilityLeft:integer(s.utilityLeft,0,1+integer(s.utilityTier,0,2),1+integer(s.utilityTier,0,2)),utilityCd:number(s.utilityCd,0,45),chargeTime:number(s.chargeTime,0,20),recoveries:integer(s.recoveries,0,100000)};
 }
 
@@ -83,13 +85,13 @@ export class Campaign extends Battle {
   interactionSites(){
     const sites=[{...this.world.HOME,action:'workshop'},...this.world.CAMPS.map(c=>({...c,action:'rest'}))];
     if(!this.prologueComplete)return sites;
-    if(this.state.region==='north')return [...sites,{...WEST_GATE,id:'west-gate',action:'gate'},{...SOUTH_DOCK,id:'south-dock',action:'ship',boat:{x:16,y:148.1}},{...EAST_DOCK,id:'east-dock',action:'ship',boat:{x:49.5,y:133}}];
+    if(this.state.region==='north')return [...sites,{...NORTH.ATLAS_SIGN,action:'atlas'},{...WEST_GATE,id:'west-gate',action:'gate'},{...SOUTH_DOCK,id:'south-dock',action:'ship',boat:{x:16,y:148.1}},{...EAST_DOCK,id:'east-dock',action:'ship',boat:{x:49.5,y:133}}];
     return [...sites,{...RETURN_POINTS[this.state.region],id:'return',action:this.western?'gate':'ship',boat:this.southern?{x:42,y:1.85}:this.eastern?{x:30,y:180}:null}];
   }
   approachPoint(p){
     if(this.trial||!point(p))return p;
     // Tapping a pictured boat means walking to its quay, not into the water.
-    const ports=this.interactionSites().filter(s=>s.action==='gate'||s.action==='ship');
+    const ports=this.interactionSites().filter(s=>s.action==='gate'||s.action==='ship'||s.action==='atlas');
     return ports.find(s=>s.boat&&distance(s.boat,p)<2.9)||ports.find(s=>distance(s,p)<1.8)||p;
   }
   arriveAtPlace(){
@@ -99,6 +101,7 @@ export class Campaign extends Battle {
     if(!site)return false;
     if(site.action==='gate')return this.crossGate();
     if(site.action==='ship')return this.boardShip();
+    if(site.action==='atlas'){this.arrivalIntent=null;this.travelGoal=null;this.goal=null;this.emit('atlas');return true;}
     if(!this.restAt(site.id))return false;
     if(site.action==='workshop')this.emit('workshop',{id:site.id});
     return true;
@@ -136,20 +139,7 @@ export class Campaign extends Battle {
   get prologueComplete(){return this.state.prologueRound>=PROLOGUE_ROUNDS;}
   get earnedCount(){return this.prologueComplete?this.state.squadSize:earnedCount(this.state.prologueRound);}
   enterArena(){
-    const leader=this.leader();
-    if(this.paused||this.trial||this.prologueComplete||this.activeEncounter||!leader||!(distance(leader,ARENA_ENTRANCE)<=3||inArena(leader)))return false;
-    this.trialFinishElapsed=0;
-    this.arrivalIntent=null;
-    this.cityUnits=this.units.filter(u=>u.team===0);
-    this.travelGoal=null;this.paths.clear();this.chargeTime=0;this.utilityCd=0;
-    this.state.utilityLeft=1+this.state.utilityTier;
-    this.trial=new Trial(this.state.prologueRound,this.state.squad,{seed:this.seed,onEvent:event=>{
-      if(event.type==='finished'){
-        this.syncTrial();
-        this.emit('trialFinished',{won:event.winner===0,round:this.trial.round});
-      }else this.onEvent(event);
-    }});
-    this.syncTrial();return true;
+    return false;
   }
   syncTrial(){
     if(!this.trial)return;
@@ -188,7 +178,7 @@ export class Campaign extends Battle {
   }
   validPosition(p,team=0){return point(p)&&this.world.passable(p.x,p.y)&&(team!==0||this.prologueComplete||p.x>=5&&p.x<=47&&p.y>=132&&p.y<=145.5)&&(team===0||!this.safe(p.x,p.y)&&(!this.harborBattle||inHarbor(p)));}
   autoLeftQuestArea(u,from){
-    return u.team===0&&this.activeEncounter?.quest&&!this.travelGoal&&((this.safe(u.x,u.y)&&!this.safe(from.x,from.y))||(distance(u,this.activeEncounter)>11.5&&distance(from,this.activeEncounter)<=11.5));
+    return u.team===0&&this.activeEncounter?.quest&&!this.travelGoal&&((this.harborBattle&&inHarbor(from)&&!inHarbor(u))||(this.safe(u.x,u.y)&&!this.safe(from.x,from.y))||(distance(u,this.activeEncounter)>11.5&&distance(from,this.activeEncounter)<=11.5));
   }
   clearLine(a,b){
     if(!point(a)||!point(b)||!this.world.passable(a.x,a.y)||!this.world.passable(b.x,b.y))return false;
@@ -272,8 +262,19 @@ export class Campaign extends Battle {
       destination=cached.points[0];
     }
     if(this.travelGoal&&u.team===0){
-      const around=super.pursuitPoint(u,destination);
-      if(this.validPosition(around,u.team)&&this.clearLine(u,around))destination=around;
+      const d=distance(u,destination);
+      if(d>.001){
+        const dx=(destination.x-u.x)/d,dy=(destination.y-u.y)/d,bodies=this.units.filter(v=>v.hp>0&&v!==u);
+        const blocker=bodies.filter(v=>{const x=v.x-u.x,y=v.y-u.y;return x*dx+y*dy>0&&Math.abs(x*dy-y*dx)<BODY_SPACING&&distance(u,v)<BODY_SPACING+.35;}).sort((a,b)=>distance(u,a)-distance(u,b))[0];
+        if(blocker){
+          // Choose among terrain-valid sides, not a blocked side followed by
+          // another step into the companion occupying the original waypoint.
+          const candidates=[-1,1].map(side=>({x:this.boundX(blocker.x-dy*side*(BODY_SPACING+.3)),y:this.boundY(blocker.y+dx*side*(BODY_SPACING+.3))}))
+            .filter(p=>distance(p,blocker)>=BODY_SPACING+.05&&this.validPosition(p,u.team)&&this.clearLine(u,p));
+          const score=p=>distance(u,p)+distance(p,destination)+bodies.reduce((sum,v)=>sum+Math.max(0,BODY_SPACING+.1-distance(p,v))*4,0);
+          destination=candidates.sort((a,b)=>score(a)-score(b))[0]||destination;
+        }
+      }
     }
     const before={x:u.x,y:u.y};
     super.walk(u,destination,dt);
@@ -284,8 +285,12 @@ export class Campaign extends Battle {
     if(u.team===0&&this.safe(u.x,u.y))return null;
     // Once a Greek patrol has engaged, short bow/spear backsteps must not leave
     // both sides idle just beyond the initial six-unit aggro boundary.
-    const aggro=(this.eastern||this.activeEncounter?.quest)&&this.activeEncounter?10:6;
-    const near=this.alive(1-u.team).filter(v=>distance(u,v)<aggro&&!this.safe(v.x,v.y));
+    const engaged=(this.eastern||this.activeEncounter?.quest)&&this.activeEncounter;
+    const aggro=engaged?10:6;
+    const near=this.alive(1-u.team).filter(v=>!this.safe(v.x,v.y)&&(distance(u,v)<aggro||
+      // Visible fighters can reconnect inside this encounter's local leash
+      // after backsteps, without acquiring distant patrols or crossing walls.
+      engaged&&distance(u,engaged)<12&&distance(v,engaged)<10&&distance(u,v)<12&&this.clearLine(u,v)));
     let valid=near.filter(v=>this.clearLine(u,v));
     if(!valid.length&&(this.eastern||this.activeEncounter?.quest)&&this.activeEncounter&&distance(u,this.activeEncounter)<12){
       // Continue a local fight around a short corner, never across the world.
@@ -440,9 +445,11 @@ export class Campaign extends Battle {
   }
   setLoadout(index,slot){
     if(this.nearbyCamp()?.id!=='home'||!Number.isInteger(index)||index<0||index>=5||!slot||!Object.hasOwn(WEAPONS,slot.weapon)||!Object.hasOwn(SHIELDS,slot.shield))return false;
-    this.state.squad[index]=normalizeSlot(slot);
+    const next=normalizeSlot(slot),previous=this.state.squad[index];
+    if(next.weapon===previous.weapon&&next.shield===previous.shield)return true;
+    this.state.squad[index]=next;
     const u=this.units.find(u=>u.team===0&&u.index===index);if(u){Object.assign(u,this.state.squad[index],{action:null});this.configureAlly(u);}
-    this.refreshPartners();return true;
+    this.refreshPartners({resetTeam:0});return true;
   }
   upgrade(category){
     const camp=this.nearbyCamp(),fieldForge=this.eastern&&camp&&this.state.refuges.includes(camp.id);
@@ -483,8 +490,6 @@ export class Campaign extends Battle {
     if(this.paused||!Number.isFinite(dt)||dt<=0)return;dt=Math.min(dt,.05);
     if(this.voyage){this.time+=dt;this.voyage.remaining=Math.max(0,this.voyage.remaining-dt);if(this.voyage.remaining===0){const region=this.voyage.to,arrival=region==='south'?SOUTH.HOME:region==='east'?EAST.HOME:this.eastern?EAST_DOCK:SOUTH_DOCK;this.state.voyage=null;this.enterRegion(region,arrival);}return;}
     if(this.trial){this.time+=dt;this.utilityCd=Math.max(0,this.utilityCd-dt);this.chargeTime=Math.max(0,this.chargeTime-dt);this.trial.chargeTime=this.chargeTime;this.trial.paused=this.paused;this.trial.tick(dt);this.syncTrial();if(this.trial.phase==='finished'){this.trialFinishElapsed=(this.trialFinishElapsed||0)+dt;if(this.trialFinishElapsed>=1.8)this.finishTrialRound();}return;}
-    const visitor=this.leader();
-    if(!this.prologueComplete&&visitor&&(distance(visitor,ARENA_ENTRANCE)<1.5||inArena(visitor)&&visitor.x>=34)){this.enterArena();return;}
     this.celebrationTime=Math.max(0,this.celebrationTime-dt);
     this.utilityCd=Math.max(0,this.utilityCd-dt);
     this.chargeTime=Math.max(0,this.chargeTime-dt);
@@ -537,7 +542,7 @@ export class Campaign extends Battle {
       }
     }else{
       const e=this.encounters.find(e=>!this.state.completed.includes(e.id)&&distance(leader,e)<5.5&&(e.quest?(e.kind!=='boss'&&!e.ordered||this.localQuest.encounters.slice(0,this.localQuest.encounters.indexOf(e)).every(p=>this.state.completed.includes(p.id))):e.kind!=='boss'||this.sealsReady));
-      if(e&&!this.safe(leader.x,leader.y))this.beginEncounter(e);
+      if(e&&!this.safe(leader.x,leader.y)&&(!this.harborBattle||inHarbor(leader)))this.beginEncounter(e);
     }
   }
   serialize(){

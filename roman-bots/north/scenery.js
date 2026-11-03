@@ -1,7 +1,7 @@
-import {drawQuestAtlas} from './quest-art.js?v=roman25';
-import { WIDTH, HEIGHT, HOME, CAMPS, KING, ENCOUNTERS, BRIDGES, tileAt } from './world.js?v=roman25';
-import { drawBot } from '../art.js?v=roman25';
-import { normalizeSlot } from '../data.js?v=roman25';
+import {drawQuestAtlas} from './quest-art.js?v=roman26';
+import { WIDTH, HEIGHT, HOME, CAMPS, KING, ENCOUNTERS, BRIDGES, tileAt } from './world.js?v=roman26';
+import { drawBot } from '../art.js?v=roman26';
+import { normalizeSlot } from '../data.js?v=roman26';
 
 const TAU=Math.PI*2;
 const INK='#314b50';
@@ -332,7 +332,7 @@ export function drawLandscape(c,{bounds={left:0,top:0,right:WIDTH,bottom:HEIGHT}
   if(visible(KING,b,8)){
     citadel(c,time,!!state.conquered);
     // Three visible seal sockets show exactly the simulation's gate requirement.
-    if(camps.size<CAMPS.length)for(let i=0;i<CAMPS.length;i++)oval(c,KING.x+(i-1)*.7,KING.y+2.5,.24,.25,camps.has(CAMPS[i].id)?'#f3d479':'#547571');
+    if(!CAMPS.every(camp=>camps.has(camp.id)))for(let i=0;i<CAMPS.length;i++)oval(c,KING.x+(i-1)*.7,KING.y+2.5,.24,.25,camps.has(CAMPS[i].id)?'#f3d479':'#547571');
   }
   c.restore();
 }
@@ -355,7 +355,7 @@ export function drawAtlas(c,width,height,state={},player){
     oval(c,site.x,site.y,1.75,1.75,INK);
     oval(c,site.x,site.y,1.25,1.25,site===HOME||camps.has(site.id)?'#f1db8e':'#e4e9dc');
   }
-  drawQuestAtlas(c,{quest:state.returnQuest,completed:state.completed,scale,top:0,bottom:HEIGHT});
+  drawQuestAtlas(c,{quest:state.returnQuest,completed:state.completed,target:state.returnQuestTarget,scale,top:0,bottom:HEIGHT});
   if(player&&Number.isFinite(player.x)&&Number.isFinite(player.y)){
     // Keep the equipped miniature legible independently of atlas zoom or aspect.
     c.save();c.translate(player.x,player.y);c.scale(1/scale,1/scale);

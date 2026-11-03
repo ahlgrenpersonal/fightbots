@@ -1,8 +1,8 @@
-import {drawQuestAtlas} from './quest-art.js?v=roman25';
-import { WIDTH, HEIGHT, HOME, CAMPS, ENCOUNTERS, KING, BRIDGES, LANDMARKS, LANDSCAPES, ROUTES, tileAt, passable } from './west-world.js?v=roman25';
-import { drawBot } from '../art.js?v=roman25';
-import { normalizeSlot } from '../data.js?v=roman25';
-import { citizen } from './scenery.js?v=roman25';
+import {drawQuestAtlas} from './quest-art.js?v=roman26';
+import { WIDTH, HEIGHT, HOME, CAMPS, ENCOUNTERS, KING, BRIDGES, LANDMARKS, LANDSCAPES, ROUTES, tileAt, passable } from './west-world.js?v=roman26';
+import { drawBot } from '../art.js?v=roman26';
+import { normalizeSlot } from '../data.js?v=roman26';
+import { citizen } from './scenery.js?v=roman26';
 
 const TAU = Math.PI * 2;
 const INK = '#354d50';
@@ -598,7 +598,7 @@ export function drawAtlas(c, width, height, state = {}, player) {
     poly(c, [[.7, -15], [11, -14], [7.8, -10.5], [11, -7], [.7, -7]], '#ffe091', '#6f6549', 1);
     c.restore();
   }
-  drawQuestAtlas(c,{quest:state.returnQuest,completed:state.completed,scale,top:view.top,bottom:view.bottom});
+  drawQuestAtlas(c,{quest:state.returnQuest,completed:state.completed,target:state.returnQuestTarget,scale,top:view.top,bottom:view.bottom});
   if (player && Number.isFinite(player.x) && Number.isFinite(player.y)) {
     c.save(); c.translate(player.x, player.y); c.scale(1 / scale, 1 / scale);
     oval(c, 0, 0, 18, 18, '#263f46'); oval(c, 0, 0, 16, 16, '#ffdf83'); oval(c, 0, 0, 13, 13, '#eff5dd');

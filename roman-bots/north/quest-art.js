@@ -230,20 +230,20 @@ function atlasFlag(c) {
 /** Caller has already applied its world transform. Sizes below are pixel radii.
  * Current target is selected before vertical culling; the caller draws player last.
  */
-export function drawQuestAtlas(c, { quest, completed = [], scale, top = 0, bottom = Infinity, time = 0 } = {}) {
+export function drawQuestAtlas(c, { quest, completed = [], target, scale, top = 0, bottom = Infinity, time = 0 } = {}) {
   if (!Number.isFinite(scale) || scale <= 0 || !Number.isFinite(1 / scale) ||
       typeof top !== 'number' || typeof bottom !== 'number' ||
       Number.isNaN(top) || Number.isNaN(bottom) || bottom <= top) return;
   const sites = pendingSites(quest, completed);
   if (!sites.length) return;
-  const next = sites[0], last = quest.encounters.at(-1);
+  const next = sites.find(site => site.id === target) || sites[0], last = quest.encounters.at(-1);
   const theme = THEMES[quest.kind];
   const pulse = .5 + Math.sin(phase(time) * 2) * .5;
   c.save();
   try {
     c.lineCap = 'round'; c.lineJoin = 'round'; c.setLineDash([]);
     // Target overlays other quest dots, but never changes the caller's player order.
-    for (const site of [...sites.slice(1), next]) {
+    for (const site of [...sites.filter(site => site !== next), next]) {
       if (site.y < top || site.y >= bottom) continue;
       c.save();
       try {

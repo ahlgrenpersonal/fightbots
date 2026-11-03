@@ -1,8 +1,8 @@
-import {drawQuestAtlas} from './quest-art.js?v=roman25';
-import * as world from './east-world.js?v=roman25';
-import {drawBot} from '../art.js?v=roman25';
-import {normalizeSlot} from '../data.js?v=roman25';
-import {drawVoyage as seaVoyage} from './south-scenery.js?v=roman25';
+import {drawQuestAtlas} from './quest-art.js?v=roman26';
+import * as world from './east-world.js?v=roman26';
+import {drawBot} from '../art.js?v=roman26';
+import {normalizeSlot} from '../data.js?v=roman26';
+import {drawVoyage as seaVoyage} from './south-scenery.js?v=roman26';
 const {WIDTH,HEIGHT,HOME,KING,CAMPS,ENCOUNTERS,LANDSCAPES,LANDMARKS,tileAt,passable}=world;
 const TAU=Math.PI*2,INK='#315364',GOLD='#f6d474';
 const hash=(x,y)=>{let n=Math.imul(x+831,374761393)^Math.imul(y+117,668265263);n=Math.imul(n^(n>>>13),1274126177);return((n^(n>>>16))>>>0)/4294967296;};
@@ -187,7 +187,7 @@ export function drawAtlas(c,w,h,state={},player){
     else{poly(c,[[-6,4],[0,-6],[6,4]],cleared?'#85dfb1':'#fff3d6');if(cleared){line(c,-3,0,-1,2,INK,1.4);line(c,-1,2,3,-3,INK,1.4);}}
     c.restore();
   }
-  drawQuestAtlas(c,{quest:state.returnQuest,completed:state.completed,scale:s,top:v.top,bottom:v.bottom});
+  drawQuestAtlas(c,{quest:state.returnQuest,completed:state.completed,target:state.returnQuestTarget,scale:s,top:v.top,bottom:v.bottom});
   if(player&&player.y>=v.top&&player.y<v.bottom){c.save();c.translate(player.x,player.y);c.scale(1/s,1/s);oval(c,0,0,18,18,INK);oval(c,0,0,16,16,GOLD);oval(c,0,0,13,13,'#e3f1df');drawBot(c,{...normalizeSlot(player),team:0,captain:true,x:0,y:4,angle:-.35,hp:1,maxHp:1,weaponTier:state.weaponTier,armorTier:state.armorTier},0,{size:24,preview:true});c.restore();}
   c.restore();
 }

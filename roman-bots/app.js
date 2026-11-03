@@ -1,8 +1,10 @@
-import {BUILD,WEAPONS,SHIELDS,freshSquad,normalizeSlot,normalizeSquad,OPPONENTS,HEALTH_ASSISTS,normalizeHealthBonus} from './data.js?v=roman25';
-import {Battle,distance,guardsAgainst,MELEE_TOLERANCE} from './engine.js?v=roman25';
-import {drawCourtyard,drawBot,drawGear} from './art.js?v=roman25';
-import {icon} from './icons.js?v=roman25';
-import {BOT_SIZE} from './geometry.js?v=roman25';
+import {BUILD,WEAPONS,SHIELDS,freshSquad,normalizeSlot,normalizeSquad,OPPONENTS,HEALTH_ASSISTS,normalizeHealthBonus} from './data.js?v=roman26';
+import {Battle,distance,guardsAgainst,MELEE_TOLERANCE} from './engine.js?v=roman26';
+import {drawCourtyard,drawBot,drawGear} from './art.js?v=roman26';
+import {icon} from './icons.js?v=roman26';
+import {BOT_SIZE} from './geometry.js?v=roman26';
+import {drawLandscape as drawAdventureLandscape} from './north/scenery.js?v=roman26';
+import {drawCity} from './north/city.js?v=roman26';
 
 const $=id=>document.getElementById(id),SAVE_KEY='roman-bots-settings-v1';
 let config={squad:freshSquad(),sound:true,healthBonus:50,opponent:0};
@@ -13,6 +15,7 @@ let camera={x:5,y:7.5,zoom:1,holdUntil:0};
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let musicUnlocked=false;
+let adventureStamp='';
 function soundContext(){
   if(!audio){
     audio=new (window.AudioContext||window.webkitAudioContext)();
@@ -67,6 +70,16 @@ function buildUI(){
   $('info').setAttribute('aria-pressed',String(details));drawBuilder(ambient);restoreFocus();
 }
 function drawBuilder(t){
+  const preview=$('adventurePreview'),r=preview.getBoundingClientRect(),stamp=JSON.stringify([r.width,r.height,devicePixelRatio,config.squad[0]]);
+  if(stamp!==adventureStamp){canvasFrame(preview,(c,w,h)=>{
+    const scale=w/40,top=120;
+    c.save();c.scale(scale,scale);c.translate(-6,-top);
+    const state={prologueRound:15};
+    drawAdventureLandscape(c,{bounds:{left:6,top,right:46,bottom:top+h/scale},state,time:0});
+    drawCity(c,0,state);
+    drawBot(c,{...previewUnit(config.squad[0],0),x:26,y:top+h/scale-1.4,angle:-Math.PI/2},0,{size:3.4,preview:true});
+    c.restore();
+  });adventureStamp=stamp;}
   for(const canvas of document.querySelectorAll('[data-opponent]'))canvasFrame(canvas,(c,w,h)=>{const i=Number(canvas.dataset.opponent);drawPortrait(c,opponent.squad[i],i,w,h,t,1);});
   for(const canvas of document.querySelectorAll('[data-roster]'))canvasFrame(canvas,(c,w,h)=>{const i=Number(canvas.dataset.roster);drawPortrait(c,config.squad[i],i,w,h,t);});
   for(const canvas of document.querySelectorAll('[data-gear]'))canvasFrame(canvas,(c,w,h)=>{const [kind,id]=canvas.dataset.gear.split(':');c.scale(w/64,h/64);drawGear(c,kind,id,t);});
@@ -188,6 +201,7 @@ window.addEventListener('keydown',e=>{
 });
 $('info').innerHTML=icon('info');$('pause').innerHTML=icon('pause');$('start').innerHTML=`${icon('play')}<b>Battle</b>`;
 $('settings').innerHTML=icon('edit');
+$('adventureIcon').innerHTML=icon('compass');
 $('nextOpponent').innerHTML=icon('next');
 canvasFrame($('brandMark'),(c,w,h)=>drawBot(c,{...previewUnit({weapon:'sword',shield:'round'},0),x:w/2,y:h*.65},0,{size:w*.82,preview:true}));
 buildUI();requestAnimationFrame(frame);
