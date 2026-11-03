@@ -1,5 +1,5 @@
-import {WEAPONS,SHIELDS,normalizeSquad} from './data.js?v=roman26';
-import {bowReleasePoint,shieldOpening,botScale} from './geometry.js?v=roman26';
+import {WEAPONS,SHIELDS,normalizeSquad} from './data.js?v=roman27';
+import {bowReleasePoint,bowContainsPoint,shieldOpening,botScale} from './geometry.js?v=roman27';
 
 export const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 export const BODY_SPACING=1.4;
@@ -96,6 +96,8 @@ export class Battle {
     });
     // Upright sprites overlap: the front robot's helmet covers the rear one's feet.
     if(body.length)return body.sort((a,b)=>b.y-a.y)[0];
+    const weapons=foes.filter(u=>bowContainsPoint(u,point,3/Math.max(1,tile)));
+    if(weapons.length)return weapons.sort((a,b)=>b.y-a.y)[0];
     return foes.map(u=>({u,d:distance({x:u.x,y:u.y-.18*botScale(u)},point)})).filter(p=>p.d<.48*botScale(p.u)+18/Math.max(1,tile)).sort((a,b)=>a.d-b.d)[0]?.u;
   }
   tapEnemy(enemy){
@@ -149,7 +151,7 @@ export class Battle {
     else{
       const defender=this.projectileBlocker(unit,target,target.team)||target;
       if(defender!==target)this.metrics.meleeInterceptions++;
-      action.contact={x:defender.x,y:defender.y,angle:defender.angle,shield:defender.shield,guarding:guardsAgainst(defender,unit),action:defender.action?{elapsed:defender.action.elapsed,hitTime:defender.action.hitTime,duration:defender.action.duration}:null};
+      action.contact={x:defender.x,y:defender.y,angle:defender.angle,shield:defender.shield,boss:!!defender.boss,champion:!!defender.champion,guarding:guardsAgainst(defender,unit),action:defender.action?{elapsed:defender.action.elapsed,hitTime:defender.action.hitTime,duration:defender.action.duration}:null};
       this.hit(unit,defender,action.power);
     }
   }
@@ -181,7 +183,10 @@ export class Battle {
       -(buddy?.weapon==='hammer'&&target.id===buddy.target&&target.guardBroken>0&&distance(unit,target)<3?1:0)
       -(unit.weapon==='hammer'&&buddy?.shield==='round'&&target.id===buddy.target&&target.shield!=='none'&&distance(unit,target)<3?.65:0)
       -(unit.shield!=='none'&&protectedUnits.some(u=>distance(u,target)<2.7)&&distance(unit,target)<3?1.3:0);
-    return foes.sort((a,b)=>score(a)-score(b))[0];
+    const ranked=foes.sort((a,b)=>score(a)-score(b)),target=ranked[0];
+    // A rear slot must not leave a ready support idle beside a reachable enemy.
+    if(buddy&&['bow','spear'].includes(unit.weapon)&&target&&distance(unit,target)>reach)return ranked.find(foe=>distance(unit,foe)<=reach)||target;
+    return target;
   }
   walk(unit,to,dt){
     if(!to)return;const d=distance(unit,to);if(d<.07)return;

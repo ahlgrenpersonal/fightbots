@@ -1,11 +1,11 @@
-import {Battle,distance,BODY_SPACING} from '../engine.js?v=roman26';
-import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman26';
-import * as NORTH from './world.js?v=roman26';
-import * as WEST from './west-world.js?v=roman26';
-import * as SOUTH from './south-world.js?v=roman26';
-import * as EAST from './east-world.js?v=roman26';
-import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman26';
-import {RETURN_QUESTS,INVASION,activeReturnQuest,questFinished,inHarbor,HARBOR_FRONT} from './return-quests.js?v=roman26';
+import {Battle,distance,BODY_SPACING} from '../engine.js?v=roman27';
+import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman27';
+import * as NORTH from './world.js?v=roman27';
+import * as WEST from './west-world.js?v=roman27';
+import * as SOUTH from './south-world.js?v=roman27';
+import * as EAST from './east-world.js?v=roman27';
+import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman27';
+import {RETURN_QUESTS,INVASION,activeReturnQuest,questFinished,inHarbor,HARBOR_FRONT} from './return-quests.js?v=roman27';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const number=(n,a,b,f=a)=>Number.isFinite(n)?clamp(n,a,b):f;
@@ -67,7 +67,7 @@ export class Campaign extends Battle {
   get eastern(){return this.state?.region==='east';}
   get voyage(){return this.state?.voyage;}
   get regionComplete(){return this.eastern?this.state.eastConquered:this.southern?this.state.southConquered:this.western?this.state.westConquered:this.state.conquered;}
-  get frontier(){return this.state.region==='north'&&this.state.conquered?(!this.state.westConquered?WEST_GATE:!this.state.southConquered?SOUTH_DOCK:!this.state.eastConquered?EAST_DOCK:this.world.HOME):this.world.HOME;}
+  get frontier(){return this.state.region==='north'?(this.state.conquered?(!this.state.westConquered?WEST_GATE:!this.state.southConquered?SOUTH_DOCK:!this.state.eastConquered?EAST_DOCK:this.world.HOME):this.world.HOME):RETURN_POINTS[this.state.region];}
   get sealsReady(){return this.world.CAMPS.every(c=>this.state.camps.includes(c.id));}
   get activeQuest(){return this.state?activeReturnQuest(this.state):null;}
   get localQuest(){const q=this.activeQuest;return q?.region===this.state.region?q:null;}
@@ -76,7 +76,7 @@ export class Campaign extends Battle {
   get earlyGreece(){return this.prologueComplete&&!this.state.eastConquered&&!(this.state.conquered&&this.state.westConquered&&this.state.southConquered);}
   questTarget(){
     const q=this.activeQuest;if(!q)return null;
-    if(q.region!==this.state.region)return this.state.region==='north'?q.region==='west'?WEST_GATE:SOUTH_DOCK:this.world.HOME;
+    if(q.region!==this.state.region)return this.state.region==='north'?q.region==='west'?WEST_GATE:SOUTH_DOCK:RETURN_POINTS[this.state.region];
     const pending=q.encounters.filter(e=>!this.state.completed.includes(e.id));
     if(q===INVASION||pending.length<2)return pending[0]||null;
     const leader=this.leader()||this.world.HOME;
@@ -283,16 +283,23 @@ export class Campaign extends Battle {
   pickTarget(u){
     if(this.travelGoal&&u.team===0&&(u===this.leader()||distance(u,this.leader())>5))return null;
     if(u.team===0&&this.safe(u.x,u.y))return null;
-    // Once a Greek patrol has engaged, short bow/spear backsteps must not leave
+    // Once a patrol has engaged, short bow/spear backsteps must not leave
     // both sides idle just beyond the initial six-unit aggro boundary.
     const engaged=(this.eastern||this.activeEncounter?.quest)&&this.activeEncounter;
     const aggro=engaged?10:6;
-    const near=this.alive(1-u.team).filter(v=>!this.safe(v.x,v.y)&&(distance(u,v)<aggro||
+    let near=this.alive(1-u.team).filter(v=>!this.safe(v.x,v.y)&&(distance(u,v)<aggro||
       // Visible fighters can reconnect inside this encounter's local leash
       // after backsteps, without acquiring distant patrols or crossing walls.
       engaged&&distance(u,engaged)<12&&distance(v,engaged)<10&&distance(u,v)<12&&this.clearLine(u,v)));
     let valid=near.filter(v=>this.clearLine(u,v));
-    if(!valid.length&&(this.eastern||this.activeEncounter?.quest)&&this.activeEncounter&&distance(u,this.activeEncounter)<12){
+    const stalled=this.activeEncounter&&this.time-this.lastCombatAt>=1;
+    if(!valid.length&&!engaged&&stalled&&distance(u,this.activeEncounter)<12){
+      // Preserve nearby target selection and let current strikes settle before
+      // a stranded squad reacquires within this encounter's existing leash.
+      near=this.alive(1-u.team).filter(v=>!this.safe(v.x,v.y)&&distance(v,this.activeEncounter)<10&&(distance(u,v)<10||distance(u,v)<12&&this.clearLine(u,v)));
+      valid=near.filter(v=>this.clearLine(u,v));
+    }
+    if(!valid.length&&(engaged||stalled)&&distance(u,this.activeEncounter)<12){
       // Continue a local fight around a short corner, never across the world.
       // Only movement may use this path; every attack still checks sight.
       valid=near.filter(v=>{if(distance(v,this.activeEncounter)>10)return false;const path=this.world.findPath(u,v);return path.length>0&&path.length<=14;});
@@ -320,6 +327,7 @@ export class Campaign extends Battle {
     if(this.safe(target.x,target.y)||this.safe(attacker.x,attacker.y)||!this.clearLine(source,target))return;
     if(!projectile&&distance(attacker,target)>Math.min(4.1,WEAPONS[attacker.weapon].range+.12))return;
     const old={x:target.x,y:target.y};
+    this.lastCombatAt=this.time;
     super.hit(attacker,target,power,projectile,source);
     if(!this.validPosition(target,target.team)||this.autoLeftQuestArea(target,old))Object.assign(target,old);
   }
@@ -366,7 +374,7 @@ export class Campaign extends Battle {
   }
   spawnWave(){
     const e=this.activeEncounter;if(!e)return;
-    this.units=this.units.filter(u=>u.team===0);this.projectiles=[];this.wave++;this.paths.clear();
+    this.units=this.units.filter(u=>u.team===0);this.projectiles=[];this.wave++;this.paths.clear();this.lastCombatAt=this.time;
     const kingWave=e.kind==='boss'&&this.wave===integer(e.waves,2,e.quest?6:3,3);
     const count=kingWave?3:integer(e.count,5,6,5),stage=integer(e.stage,0,4);
     const roster=e.quest||this.eastern?(GREEK_SQUADS[e.roster]||GREEK_SQUADS.phalanx):Array.from({length:5},(_,i)=>this.southern?{weapon:i===0?'bow':i===2?'spear':i===4?'hammer':'sword',shield:i===1?'round':i===3&&e.kind==='elite'?'tower':'none'}:this.western?{weapon:i===0?'bow':i===2?'spear':i===4?'hammer':'sword',shield:i===1?'round':'none'}:{weapon:i%3===0?'bow':'sword',shield:'none'});
@@ -514,8 +522,9 @@ export class Campaign extends Battle {
       }
       if(distance(leader,this.travelGoal)<.3){this.travelGoal=null;this.goal=null;}else this.goal=this.travelGoal;
     }else{
-      if((this.eastern||this.activeEncounter?.quest)&&this.activeEncounter)for(const u of [...this.alive(0),...this.alive(1)]){
+      if(this.activeEncounter&&(this.eastern||this.activeEncounter.quest||this.time-this.lastCombatAt>=1))for(const u of [...this.alive(0),...this.alive(1)]){
         const target=this.units.find(v=>v.id===u.target&&v.hp>0&&v.team!==u.team);
+        if(target&&!this.eastern&&!this.activeEncounter.quest&&(distance(u,this.activeEncounter)>=12||distance(target,this.activeEncounter)>=10))continue;
         if(target&&!this.safe(u.x,u.y)&&!this.safe(target.x,target.y)&&!u.moving&&!u.action&&!this.clearLine(u,target)&&distance(u,target)<10){
           const path=this.world.findPath(u,target);
           if(path.length>0&&path.length<=14)this.walk(u,target,dt);

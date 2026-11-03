@@ -1,4 +1,4 @@
-import { actionPose, bowGrip, shieldOpening } from './geometry.js?v=roman26';
+import { actionPose, bowGrip, bowArrowVisible, shieldOpening, botScale } from './geometry.js?v=roman27';
 const TAU = Math.PI * 2;
 const INK = '#314b50';
 const GOLD = '#d8ae54';
@@ -528,13 +528,14 @@ export function weaponPose(unit, time = 0, { size = 1, preview = false } = {}) {
   const target = unit.strikeTarget;
   if (!preview && unit.action && id !== 'bow' && target && Number.isFinite(target.x) && Number.isFinite(target.y) && size > 0) {
     handX = side * grip; handY = gripY;
-    let cx = (target.x - (unit.x || 0)) * 100 / size, cy = (target.y - (unit.y || 0)) * 100 / size - 6;
-    let rx = 26, ry = 28, turn = 0;
+    const targetScale = botScale(target) / botScale(unit);
+    let cx = (target.x - (unit.x || 0)) * 100 / size, cy = (target.y - (unit.y || 0)) * 100 / size - 6 * targetScale;
+    let rx = 26 * targetScale, ry = 28 * targetScale, turn = 0;
     if (target.guarding && ['round', 'tower'].includes(target.shield)) {
       const shield = shieldPose(target);
-      turn = shield.angle; cx += shield.x; cy += 6 + shield.y;
-      rx = (target.shield === 'tower' ? 18 : 23) * shield.scale;
-      ry = (target.shield === 'tower' ? 34 : 23) * shield.scale;
+      turn = shield.angle; cx += shield.x * targetScale; cy += (6 + shield.y) * targetScale;
+      rx = (target.shield === 'tower' ? 18 : 23) * shield.scale * targetScale;
+      ry = (target.shield === 'tower' ? 34 : 23) * shield.scale * targetScale;
     }
     const vx = cx - handX, vy = cy - handY, ex = Math.cos(turn) * vx + Math.sin(turn) * vy, ey = -Math.sin(turn) * vx + Math.cos(turn) * vy;
     const edge = 1 / Math.max(1, Math.hypot(ex / rx, ey / ry));
@@ -605,7 +606,7 @@ export function drawBot(ctx, unit, time = 0, { size = 1, preview = false, promot
       arc(c, 0, 0, id === 'hammer' ? 58 : 64, -.9, .15, '#fff9dc88', 6);
       arc(c, 0, 0, id === 'hammer' ? 58 : 64, -.9, .15, colors.light + '88', 2);
     }
-    weaponArt(c, id, colors, pull, id === 'bow' && pose.strike >= 1 && pose.recover < .55, extension, unit.weaponTier || 0);
+    weaponArt(c, id, colors, pull, id === 'bow' && !bowArrowVisible(pose), extension, unit.weaponTier || 0);
     if(unit.weaponTier >= 3){
       const tip=id==='spear'?68+extension:id==='hammer'?45:id==='bow'?25:44;
       for(let i=0;i<3;i++){

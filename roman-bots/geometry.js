@@ -32,6 +32,39 @@ export function bowGrip(unit, pose = actionPose(unit)) {
     y: 15 + Math.sin(angle) * thrust, angle, scale: .86 };
 }
 
+export const bowArrowVisible = pose => pose.strike < 1 || pose.recover >= .55;
+
+export function bowContainsPoint(unit, point, margin = 0) {
+  if (unit.weapon !== 'bow') return false;
+  const pose = actionPose(unit), grip = bowGrip(unit, pose), size = botSize(unit) / 100;
+  const dx = (point.x - unit.x) / size - grip.x, dy = (point.y - unit.y) / size - grip.y;
+  const x = (Math.cos(grip.angle) * dx + Math.sin(grip.angle) * dy) / grip.scale;
+  const y = -Math.sin(grip.angle) * dx + Math.cos(grip.angle) * dy;
+  const padding = 3.5 + margin / size / grip.scale;
+  const near = (ax, ay, bx, by) => {
+    const vx = bx - ax, vy = by - ay;
+    const t = clamp(((x - ax) * vx + (y - ay) * vy) / (vx * vx + vy * vy || 1));
+    return Math.hypot(x - ax - vx * t, y - ay - vy * t) <= padding;
+  };
+  // Trace the painted stave, string and nocked arrow, not a larger body halo.
+  let ax = 8, ay = -32;
+  for (let i = 1; i <= 12; i++) {
+    const t = i / 12, u = 1 - t;
+    const bx = 8 + 84 * u * t, by = -32 * u ** 3 - 66 * u * u * t + 66 * u * t * t + 32 * t ** 3;
+    if (near(ax, ay, bx, by)) return true;
+    ax = bx; ay = by;
+  }
+  const pull = pose.wind * (1 - pose.strike), string = 5 - pull * 23;
+  if (near(8, -32, string, 0) || near(string, 0, 8, 32)) return true;
+  if (x >= 23 - padding && x <= 30 + padding && Math.abs(y) <= 7 + padding) return true;
+  if (!bowArrowVisible(pose)) return false;
+  const rear = 3 - pull * 23;
+  return near(rear - 12, 0, rear + 43, 0) || near(rear + 50, 0, rear + 38, -5)
+    || near(rear + 38, -5, rear + 39, 5) || near(rear + 39, 5, rear + 50, 0)
+    || [-1, 1].some(side => near(rear - 6, 0, rear - 13, side * 6)
+      || near(rear - 13, side * 6, rear - 19, side * 6) || near(rear - 19, side * 6, rear - 13, 0));
+}
+
 // Physics and artwork agree on the arrow tip at the moment the string releases.
 export function bowReleasePoint(unit) {
   const contact = unit.action ? { ...unit, action: { ...unit.action, elapsed: unit.action.hitTime } } : unit;
