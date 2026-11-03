@@ -1,11 +1,11 @@
-import {Battle,distance,BODY_SPACING} from '../engine.js?v=roman31';
-import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman31';
-import * as NORTH from './world.js?v=roman31';
-import * as WEST from './west-world.js?v=roman31';
-import * as SOUTH from './south-world.js?v=roman31';
-import * as EAST from './east-world.js?v=roman31';
-import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman31';
-import {RETURN_QUESTS,INVASION,activeReturnQuest,questFinished,inHarbor,HARBOR_FRONT} from './return-quests.js?v=roman31';
+import {Battle,distance,BODY_SPACING} from '../engine.js?v=roman32';
+import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman32';
+import * as NORTH from './world.js?v=roman32';
+import * as WEST from './west-world.js?v=roman32';
+import * as SOUTH from './south-world.js?v=roman32';
+import * as EAST from './east-world.js?v=roman32';
+import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman32';
+import {RETURN_QUESTS,INVASION,activeReturnQuest,questFinished,inHarbor,HARBOR_FRONT} from './return-quests.js?v=roman32';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const number=(n,a,b,f=a)=>Number.isFinite(n)?clamp(n,a,b):f;
@@ -36,7 +36,7 @@ function cleanSave(saved){
   const leavingTutorial=Number.isInteger(s.prologueRound)&&s.prologueRound<PROLOGUE_ROUNDS;
   const region=prologueRound>=PROLOGUE_ROUNDS&&['west','south','east'].includes(s.region)?s.region:'north';
   const voyage=prologueRound>=PROLOGUE_ROUNDS&&((region==='north'&&['south','east'].includes(s.voyage?.to))||(['south','east'].includes(region)&&s.voyage?.to==='north'))?{to:s.voyage.to,remaining:number(s.voyage.remaining,0,14,14)}:null;
-  return {version:4,region:leavingTutorial?'north':region,voyage:leavingTutorial?null:voyage,prologueRound,needsLoadout:!saved||leavingTutorial||s.needsLoadout===true,squad:defaults().map((slot,i)=>normalizeSlot(Array.isArray(s.squad)?s.squad[i]||slot:slot)),squadSize:!leavingTutorial&&s.squadSize===5?5:3,
+  return {version:4,region:leavingTutorial?'north':region,voyage:leavingTutorial?null:voyage,prologueRound,needsLoadout:!saved||leavingTutorial||s.needsLoadout===true,squad:defaults().map((slot,i)=>normalizeSlot(Array.isArray(s.squad)?s.squad[i]||slot:slot)),squadSize:s.squadSize===3?3:5,
     weaponTier:integer(s.weaponTier,0,3),armorTier:integer(s.armorTier,0,3),utility:s.utility==='charge'?'charge':'repair',utilityTier:integer(s.utilityTier,0,2),
     coins:integer(s.coins,0,100000),camps,refuges:[...new Set([...camps,...(Array.isArray(s.refuges)?s.refuges.filter(id=>allCamps().some(c=>c.id===id)):[])])],completed,conquered:NORTH.CAMPS.every(c=>camps.includes(c.id))&&completed.includes('north-king'),westConquered:WEST.CAMPS.every(c=>camps.includes(c.id))&&completed.includes(WEST.ENCOUNTERS.find(e=>e.kind==='boss')?.id),southConquered:SOUTH.CAMPS.every(c=>camps.includes(c.id))&&completed.includes(SOUTH.ENCOUNTERS.find(e=>e.kind==='boss')?.id),eastConquered:EAST.CAMPS.every(c=>camps.includes(c.id))&&completed.includes('east-king'),
     position:leavingTutorial?{...NORTH.HOME}:point(s.position)?{x:number(s.position.x,.5,world.WIDTH-.5),y:number(s.position.y,.5,world.HEIGHT-.5)}:{...world.HOME},

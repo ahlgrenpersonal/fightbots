@@ -1,6 +1,6 @@
-import * as NORTH from './world.js?v=roman31';
-import * as WEST from './west-world.js?v=roman31';
-import * as SOUTH from './south-world.js?v=roman31';
+import * as NORTH from './world.js?v=roman32';
+import * as WEST from './west-world.js?v=roman32';
+import * as SOUTH from './south-world.js?v=roman32';
 
 export const HARBOR_FRONT=Object.freeze({left:38,top:120,right:47.8,bottom:129.5});
 export const inHarbor=p=>!!p&&p.x>=HARBOR_FRONT.left&&p.x<=HARBOR_FRONT.right&&p.y>=HARBOR_FRONT.top&&p.y<=HARBOR_FRONT.bottom;
