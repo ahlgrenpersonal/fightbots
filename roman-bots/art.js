@@ -1,4 +1,4 @@
-import { actionPose, bowGrip, shieldOpening } from './geometry.js?v=roman15';
+import { actionPose, bowGrip, shieldOpening } from './geometry.js?v=roman16';
 const TAU = Math.PI * 2;
 const INK = '#314b50';
 const GOLD = '#d8ae54';
@@ -256,12 +256,13 @@ export function drawCourtyard(ctx, time = 0) {
 
 // Equipment is drawn along local +X, with the grip at the origin. Both the
 // battle renderer and the 64px inventory renderer call these exact routines.
-function weaponArt(c, id, colors, draw = 0, released = false, extension = 0) {
+function weaponArt(c, id, colors, draw = 0, released = false, extension = 0, tier = 0) {
+  const finish = (x,y,xx,yy) => tier >= 3 ? metal(c,x,y,xx,yy,'#fff0a8','#edbd4d','#a66c29') : tier === 2 ? metal(c,x,y,xx,yy,'#ffffff','#e3f7f8','#76a5b3') : tier === 1 ? metal(c,x,y,xx,yy,'#f6d5a4','#c89152','#8d5939') : metal(c,x,y,xx,yy);
   if (id === 'bow') {
     c.beginPath(); c.moveTo(8, -32);
     c.bezierCurveTo(36, -22, 36, 22, 8, 32);
     c.strokeStyle = INK; c.lineWidth = 7; c.stroke();
-    c.strokeStyle = '#bb9150'; c.lineWidth = 4.5; c.stroke();
+    c.strokeStyle = tier >= 3 ? '#f6c65e' : tier === 2 ? '#d4a967' : tier === 1 ? '#c8793e' : '#bb9150'; c.lineWidth = 4.5; c.stroke();
     c.beginPath(); c.moveTo(8, -32); c.lineTo(5 - draw * 23, 0); c.lineTo(8, 32);
     c.strokeStyle = '#f2ebc8'; c.lineWidth = 1.5; c.stroke();
     for (const y of [-29, 29]) oval(c, 11, y, 3, 3, GOLD, INK, 1);
@@ -286,7 +287,7 @@ function weaponArt(c, id, colors, draw = 0, released = false, extension = 0) {
       line(c, 48, -2, 61 + extension, -2, '#f5ffff', 1);
       box(c, 44, -4, 6, 8, 1, GOLD, INK, 1.2);
     }
-    path(c, [[56 + extension, -7], [80 + extension, 0], [56 + extension, 7], [59 + extension, 0]], metal(c, 56 + extension, -7, 62 + extension, 7), INK, 1.8);
+    path(c, [[56 + extension, -7], [80 + extension, 0], [56 + extension, 7], [59 + extension, 0]], finish(56 + extension, -7, 62 + extension, 7), INK, 1.8);
     line(c, 61 + extension, 0, 76 + extension, 0, '#ffffff', 1.3);
     box(c, 49 + extension, -4, 10, 8, 1, GOLD, INK, 1.3);
     path(c, [[49 + extension, 3], [37 + extension, 6], [43 + extension, 11], [37 + extension, 16], [51 + extension, 11]], colors.cloth, INK, 1.2);
@@ -298,7 +299,7 @@ function weaponArt(c, id, colors, draw = 0, released = false, extension = 0) {
     line(c, -10, 0, 44, 0, INK, 8);
     line(c, -10, -1, 44, -1, '#a17d4b', 4.5);
     for (let x = -6; x < 16; x += 5) line(c, x, -3, x - 1, 3, colors.dark, 2.5);
-    box(c, 30, -26, 27, 52, 4, metal(c, 30, -25, 58, 24), INK, 2.5);
+    box(c, 30, -26, 27, 52, 4, finish(30, -25, 58, 24), INK, 2.5);
     box(c, 29, -26, 7, 52, 1, GOLD, INK, 1.5);
     box(c, 52, -26, 7, 52, 1, '#a2b6b9', INK, 1.5);
     box(c, 39, -8, 11, 16, 2, colors.dark, INK, 1.5);
@@ -308,8 +309,8 @@ function weaponArt(c, id, colors, draw = 0, released = false, extension = 0) {
     return;
   }
   path(c, [[8, -8], [43, -9], [60, 0], [43, 9], [8, 8]],
-    metal(c, 10, -7, 15, 7), INK, 2);
-  path(c, [[12, 0], [58, 0], [43, 6], [12, 5]], '#9dbcc4', null);
+    finish(10, -7, 15, 7), INK, 2);
+  path(c, [[12, 0], [58, 0], [43, 6], [12, 5]], tier >= 3 ? '#d69835' : tier === 1 ? '#b37c4d' : '#9dbcc4', null);
   line(c, 12, -4, 43, -4, '#ffffff', 1.6);
   line(c, 44, -4, 56, 0, '#ffffff', 1.3);
   box(c, 3, -12, 7, 24, 2, GOLD, INK, 1.7);
@@ -397,7 +398,8 @@ function robotBody(c, unit, colors, time, aim, bob, battle = false) {
   c.save(); c.translate(0, bob);
   box(c, -22, 0, 44, 30, 8, metal(c, -20, 0, 23, 30), INK, 2.5);
   for (const y of [7, 15, 23]) {
-    box(c, -21, y, 42, 6, 2, y === 15 ? '#a9bec1' : '#d3dfe0', INK, 1.3);
+    const armor = unit.armorTier >= 3 ? ['#edc75c','#bd8c36'] : unit.armorTier === 2 ? ['#e3f8f5','#8cb6bb'] : unit.armorTier === 1 ? ['#cb9a62','#a77649'] : ['#d3dfe0','#a9bec1'];
+    box(c, -21, y, 42, 6, 2, armor[y === 15 ? 1 : 0], INK, 1.3);
     line(c, -17, y + 1, 15, y + 1, '#f6fffa', 1.3);
   }
   box(c, -24, 26, 48, 6, 2, gold, INK, 1.8);
@@ -423,7 +425,12 @@ function robotBody(c, unit, colors, time, aim, bob, battle = false) {
   c.beginPath(); c.moveTo(-6, -8); c.quadraticCurveTo(0, -3, 6, -8);
   c.strokeStyle = '#a6d7cd'; c.lineWidth = 1.8; c.stroke();
   // Helmet brim stays above the visor, so no facing direction hides the eyes.
-  if (archer && !unit.captain) {
+  if (unit.faction === 'forest') {
+    path(c,[[-29,-29],[-25,-44],[-13,-54],[13,-54],[25,-44],[29,-29],[15,-34],[-15,-34]],'#945f47',INK,3);
+    for(const s of [-1,1])path(c,[[s*20,-42],[s*35,-56],[s*33,-42],[s*25,-33]],'#e6d1a1',INK,2);
+    for(let x=-24;x<=24;x+=8)path(c,[[x,-34],[x+4,-40],[x+8,-34]],'#d5ba91',INK,1);
+    if(unit.boss){path(c,[[-22,-54],[-24,-70],[-10,-63],[0,-77],[10,-63],[24,-70],[22,-54]],GOLD,INK,2);}
+  } else if (archer && !unit.captain) {
     path(c, [[-29, -9], [-31, -32], [-17, -51], [0, -58], [18, -50], [30, -30], [28, -8], [22, -31], [0, -41], [-22, -31]], colors.cloth, INK, 3);
     line(c, -20, -37, 0, -47, colors.light, 2);
   } else {
@@ -570,7 +577,15 @@ export function drawBot(ctx, unit, time = 0, { size = 1, preview = false, promot
       arc(c, 0, 0, id === 'hammer' ? 58 : 64, -.9, .15, '#fff9dc88', 6);
       arc(c, 0, 0, id === 'hammer' ? 58 : 64, -.9, .15, colors.light + '88', 2);
     }
-    weaponArt(c, id, colors, pull, id === 'bow' && pose.strike >= 1 && pose.recover < .55, extension);
+    weaponArt(c, id, colors, pull, id === 'bow' && pose.strike >= 1 && pose.recover < .55, extension, unit.weaponTier || 0);
+    if(unit.weaponTier >= 3){
+      const tip=id==='spear'?68+extension:id==='hammer'?45:id==='bow'?25:44;
+      for(let i=0;i<3;i++){
+        const flicker=Math.sin(time*8+i*2)*2;
+        path(c,[[tip-9+i*7,-4],[tip-6+i*7,-15-flicker],[tip-2+i*7,-8],[tip+2+i*7,-20+flicker],[tip+5+i*7,-3]],'#ffb840bb',null);
+        line(c,tip-5+i*7,-3,tip-3+i*7,-10-flicker,'#fff1a9',1.8);
+      }
+    }
     if (id === 'spear' || id === 'hammer') {
       for (const x of [0, 16]) {
         box(c, x - 6, -7, 12, 14, 3, metal(c, x, -7, x, 7, colors.light, colors.main, colors.dark), INK, 2);
@@ -601,6 +616,16 @@ export function drawBot(ctx, unit, time = 0, { size = 1, preview = false, promot
   c.restore();
   shield();
   hand();
+  if(unit.hp>0&&unit.hp/unit.maxHp<.5){
+    const severe=unit.hp/unit.maxHp<.15;
+    line(c,-13,-28,-6,-22,'#2b4147',2.6);line(c,-6,-22,-10,-15,'#2b4147',2.6);
+    line(c,7,8,13,13,'#654d48',2.5);line(c,13,13,7,19,'#654d48',2.5);
+    for(let i=0;i<(severe?5:2);i++){
+      const p=(time*.5+i*.27)%1;
+      oval(c,24+Math.sin(time+i)*8,-36-p*(severe?65:28),4+p*(severe?12:7),4+p*(severe?10:6),severe?'#53616bb0':'#8b9d9b88');
+    }
+    if(severe){oval(c,23,-34,5,4,'#ffd17e');line(c,21,-38,28,-47,'#fff3aa',2.5);line(c,25,-29,32,-35,'#ffb568',2);}
+  }
   if (broken) {
     for (let i = 0; i < 3; i++) {
       const a = time * 3 + i * TAU / 3, x = Math.cos(a) * 24, y = -72 + Math.sin(a) * 4;
@@ -611,7 +636,7 @@ export function drawBot(ctx, unit, time = 0, { size = 1, preview = false, promot
 }
 
 /** Transparent 64x64 equipment icon; no external state or backing decoration. */
-export function drawGear(ctx, kind, id, time = 0) {
+export function drawGear(ctx, kind, id, time = 0, tier = 0) {
   const c = ctx;
   c.save(); c.translate(32, 32); c.lineJoin = 'round'; c.lineCap = 'round';
   if (kind === 'shield') {
@@ -623,7 +648,7 @@ export function drawGear(ctx, kind, id, time = 0) {
     const s = id === 'spear' ? .66 : id === 'bow' ? .72 : id === 'hammer' ? .67 : .82;
     c.rotate(-Math.PI / 4); c.scale(s, s);
     c.translate(id === 'spear' ? -24 : id === 'bow' ? -12 : id === 'hammer' ? -21 : -18, 0);
-    weaponArt(c, id, TEAMS[0], id === 'bow' ? .12 + Math.sin(time * 1.5) * .035 : 0);
+    weaponArt(c, id, TEAMS[0], id === 'bow' ? .12 + Math.sin(time * 1.5) * .035 : 0, false, 0, tier);
   }
   c.restore();
 }

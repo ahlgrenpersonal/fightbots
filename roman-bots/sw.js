@@ -1,7 +1,8 @@
-const CACHE='roman-bots-roman15',ASSETS=['./','./index.html','./styles.css?v=roman15','./app.js?v=roman15','./data.js?v=roman15','./engine.js?v=roman15','./art.js?v=roman15','./geometry.js?v=roman15','./icons.js?v=roman15','./manifest.webmanifest','./version.json','./refresh.html','./assets/icon-192.png','./assets/icon-512.png','./assets/courtyard-theme.mp3'];
+const CACHE='roman-bots-roman16',ASSETS=['./','./index.html','./styles.css?v=roman16','./app.js?v=roman16','./data.js?v=roman16','./engine.js?v=roman16','./art.js?v=roman16','./geometry.js?v=roman16','./icons.js?v=roman16','./manifest.webmanifest','./version.json','./refresh.html','./assets/icon-192.png','./assets/icon-512.png','./assets/courtyard-theme.mp3','./north/index.html','./north/north.css?v=roman16','./north/north.js?v=roman16','./north/campaign.js?v=roman16','./north/world.js?v=roman16','./north/scenery.js?v=roman16'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('roman-bots-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{
+  if(self.location.hostname==='127.0.0.1'||self.location.hostname==='localhost')return;
   const url=new URL(event.request.url),scope=new URL('./',self.location.href);if(event.request.method!=='GET'||url.origin!==scope.origin||!url.pathname.startsWith(scope.pathname))return;
   if(url.pathname===new URL('./assets/courtyard-theme.mp3',scope).pathname&&event.request.headers?.get('range')){
     event.respondWith(audioRange(event.request));return;
@@ -9,7 +10,9 @@ self.addEventListener('fetch',event=>{
   if(url.pathname.endsWith('/version.json')){event.respondWith(fetch(event.request,{cache:'no-store'}));return;}
   if(event.request.mode==='navigate'){
     const shell=url.pathname===scope.pathname||url.pathname===new URL('./index.html',scope).pathname;
-    event.respondWith(fetch(event.request).then(async res=>{if(res.ok){const cache=await caches.open(CACHE);await cache.put(shell?'./index.html':event.request,res.clone());}return res;}).catch(()=>caches.match(shell?'./index.html':event.request)));return;
+    const north=url.pathname===new URL('./north/',scope).pathname||url.pathname===new URL('./north/index.html',scope).pathname;
+    const fallback=shell?'./index.html':north?'./north/index.html':event.request;
+    event.respondWith(fetch(event.request).then(async res=>{if(res.ok){const cache=await caches.open(CACHE);await cache.put(fallback,res.clone());}return res;}).catch(()=>caches.match(fallback)));return;
   }
   event.respondWith(caches.match(event.request).then(cached=>cached||fetch(event.request).then(async res=>{if(res.ok){const cache=await caches.open(CACHE);await cache.put(event.request,res.clone());}return res;})));
 });

@@ -1,5 +1,5 @@
-import {WEAPONS,SHIELDS,normalizeSquad} from './data.js?v=roman15';
-import {bowReleasePoint,shieldOpening} from './geometry.js?v=roman15';
+import {WEAPONS,SHIELDS,normalizeSquad} from './data.js?v=roman16';
+import {bowReleasePoint,shieldOpening} from './geometry.js?v=roman16';
 
 export const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 export const BODY_SPACING=1.4;
@@ -10,7 +10,10 @@ export const isGuarding=u=>u.hp>0&&u.shield!=='none'&&u.guardBroken<=0&&(u.shiel
 export function guardsAgainst(unit,source){return isGuarding(unit)&&Math.abs(angleDiff(Math.atan2(source.y-unit.y,source.x-unit.x),unit.angle))<SHIELDS[unit.shield].arc;}
 
 export class Battle {
-  constructor(squad,opponent,{seed=1,gentle=true,healthBonus,onEvent=()=>{}}={}){
+  constructor(squad,opponent,{seed=1,gentle=true,healthBonus,onEvent=()=>{},bounds=null}={}){
+    if(bounds&&!['minX','maxX','minY','maxY'].every(k=>Number.isFinite(bounds[k])))throw new TypeError('Invalid battle bounds');
+    if(bounds&&(bounds.minX>=bounds.maxX||bounds.minY>=bounds.maxY))throw new RangeError('Empty battle bounds');
+    this.bounds=bounds?{...bounds}:{minX:1,maxX:9,minY:2.25,maxY:13.25};
     this.seed=((seed>>>0)*1664525+1013904223)>>>0;this.onEvent=onEvent;this.time=0;this.phase='ready';this.ready=1.25;this.paused=false;this.winner=null;
     this.headings=[-Math.PI/2,Math.PI/2];
     this.goal=null;this.focus=null;this.pendingPower=null;this.powerCd=0;this.effects=[];this.projectiles=[];this.units=[];this.lastHit=0;
@@ -31,6 +34,8 @@ export class Battle {
     }
     this.separateBodies();
   }
+  boundX(v){return clamp(v,this.bounds.minX,this.bounds.maxX);}
+  boundY(v){return clamp(v,this.bounds.minY,this.bounds.maxY);}
   random(){let x=this.seed;x^=x<<13;x^=x>>>17;x^=x<<5;this.seed=x>>>0;return this.seed/4294967296;}
   emit(type,data={}){this.onEvent({type,...data});}
   alive(team){return this.units.filter(u=>u.team===team&&u.hp>0);}
@@ -79,9 +84,9 @@ export class Battle {
       const side=(unit.index<buddy.index?-1:1)*.82;
       x=(unit.x+buddy.x)/2-Math.sin(a)*side;y=(unit.y+buddy.y)/2+Math.cos(a)*side;
     }
-    return {x:clamp(x,1,9),y:clamp(y,2.25,13.25)};
+    return {x:this.boundX(x),y:this.boundY(y)};
   }
-  moveTo(point){if(this.phase==='finished')return false;this.goal={x:clamp(point.x,1,9),y:clamp(point.y,2.25,13.25)};this.focus=null;this.pendingPower=null;return true;}
+  moveTo(point){if(this.phase==='finished')return false;this.goal={x:this.boundX(point.x),y:this.boundY(point.y)};this.focus=null;this.pendingPower=null;return true;}
   enemyAt(point,tile=40){
     const foes=this.alive(1),body=foes.filter(u=>Math.abs(u.x-point.x)<=(u.captain?.47:.38)&&point.y>=u.y-(u.captain?.88:u.weapon==='spear'?.97:.73)&&point.y<=u.y+.43);
     // Upright sprites overlap: the front robot's helmet covers the rear one's feet.
@@ -108,19 +113,20 @@ export class Battle {
     unit.action={elapsed:0,duration:w.windup+w.recovery,hitTime:w.windup,target:target.id,power,hit:false};unit.cd=w.rate*(power?.85:1)*(SHIELDS[unit.shield].attackRate||1)*(.92+this.random()*.16);unit.moving=false;
     this.emit('windup',{weapon:unit.weapon,power});
   }
+  damageMultiplier(){return 1;}
   hit(attacker,target,power=false,projectile=false,source=attacker){
     if(target.hp<=0)return;
     const blocked=guardsAgainst(target,source),w=WEAPONS[attacker.weapon];
     const buddy=this.units.find(u=>u.id===attacker.buddy&&u.hp>0);
     if(attacker.weapon==='sword'&&target.guardBroken>0&&buddy?.weapon==='hammer')this.metrics.openingStrikes++;
     if(attacker.weapon==='spear'&&buddy?.shield!=='none'&&buddy&&distance(attacker,target)>2.1)this.metrics.supportThrusts++;
-    let damage=w.damage*(SHIELDS[attacker.shield].damageMultiplier||1)*(power?1.8:1)*(.96+this.random()*.08);
+    let damage=w.damage*(SHIELDS[attacker.shield].damageMultiplier||1)*(power?1.8:1)*(.96+this.random()*.08)*this.damageMultiplier(attacker);
     if(blocked){damage*=projectile?(target.shield==='tower'?.2:.35):attacker.weapon==='hammer'?.75:attacker.weapon==='spear'?.55:SHIELDS[target.shield].block;target.blockFlash=.26;this.metrics.blocks++;}
     else if(Math.abs(angleDiff(Math.atan2(source.y-target.y,source.x-target.x),target.angle))>2){damage*=1.12;this.metrics.flanks++;}
     if(attacker.weapon==='hammer'||power&&attacker.weapon!=='bow'){
       if(target.shield!=='none'){target.guardBroken=Math.max(target.guardBroken,attacker.weapon==='hammer'?(SHIELDS[target.shield].breakRecovery||1.65):.7);this.metrics.shieldBreaks++;}
       const a=Math.atan2(target.y-attacker.y,target.x-attacker.x),push=power?.2:.12;
-      target.x=clamp(target.x+Math.cos(a)*push,1,9);target.y=clamp(target.y+Math.sin(a)*push,2.25,13.25);
+      target.x=this.boundX(target.x+Math.cos(a)*push);target.y=this.boundY(target.y+Math.sin(a)*push);
     }
     const dealt=Math.min(target.hp,damage);target.hp=Math.max(0,target.hp-damage);target.flash=blocked?.08:.18;this.metrics.damage[attacker.team]+=dealt;this.lastHit=this.time;
     this.effects.push({type:blocked?'block':attacker.weapon==='hammer'?'hammer':power?'power':'hit',x:target.x,y:target.y,angle:attacker.angle,life:power?.6:.35,max:power?.6:.35,team:attacker.team});
@@ -175,7 +181,7 @@ export class Battle {
   walk(unit,to,dt){
     if(!to)return;const d=distance(unit,to);if(d<.07)return;
     const speed=WEAPONS[unit.weapon].speed*SHIELDS[unit.shield].speed,step=Math.min(d,speed*dt);
-    unit.x=clamp(unit.x+(to.x-unit.x)/d*step,1,9);unit.y=clamp(unit.y+(to.y-unit.y)/d*step,2.25,13.25);unit.moving=true;
+    unit.x=this.boundX(unit.x+(to.x-unit.x)/d*step);unit.y=this.boundY(unit.y+(to.y-unit.y)/d*step);unit.moving=true;
     if(!unit.action)unit.angle=Math.atan2(to.y-unit.y,to.x-unit.x);
   }
   pursuitPoint(unit,target){
@@ -186,7 +192,7 @@ export class Battle {
     if(!blocker)return target;
     // Give automatic pursuit a way around a companion at a wall. Ground
     // orders keep their exact destination; all travel still uses walk().
-    return [-1,1].map(side=>({x:clamp(blocker.x-dy*side*(BODY_SPACING+.3),1,9),y:clamp(blocker.y+dx*side*(BODY_SPACING+.3),2.25,13.25)})).filter(p=>distance(p,blocker)>=BODY_SPACING+.05).sort((a,b)=>{
+    return [-1,1].map(side=>({x:this.boundX(blocker.x-dy*side*(BODY_SPACING+.3)),y:this.boundY(blocker.y+dx*side*(BODY_SPACING+.3))})).filter(p=>distance(p,blocker)>=BODY_SPACING+.05).sort((a,b)=>{
       const score=p=>distance(unit,p)+distance(p,target)+allies.reduce((s,u)=>s+Math.max(0,BODY_SPACING+.1-distance(p,u))*4,0);
       return score(a)-score(b);
     })[0]||target;
@@ -200,7 +206,7 @@ export class Battle {
     if(!unit.retreat&&unit.retreatCd<=0&&unit.retreats<2&&distance(unit,threat)<comfort){
       const angle=Math.atan2(unit.y-threat.y,unit.x-threat.x),step=unit.weapon==='bow'?.7:.4;
       const leash=3,allies=this.alive(unit.team).filter(u=>u!==unit);
-      const candidates=[0,-Math.PI/3,Math.PI/3].map(turn=>({x:clamp(unit.x+Math.cos(angle+turn)*step,1,9),y:clamp(unit.y+Math.sin(angle+turn)*step,2.25,13.25)}))
+      const candidates=[0,-Math.PI/3,Math.PI/3].map(turn=>({x:this.boundX(unit.x+Math.cos(angle+turn)*step),y:this.boundY(unit.y+Math.sin(angle+turn)*step)}))
         .filter(p=>distance(p,threat)>distance(unit,threat)+.08&&(unit===this.leader(unit.team)||distance(p,slot)<=leash)&&allies.every(a=>distance(p,a)>=BODY_SPACING));
       candidates.sort((a,b)=>Math.min(...foes.map(f=>distance(b,f)))-Math.min(...foes.map(f=>distance(a,f))));
       if(candidates.length){unit.retreat={...candidates[0],until:this.time+.55};unit.retreatCd=3;unit.retreats++;}
@@ -216,7 +222,7 @@ export class Battle {
     for(let pass=0;pass<12;pass++)for(let i=0;i<this.units.length;i++)for(let j=i+1;j<this.units.length;j++){
       const a=this.units[i],b=this.units[j];if(a.hp<=0||b.hp<=0)continue;const d=distance(a,b),min=BODY_SPACING;if(d>=min)continue;
       const angle=d>.001?Math.atan2(b.y-a.y,b.x-a.x):(i+j)*1.7,push=(min-d)*.5;
-      a.x=clamp(a.x-Math.cos(angle)*push,1,9);a.y=clamp(a.y-Math.sin(angle)*push,2.25,13.25);b.x=clamp(b.x+Math.cos(angle)*push,1,9);b.y=clamp(b.y+Math.sin(angle)*push,2.25,13.25);
+      a.x=this.boundX(a.x-Math.cos(angle)*push);a.y=this.boundY(a.y-Math.sin(angle)*push);b.x=this.boundX(b.x+Math.cos(angle)*push);b.y=this.boundY(b.y+Math.sin(angle)*push);
     }
   }
   projectileBlocker(from,to,team){
@@ -281,6 +287,9 @@ export class Battle {
       const own=center(units),enemy=center(foes),desired=Math.atan2(enemy.y-own.y,enemy.x-own.x);
       this.headings[team]+=clamp(angleDiff(desired,this.headings[team]),-dt*.75,dt*.75);
     }
+    this.checkFinished();
+  }
+  checkFinished(){
     if(!this.alive(0).length||!this.alive(1).length){this.phase='finished';this.winner=this.alive(0).length?0:1;this.emit('finished',{winner:this.winner});}
     else if(this.time>180){this.phase='finished';this.winner=this.alive(0).reduce((s,u)=>s+u.hp,0)>=this.alive(1).reduce((s,u)=>s+u.hp,0)?0:1;this.emit('finished',{winner:this.winner});}
   }
