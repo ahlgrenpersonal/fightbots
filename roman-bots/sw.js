@@ -1,9 +1,9 @@
-const CACHE='roman-bots-roman22',ASSETS=['./','./index.html','./styles.css?v=roman22','./app.js?v=roman22','./data.js?v=roman22','./engine.js?v=roman22','./art.js?v=roman22','./geometry.js?v=roman22','./icons.js?v=roman22','./manifest.webmanifest','./version.json','./refresh.html','./assets/icon-192.png','./assets/icon-512.png','./assets/courtyard-theme.mp3','./north/index.html','./north/north.css?v=roman22','./north/north.js?v=roman22','./north/campaign.js?v=roman22','./north/world.js?v=roman22','./north/scenery.js?v=roman22'];
-ASSETS.push('./north/prologue.js?v=roman22','./north/city.js?v=roman22');
-ASSETS.push('./north/west-world.js?v=roman22','./north/west-scenery.js?v=roman22');
-ASSETS.push('./north/navigation.js?v=roman22');
-ASSETS.push('./north/south-world.js?v=roman22','./north/south-scenery.js?v=roman22');
-ASSETS.push('./north/east-world.js?v=roman22','./north/east-scenery.js?v=roman22');
+const CACHE='roman-bots-roman23',ASSETS=['./','./index.html','./styles.css?v=roman23','./app.js?v=roman23','./data.js?v=roman23','./engine.js?v=roman23','./art.js?v=roman23','./geometry.js?v=roman23','./icons.js?v=roman23','./manifest.webmanifest','./version.json','./refresh.html','./assets/icon-192.png','./assets/icon-512.png','./assets/courtyard-theme.mp3','./north/index.html','./north/north.css?v=roman23','./north/north.js?v=roman23','./north/campaign.js?v=roman23','./north/world.js?v=roman23','./north/scenery.js?v=roman23'];
+ASSETS.push('./north/prologue.js?v=roman23','./north/city.js?v=roman23');
+ASSETS.push('./north/west-world.js?v=roman23','./north/west-scenery.js?v=roman23');
+ASSETS.push('./north/navigation.js?v=roman23');
+ASSETS.push('./north/south-world.js?v=roman23','./north/south-scenery.js?v=roman23');
+ASSETS.push('./north/east-world.js?v=roman23','./north/east-scenery.js?v=roman23');
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('roman-bots-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{

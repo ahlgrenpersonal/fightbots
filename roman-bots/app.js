@@ -1,8 +1,8 @@
-import {BUILD,WEAPONS,SHIELDS,freshSquad,normalizeSlot,normalizeSquad,OPPONENTS,HEALTH_ASSISTS,normalizeHealthBonus} from './data.js?v=roman22';
-import {Battle,distance,guardsAgainst,MELEE_TOLERANCE} from './engine.js?v=roman22';
-import {drawCourtyard,drawBot,drawGear} from './art.js?v=roman22';
-import {icon} from './icons.js?v=roman22';
-import {BOT_SIZE} from './geometry.js?v=roman22';
+import {BUILD,WEAPONS,SHIELDS,freshSquad,normalizeSlot,normalizeSquad,OPPONENTS,HEALTH_ASSISTS,normalizeHealthBonus} from './data.js?v=roman23';
+import {Battle,distance,guardsAgainst,MELEE_TOLERANCE} from './engine.js?v=roman23';
+import {drawCourtyard,drawBot,drawGear} from './art.js?v=roman23';
+import {icon} from './icons.js?v=roman23';
+import {BOT_SIZE} from './geometry.js?v=roman23';
 
 const $=id=>document.getElementById(id),SAVE_KEY='roman-bots-settings-v1';
 let config={squad:freshSquad(),sound:true,healthBonus:50,opponent:0};

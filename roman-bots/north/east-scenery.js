@@ -1,7 +1,7 @@
-import * as world from './east-world.js?v=roman22';
-import {drawBot} from '../art.js?v=roman22';
-import {normalizeSlot} from '../data.js?v=roman22';
-import {drawVoyage as seaVoyage} from './south-scenery.js?v=roman22';
+import * as world from './east-world.js?v=roman23';
+import {drawBot} from '../art.js?v=roman23';
+import {normalizeSlot} from '../data.js?v=roman23';
+import {drawVoyage as seaVoyage} from './south-scenery.js?v=roman23';
 const {WIDTH,HEIGHT,HOME,KING,CAMPS,ENCOUNTERS,LANDSCAPES,LANDMARKS,tileAt,passable}=world;
 const TAU=Math.PI*2,INK='#315364',GOLD='#f6d474';
 const hash=(x,y)=>{let n=Math.imul(x+831,374761393)^Math.imul(y+117,668265263);n=Math.imul(n^(n>>>13),1274126177);return((n^(n>>>16))>>>0)/4294967296;};

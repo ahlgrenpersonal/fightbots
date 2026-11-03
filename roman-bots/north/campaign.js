@@ -1,10 +1,10 @@
-import {Battle,distance,BODY_SPACING} from '../engine.js?v=roman22';
-import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman22';
-import * as NORTH from './world.js?v=roman22';
-import * as WEST from './west-world.js?v=roman22';
-import * as SOUTH from './south-world.js?v=roman22';
-import * as EAST from './east-world.js?v=roman22';
-import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman22';
+import {Battle,distance,BODY_SPACING} from '../engine.js?v=roman23';
+import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman23';
+import * as NORTH from './world.js?v=roman23';
+import * as WEST from './west-world.js?v=roman23';
+import * as SOUTH from './south-world.js?v=roman23';
+import * as EAST from './east-world.js?v=roman23';
+import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman23';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const number=(n,a,b,f=a)=>Number.isFinite(n)?clamp(n,a,b):f;
@@ -97,6 +97,7 @@ export class Campaign extends Battle {
   enterArena(){
     const leader=this.leader();
     if(this.paused||this.trial||this.prologueComplete||this.activeEncounter||!leader||!(distance(leader,ARENA_ENTRANCE)<=3||inArena(leader)))return false;
+    this.trialFinishElapsed=0;
     this.cityUnits=this.units.filter(u=>u.team===0);
     this.travelGoal=null;this.paths.clear();this.chargeTime=0;this.utilityCd=0;
     this.state.utilityLeft=1+this.state.utilityTier;
@@ -126,8 +127,8 @@ export class Campaign extends Battle {
     this.goal=null;this.travelGoal=null;this.focus=null;this.pendingPower=null;this.focusOwner=null;this.pendingOwner=null;this.chargeTime=0;this.utilityCd=0;
     this.state.utilityLeft=1+this.state.utilityTier;this.state.health.fill(1);
     for(const u of this.units){u.hp=u.maxHp;u.cd=0;u.action=null;u.stun=0;u.guardBroken=0;u.retreat=null;u.buddy=null;}
-    this.placeSquad(this.prologueComplete?CITY_EXIT:ARENA_ENTRANCE);this.syncActive();this.refreshPartners();
-    this.state.position={...(this.prologueComplete?CITY_EXIT:ARENA_ENTRANCE)};
+    this.placeSquad(CITY_EXIT);this.syncActive();this.refreshPartners();
+    this.state.position={...CITY_EXIT};
     if(won&&this.prologueComplete){this.celebrationTime=8;this.emit('hero',{round});}
     else if(won&&this.earnedCount>previous)this.emit('promoted',{round,companion:this.earnedCount-1});
     return won;
@@ -419,7 +420,9 @@ export class Campaign extends Battle {
   tick(dt){
     if(this.paused||!Number.isFinite(dt)||dt<=0)return;dt=Math.min(dt,.05);
     if(this.voyage){this.time+=dt;this.voyage.remaining=Math.max(0,this.voyage.remaining-dt);if(this.voyage.remaining===0){const region=this.voyage.to,arrival=region==='south'?SOUTH.HOME:region==='east'?EAST.HOME:this.eastern?EAST_DOCK:SOUTH_DOCK;this.state.voyage=null;this.enterRegion(region,arrival);}return;}
-    if(this.trial){this.time+=dt;this.utilityCd=Math.max(0,this.utilityCd-dt);this.chargeTime=Math.max(0,this.chargeTime-dt);this.trial.chargeTime=this.chargeTime;this.trial.paused=this.paused;this.trial.tick(dt);this.syncTrial();return;}
+    if(this.trial){this.time+=dt;this.utilityCd=Math.max(0,this.utilityCd-dt);this.chargeTime=Math.max(0,this.chargeTime-dt);this.trial.chargeTime=this.chargeTime;this.trial.paused=this.paused;this.trial.tick(dt);this.syncTrial();if(this.trial.phase==='finished'){this.trialFinishElapsed=(this.trialFinishElapsed||0)+dt;if(this.trialFinishElapsed>=1.8)this.finishTrialRound();}return;}
+    const visitor=this.leader();
+    if(!this.prologueComplete&&visitor&&(distance(visitor,ARENA_ENTRANCE)<1.5||inArena(visitor)&&visitor.x>=34)){this.enterArena();return;}
     this.celebrationTime=Math.max(0,this.celebrationTime-dt);
     this.utilityCd=Math.max(0,this.utilityCd-dt);
     this.chargeTime=Math.max(0,this.chargeTime-dt);

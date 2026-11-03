@@ -1,4 +1,4 @@
-import {citizen} from './scenery.js?v=roman22';
+import {citizen} from './scenery.js?v=roman23';
 const TAU=Math.PI*2,INK='#314b50';
 export const ARENA_ENTRY={x:33,y:142};
 function line(c,x,y,xx,yy,color,width=.07){c.beginPath();c.moveTo(x,y);c.lineTo(xx,yy);c.strokeStyle=color;c.lineWidth=width;c.stroke();}
@@ -37,6 +37,12 @@ export function drawCity(c,time,state){
   // A broad entrance and gold footprints make the arena easy to find.
   box(c,31,141.5,3.3,2,'#e8d7a5');
   for(let i=0;i<3;i++){oval(c,30.5+i*.8,142.3,.13,.2,'#b39753');}
+  if(!ready){
+    c.save();c.translate(33,142);const pulse=1+Math.sin(time*3)*.08;
+    c.scale(pulse,pulse);oval(c,0,0,.65,.38,'#ffda7388');
+    line(c,-.35,-.35,.35,-1.05,'#fff0b2',.14);line(c,.35,-.35,-.35,-1.05,'#fff0b2',.14);
+    line(c,-.45,-.55,-.15,-.25,'#74552e',.09);line(c,.45,-.55,.15,-.25,'#74552e',.09);c.restore();
+  }
   oval(c,39,139.9,1.2,.7,'#c2b27533');
   for(const side of [-1,1])for(let i=0;i<5;i++){
     const a=side*(.35+i*.2)-Math.PI/2;oval(c,39+Math.cos(a)*1.1,140+Math.sin(a)*.6,.17,.08,'#c2a55c');
