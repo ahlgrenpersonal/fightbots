@@ -3,6 +3,7 @@ export function previewRoute(game,p){
   const leader=game.leader();
   if(!leader||!Number.isFinite(p?.x)||!Number.isFinite(p?.y))return [];
   const bounds=game.trial||game;
+  p=game.approachPoint?.(p)||p;
   const end=game.world.nearestWalkable({x:bounds.boundX(p.x),y:bounds.boundY(p.y)});
   return end?game.world.findPath(leader,end):[];
 }
