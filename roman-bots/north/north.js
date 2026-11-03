@@ -1,18 +1,18 @@
-import {Campaign,UPGRADE_PRICES,WEST_GATE,SOUTH_DOCK,EAST_DOCK} from './campaign.js?v=roman29';
-import * as NORTH from './world.js?v=roman29';
-import * as northArt from './scenery.js?v=roman29';
-import * as westArt from './west-scenery.js?v=roman29';
-import * as southArt from './south-scenery.js?v=roman29';
-import * as eastArt from './east-scenery.js?v=roman29';
-import {drawBot,drawGear} from '../art.js?v=roman29';
-import {BUILD,WEAPONS,SHIELDS} from '../data.js?v=roman29';
-import {guardsAgainst,distance,MELEE_TOLERANCE} from '../engine.js?v=roman29';
-import {botSize} from '../geometry.js?v=roman29';
-import {icon} from '../icons.js?v=roman29';
-import {drawCity,drawHeroWelcome,ATLAS_SIGN,drawWorldBoard} from './city.js?v=roman29';
-import {RouteGesture,previewRoute,nextDestination,hintPoint,drawSignposts} from './navigation.js?v=roman29';
-import {drawQuestSites,drawQuestBadge,drawQuestWarning} from './quest-art.js?v=roman29';
-import {HARBOR_FRONT} from './return-quests.js?v=roman29';
+import {Campaign,UPGRADE_PRICES,WEST_GATE,SOUTH_DOCK,EAST_DOCK} from './campaign.js?v=roman30';
+import * as NORTH from './world.js?v=roman30';
+import * as northArt from './scenery.js?v=roman30';
+import * as westArt from './west-scenery.js?v=roman30';
+import * as southArt from './south-scenery.js?v=roman30';
+import * as eastArt from './east-scenery.js?v=roman30';
+import {drawBot,drawGear} from '../art.js?v=roman30';
+import {BUILD,WEAPONS,SHIELDS} from '../data.js?v=roman30';
+import {guardsAgainst,distance,MELEE_TOLERANCE} from '../engine.js?v=roman30';
+import {botSize} from '../geometry.js?v=roman30';
+import {icon} from '../icons.js?v=roman30';
+import {drawCity,drawHeroWelcome,ATLAS_SIGN,drawWorldBoard} from './city.js?v=roman30';
+import {RouteGesture,previewRoute,nextDestination,hintPoint,drawSignposts} from './navigation.js?v=roman30';
+import {drawQuestSites,drawQuestBadge,drawQuestWarning} from './quest-art.js?v=roman30';
+import {HARBOR_FRONT} from './return-quests.js?v=roman30';
 
 const $=id=>document.getElementById(id),KEY='roman-bots-north-v1',PREFS='roman-bots-north-preferences-v1',SAVE_WARNING='Save unavailable. Keep this window open.';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -184,7 +184,7 @@ function showWorkshop(){
     openPanel(camp.name,'forge',`<div class="upgrades">${['weapon','armor','utility'].map(kind=>{const tier=game.state[`${kind}Tier`],cost=upgradeCost(kind,tier);return `<button class="upgrade" data-upgrade="${kind}" ${tier>=(kind==='utility'?2:3)||game.state.coins<cost?'disabled':''} aria-label="Upgrade ${kind}">${icon(kind==='weapon'?'sword':kind==='armor'?'shield':'heart')}<span class="tiers">${Array.from({length:kind==='utility'?3:4},(_,i)=>`<i class="${i<=tier?'lit':''}"></i>`).join('')}</span><small>${kind==='weapon'?'Weapons':kind==='armor'?'Armor':'Supplies'}</small><b>${tier>=(kind==='utility'?2:3)?'✓':`◆ ${cost}`}</b></button>`;}).join('')}</div><button class="wide" data-action="close" aria-label="Done">${icon('play')}</button>`);
     return;
   }
-  const leader=game.leader();if(!leader||distance(leader,HOME)>=3){closePanel();guide(HOME);game.moveTo(HOME);return;}
+  const leader=game.leader();if(!leader||camp?.id!==HOME.id){closePanel();guide(HOME);game.moveTo(HOME);return;}
   game.restAt(HOME.id);slot=Math.min(slot,game.earnedCount-1);
   openPanel('The home workshop','workshop',`<div class="slot-row" style="--slots:${Math.max(3,game.earnedCount)}">${game.state.squad.slice(0,game.earnedCount).map((s,i)=>`<button class="slot ${i===slot?'selected':''}" data-slot="${i}" aria-label="${i===0?'Captain':`Companion ${i}`}" aria-pressed="${i===slot}"><canvas data-portrait="${i}" width="160" height="160"></canvas>${i===0?'<span class="star">★</span>':''}</button>`).join('')}</div><canvas id="preview" class="preview" width="600" height="320" aria-label="Selected soldier"></canvas><h2 aria-label="Weapon">${icon('sword')}</h2><div class="choices">${Object.entries(WEAPONS).map(([id,w])=>`<button class="choice ${game.state.squad[slot].weapon===id?'selected':''}" data-weapon="${id}" aria-label="${w.name}"><canvas data-gear="weapon:${id}" width="128" height="128"></canvas><small>${w.name}</small></button>`).join('')}</div><h2 aria-label="Shield">${icon('shield')}</h2><div class="choices shields">${Object.entries(SHIELDS).map(([id,s])=>`<button class="choice ${game.state.squad[slot].shield===id?'selected':''}" data-shield="${id}" aria-label="${s.name}" ${WEAPONS[game.state.squad[slot].weapon].hands===2&&id!=='none'?'disabled':''}><canvas data-gear="shield:${id}" width="128" height="128"></canvas><small>${id==='none'?'None':id==='round'?'Round':'Tower'}</small></button>`).join('')}</div><h2 aria-label="Forge">${icon('edit')}</h2><div class="upgrades">${['weapon','armor','utility'].map(kind=>{const tier=game.state[`${kind}Tier`],cost=upgradeCost(kind,tier);return `<button class="upgrade" data-upgrade="${kind}" ${tier>=(kind==='utility'?2:3)||game.state.coins<cost?'disabled':''} aria-label="Upgrade ${kind}">${icon(kind==='weapon'?'sword':kind==='armor'?'shield':'heart')}<span class="tiers">${Array.from({length:kind==='utility'?3:4},(_,i)=>`<i class="${i<=tier?'lit':''}"></i>`).join('')}</span><small>${kind==='weapon'?'Weapons':kind==='armor'?'Armor':'Supplies'}</small><b>${tier>=(kind==='utility'?2:3)?'✓':`◆ ${cost}`}</b></button>`;}).join('')}</div><h2 aria-label="Pack">${icon('heart')}</h2><div class="row">${['repair','charge'].map(id=>`<button class="choice ${game.state.utility===id?'selected':''}" style="flex:1" data-utility="${id}">${icon(id==='repair'?'heart':'bolt')}<small>${id==='repair'?'Repair packs':'Power charge'}</small></button>`).join('')}</div><button class="wide" data-action="close" aria-label="Done">${icon('play')}</button>`);
 }
@@ -225,7 +225,7 @@ function atlas(showOverview=false){
 }
 function hasBackup(){try{return !!localStorage.getItem(KEY+'-backup');}catch{return false;}}
 function recoveryPanel(){openPanel('Saved adventure needs attention','saveRecovery','<p>The saved adventure could not be read. It has been left untouched. Try loading it again, restore the recovery save, or deliberately start again.</p><button class="wide" data-action="reloadLatest">Try loading again</button>'+(hasBackup()?'<button class="wide quiet" data-action="restore">Restore previous adventure</button>':'')+'<button class="wide quiet" data-action="restart">Start again</button>');}
-function settings(){const atHome=game.nearbyCamp()?.id==='home';openPanel('Adventure settings','settings',`<label class="setting">Squad size<select id="squadSize" ${atHome?'':'disabled'}><option value="3" ${game.state.squadSize===3?'selected':''}>Captain + 2 companions</option><option value="5" ${game.state.squadSize===5?'selected':''}>Captain + 4 companions</option></select></label><p>Change the squad at the home workshop. All regions are open from the start.</p><button class="wide quiet" data-action="restart">${icon('replay')} <span class="red">Start this adventure again</span></button>${hasBackup()?'<button class="wide quiet" data-action="restore">Restore previous adventure</button>':''}<p class="build">roman29 · Roman adventure</p>`);}
+function settings(){const atHome=game.nearbyCamp()?.id==='home';openPanel('Adventure settings','settings',`<label class="setting">Squad size<select id="squadSize" ${atHome?'':'disabled'}><option value="3" ${game.state.squadSize===3?'selected':''}>Captain + 2 companions</option><option value="5" ${game.state.squadSize===5?'selected':''}>Captain + 4 companions</option></select></label><p>Change the squad at the home workshop. All regions are open from the start.</p><button class="wide quiet" data-action="restart">${icon('replay')} <span class="red">Start this adventure again</span></button>${hasBackup()?'<button class="wide quiet" data-action="restore">Restore previous adventure</button>':''}<p class="build">roman30 · Roman adventure</p>`);}
 function pause(){openPanel('Take a breather','pause',`<button class="wide" data-action="close" aria-label="Keep playing">${icon('play')}</button><button class="wide quiet" data-action="settings" aria-label="Advanced settings">${icon('edit')}</button>`);}
 function cancelRestartHold(){
   const hold=restartHold;restartHold=null;if(!hold)return;
@@ -281,7 +281,7 @@ $('panelBody').addEventListener('click',e=>{
   if(b.dataset.action==='confirmRestore'){try{if(!currentSave())return;const backup=localStorage.getItem(KEY+'-backup');if(!backup)throw new Error('Missing recovery');const decoded=JSON.parse(backup);if(!validSave(decoded))throw new Error('Invalid recovery');const valid=new Campaign(decoded),raw=JSON.stringify(valid.serialize());if(loadIssue&&expectedSaveRaw!==null)localStorage.setItem(KEY+'-unreadable',expectedSaveRaw);saveSuppressed=true;localStorage.setItem(KEY,raw);expectedSaveRaw=raw;location.reload();}catch{saveSuppressed=loadIssue||saveConflict;toast('Recovery save could not be read.');}}
   if($('panel').open){if(focusKey)$('panelBody').querySelector(`[data-${focusKey}="${b.dataset[focusKey]}"]`)?.focus?.({preventScroll:true});$('panel').scrollTop=scroll;}
 });
-$('panelBody').addEventListener('change',e=>{if(e.target.id==='squadSize'){if(saveSuppressed||!checkCurrentSave()){e.target.value=game.state.squadSize;return;}if(distance(game.leader()||HOME,HOME)>=3||!game.setSquadSize(Number(e.target.value))){toast('Change the squad at the home workshop');e.target.value=game.state.squadSize;}else{updateHUD();save();}}});
+$('panelBody').addEventListener('change',e=>{if(e.target.id==='squadSize'){if(saveSuppressed||!checkCurrentSave()){e.target.value=game.state.squadSize;return;}if(!game.setSquadSize(Number(e.target.value))){toast('Change the squad at the home workshop');e.target.value=game.state.squadSize;}else{updateHUD();save();}}});
 function groundPoint(e){const r=$('world').getBoundingClientRect(),x=r.width?clamp(e.clientX-r.left,0,r.width):e.clientX-r.left,y=r.height?clamp(e.clientY-r.top,0,r.height):e.clientY-r.top;return {x:(x-layout.ox)/layout.scale,y:(y-layout.oy)/layout.scale};}
 $('world').addEventListener('pointerdown',e=>{if($('panel').open||e.button!==0)return;e.preventDefault();const p=groundPoint(e);if(!gesture.begin(e.pointerId,p,game.enemyAt(p,layout.scale)))return;$('world').setPointerCapture(e.pointerId);preview=gesture.enemy?[]:previewRoute(game,p);});
 $('world').addEventListener('pointermove',e=>{if(!gesture.update(e.pointerId,groundPoint(e)))return;preview=gesture.enemy?[]:previewRoute(game,gesture.point);});

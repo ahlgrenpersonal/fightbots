@@ -1,8 +1,8 @@
-import {drawQuestAtlas} from './quest-art.js?v=roman29';
-import * as world from './east-world.js?v=roman29';
-import {drawBot} from '../art.js?v=roman29';
-import {normalizeSlot} from '../data.js?v=roman29';
-import {drawVoyage as seaVoyage} from './south-scenery.js?v=roman29';
+import {drawQuestAtlas} from './quest-art.js?v=roman30';
+import * as world from './east-world.js?v=roman30';
+import {drawBot} from '../art.js?v=roman30';
+import {normalizeSlot} from '../data.js?v=roman30';
+import {drawVoyage as seaVoyage} from './south-scenery.js?v=roman30';
 const {WIDTH,HEIGHT,HOME,KING,CAMPS,ENCOUNTERS,LANDSCAPES,LANDMARKS,tileAt,passable}=world;
 const TAU=Math.PI*2,INK='#315364',GOLD='#f6d474';
 const hash=(x,y)=>{let n=Math.imul(x+831,374761393)^Math.imul(y+117,668265263);n=Math.imul(n^(n>>>13),1274126177);return((n^(n>>>16))>>>0)/4294967296;};

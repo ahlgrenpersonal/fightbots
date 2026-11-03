@@ -4,9 +4,9 @@ export const WIDTH = 52;
 export const HEIGHT = 148;
 export const HOME = Object.freeze({ id: 'home', x: 26, y: 138, name: 'Laurel Haven' });
 export const HOME_BUILDINGS = Object.freeze([
-  Object.freeze({left:16.7,top:132,right:24.9,bottom:135.6}),
-  Object.freeze({left:17.6,top:137.8,right:20.4,bottom:141.5}),
-  Object.freeze({left:31.6,top:137.8,right:34.4,bottom:141.5})
+  Object.freeze({left:16.7,top:132,right:24.9,bottom:135.6,x:20.5,y:135.5}),
+  Object.freeze({left:17.6,top:137.8,right:20.4,bottom:141.5,x:19.5,y:141.5}),
+  Object.freeze({left:31.6,top:137.8,right:34.4,bottom:141.5,x:33.5,y:141.5})
 ]);
 export const ATLAS_SIGN = Object.freeze({ id: 'world-board', x: 29, y: 136 });
 export const CAMPS = Object.freeze([
