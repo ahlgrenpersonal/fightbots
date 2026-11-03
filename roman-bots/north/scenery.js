@@ -1,6 +1,6 @@
-import { WIDTH, HEIGHT, HOME, CAMPS, KING, ENCOUNTERS, BRIDGES, tileAt } from './world.js?v=roman17';
-import { drawBot } from '../art.js?v=roman17';
-import { normalizeSlot } from '../data.js?v=roman17';
+import { WIDTH, HEIGHT, HOME, CAMPS, KING, ENCOUNTERS, BRIDGES, tileAt } from './world.js?v=roman18';
+import { drawBot } from '../art.js?v=roman18';
+import { normalizeSlot } from '../data.js?v=roman18';
 
 const TAU=Math.PI*2;
 const INK='#314b50';

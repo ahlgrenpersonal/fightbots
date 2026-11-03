@@ -1,25 +1,35 @@
-import {Campaign,UPGRADE_PRICES} from './campaign.js?v=roman17';
-import {HOME,CAMPS,KING,ENCOUNTERS,WIDTH,HEIGHT} from './world.js?v=roman17';
-import {drawLandscape,drawAtlas} from './scenery.js?v=roman17';
-import {drawBot,drawGear} from '../art.js?v=roman17';
-import {BUILD,WEAPONS,SHIELDS} from '../data.js?v=roman17';
-import {guardsAgainst,distance,MELEE_TOLERANCE} from '../engine.js?v=roman17';
-import {BOT_SIZE} from '../geometry.js?v=roman17';
-import {icon} from '../icons.js?v=roman17';
-import {drawCity,drawHeroWelcome,ARENA_ENTRY} from './city.js?v=roman17';
+import {Campaign,UPGRADE_PRICES,WEST_GATE} from './campaign.js?v=roman18';
+import * as NORTH from './world.js?v=roman18';
+import * as northArt from './scenery.js?v=roman18';
+import * as westArt from './west-scenery.js?v=roman18';
+import {drawBot,drawGear} from '../art.js?v=roman18';
+import {BUILD,WEAPONS,SHIELDS} from '../data.js?v=roman18';
+import {guardsAgainst,distance,MELEE_TOLERANCE} from '../engine.js?v=roman18';
+import {BOT_SIZE} from '../geometry.js?v=roman18';
+import {icon} from '../icons.js?v=roman18';
+import {drawCity,drawHeroWelcome,ARENA_ENTRY} from './city.js?v=roman18';
 
 const $=id=>document.getElementById(id),KEY='roman-bots-north-v1',PREFS='roman-bots-north-preferences-v1';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let saved=null,prefs={sound:true};
 try{saved=JSON.parse(localStorage.getItem(KEY));const p=JSON.parse(localStorage.getItem(PREFS));if(p)prefs.sound=p.sound!==false;}catch{}
 let last=performance.now(),saveAt=0,uiAt=0,toastUntil=0,slot=0,panelKind='',nearby=null,audioContext,musicUnlocked=false,saveSuppressed=false,welcomeUntil=0;
-let camera={x:HOME.x,y:HOME.y},layout={scale:30,ox:0,oy:0,width:1,height:1},mapZoom=1;
+let camera={x:NORTH.HOME.x,y:NORTH.HOME.y},layout={scale:30,ox:0,oy:0,width:1,height:1},mapZoom=1;
 const game=new Campaign(saved,{onEvent:handleEvent,seed:Date.now()>>>0});
+let {HOME,CAMPS,KING,ENCOUNTERS,WIDTH,HEIGHT}=game.world;
+let {drawLandscape,drawAtlas}=game.western?westArt:northArt;
 camera={x:game.leader()?.x||HOME.x,y:game.leader()?.y||HOME.y};
 
 function save(){if(saveSuppressed)return false;try{localStorage.setItem(KEY,JSON.stringify(game.serialize()));return true;}catch{toast('Save unavailable. Keep this window open.');return false;}}
 function toast(message){$('toast').textContent=message;$('toast').hidden=false;toastUntil=performance.now()+3500;}
 function handleEvent(e){
+  if(e.type==='region'){
+    ({HOME,CAMPS,KING,ENCOUNTERS,WIDTH,HEIGHT}=game.world);
+    ({drawLandscape,drawAtlas}=game.western?westArt:northArt);
+    camera={x:game.leader().x,y:game.leader().y};
+    toast(game.western?'The Amber Highlands':'Welcome back to Rome');saveAt=0;
+  }
+  if(e.type==='refuge'){toast('A safe refuge. Rest and refill here.');saveAt=0;}
   if(e.type==='hero'){welcomeUntil=game.time+9;toast('Rome welcomes its new general!');tone(440,1100,.7);saveAt=0;}
   if(e.type==='promoted'){toast('A new companion joins you!');tone(440,880,.4);saveAt=0;}
   if(e.type==='trialFinished'){toast(e.won?'Round won!':'Free repairs. Ready to try again?');tone(e.won?500:350,e.won?900:500,.3);saveAt=0;}
@@ -27,7 +37,7 @@ function handleEvent(e){
   if(e.type==='camp'){toast('A new refuge!');tone(420,740,.3);saveAt=0;}
   if(e.type==='rest'){toast('Squad repaired. Packs refilled.');tone(400,800,.4);saveAt=0;for(const u of game.units.filter(u=>u.team===0))game.effects.push({type:'repair',x:u.x,y:u.y,life:2,max:2});}
   if(e.type==='recovered'){toast('Safe at camp. Your equipment is still yours.');saveAt=0;}
-  if(e.type==='complete'){toast('The Northern Wilds are at peace!');tone(500,1100,.6);saveAt=0;queueMicrotask(()=>openPanel('Laurel champions!','victory','<canvas id="victoryArt" class="preview" width="600" height="320" aria-label="Victorious captain"></canvas><p>The Thorn King has yielded. The woodland villages are safe, and the northern banner is yours.</p><button class="wide" data-action="close">'+icon('play')+' Keep exploring</button>'));}
+  if(e.type==='complete'){toast(game.western?'The Amber Highlands are at peace!':'The Northern Wilds are at peace!');tone(500,1100,.6);saveAt=0;queueMicrotask(()=>openPanel('Laurel champions!','victory','<canvas id="victoryArt" class="preview" width="600" height="320" aria-label="Victorious captain"></canvas><p>'+ (game.western?'The mountain stronghold is yours. The five highland villages are safe.':'The Thorn King has yielded. The woodland villages are safe, and the northern banner is yours.')+'</p><button class="wide" data-action="close">'+icon('play')+' Keep exploring</button>'));}
   if(e.type==='hit')tone(e.weapon==='hammer'?100:250,65,.06);
   if(e.type==='block')tone(880,400,.04);
 }
@@ -45,6 +55,14 @@ function frame(canvas,draw){const r=canvas.getBoundingClientRect();if(!r.width||
 function portrait(c,w,h,build,index=0){
   const size=Math.min(w/1.6,h/1.5);drawBot(c,{...build,x:w*.43,y:h*.62,team:0,captain:index===0,angle:-.35,hp:1,maxHp:1,weaponTier:game.state.weaponTier,armorTier:game.state.armorTier},reduced?0:performance.now()/1000,{size,preview:true});
 }
+function drawWestGate(c,t){
+  c.save();c.translate(WEST_GATE.x,WEST_GATE.y);
+  c.fillStyle='#dfd6b4';c.strokeStyle='#617e7a';c.lineWidth=.08;
+  for(const y of [-2.5,1.7]){c.fillRect(-.8,y,1.6,.8);c.strokeRect(-.8,y,1.6,.8);c.fillStyle='#f0e8c8';c.fillRect(-.95,y-.15,1.9,.2);}
+  c.strokeStyle=game.prologueComplete?'#e7b857':'#6f8580';c.lineWidth=.16;c.beginPath();c.moveTo(.2,-1.45);c.lineTo(-.6,0);c.lineTo(.2,1.45);c.stroke();
+  if(game.prologueComplete){c.fillStyle='#ffe291';for(let i=0;i<3;i++){const p=(t*.4+i/3)%1;c.globalAlpha=1-p;c.beginPath();c.arc(-.7-p*.6,(i-1)*.65,.07,0,Math.PI*2);c.fill();}}
+  c.restore();
+}
 function render(t){
   frame($('world'),(c,w,h)=>{
     const leader=game.leader();if(leader){const ease=reduced?1:.12;camera.x+=(leader.x-camera.x)*ease;camera.y+=(leader.y-camera.y)*ease;}
@@ -52,8 +70,8 @@ function render(t){
     camera.x=clamp(camera.x,halfW,WIDTH-halfW);camera.y=clamp(camera.y,halfH,HEIGHT-halfH);
     const ox=w/2-camera.x*scale,oy=h*.52-camera.y*scale;layout={scale,ox,oy,width:w,height:h};
     c.save();c.translate(ox,oy);c.scale(scale,scale);
-    drawLandscape(c,{bounds:{left:camera.x-halfW-3,top:camera.y-halfH-4,right:camera.x+halfW+3,bottom:camera.y+halfH+4},time:reduced?0:t,state:game.state});
-    if(camera.y+halfH>128)drawCity(c,reduced?0:t,game.state);
+    drawLandscape(c,{bounds:{left:camera.x-halfW-3,top:camera.y-halfH-4,right:camera.x+halfW+3,bottom:camera.y+halfH+4},time:reduced?0:t,state:{...game.state,conquered:game.regionComplete}});
+    if(!game.western&&camera.y+halfH>128){drawCity(c,reduced?0:t,game.state);drawWestGate(c,t);}
     if(game.goal){c.strokeStyle='#ffe28c';c.lineWidth=.07;c.beginPath();c.arc(game.goal.x,game.goal.y,.25,0,Math.PI*2);c.stroke();}
     for(const u of [...game.units].sort((a,b)=>a.y-b.y)){
       if(Math.abs(u.x-camera.x)>halfW+3||Math.abs(u.y-camera.y)>halfH+3)continue;
@@ -61,12 +79,12 @@ function render(t){
       const active=u===leader,target=u.action&&game.units.find(v=>v.id===u.action.target),strikeTarget=u.action?.contact||(target&&distance(u,target)<=WEAPONS[u.weapon].range+MELEE_TOLERANCE?{...target,guarding:guardsAgainst(target,u)}:null);
       if(active){c.fillStyle='#70efba55';c.strokeStyle='#ffe17d';c.lineWidth=.075;c.beginPath();c.ellipse(u.x,u.y+.32,.63,.29,0,0,Math.PI*2);c.fill();c.stroke();}
       if(u.team===0&&u.hp>0&&game.chargeTime>0){c.strokeStyle='#ffdf8588';c.lineWidth=.08;c.beginPath();c.ellipse(u.x,u.y+.22,.68,.28,0,t*2,t*2+Math.PI*1.5);c.stroke();for(let i=0;i<3;i++){const a=t*3+i*Math.PI*2/3;c.fillStyle='#fff2b4';c.fillRect(u.x+Math.cos(a)*.5-.035,u.y-.4+Math.sin(a)*.25,.07,.13);}}
-      drawBot(c,{...u,strikeTarget,faction:u.team===1&&!game.trial?'forest':undefined,weaponTier:u.team===0?game.state.weaponTier:0,armorTier:u.team===0?game.state.armorTier:0},reduced?0:t,{size:BOT_SIZE*(u.boss?1.5:1),promoted:active});
+      drawBot(c,{...u,strikeTarget,faction:u.team===1&&!game.trial?(game.western?'highland':'forest'):undefined,weaponTier:u.team===0?game.state.weaponTier:0,armorTier:u.team===0?game.state.armorTier:0},reduced?0:t,{size:BOT_SIZE*(u.boss?1.5:1),promoted:active});
       if(u.hp>0){const ratio=u.hp/u.maxHp,bw=u.boss?1.2:.75,by=u.y-(u.boss?1.48:1.04);c.fillStyle='#183d3c';c.fillRect(u.x-bw/2,by,bw,.095);c.fillStyle=u.team===1?'#f3836e':ratio<.2?'#fa8b63':ratio<.5?'#ffd36a':'#8fe0a5';c.fillRect(u.x-bw/2,by,bw*ratio,.095);}
     }
     for(const shot of game.projectiles){const target=game.units.find(u=>u.id===shot.target),owner=game.units.find(u=>u.id===shot.owner);if(!target)continue;const a=Math.atan2(target.y-shot.y,target.x-shot.x),fire=owner?.team===0&&game.state.weaponTier>=3;c.save();c.translate(shot.x,shot.y);c.rotate(a);if(fire){c.strokeStyle='#ff9a4366';c.lineWidth=.18;c.beginPath();c.moveTo(-.65,0);c.lineTo(0,0);c.stroke();for(let i=0;i<3;i++){c.fillStyle=i%2?'#ffe68c':'#ffb94c';c.fillRect(-.18-i*.18,-.04+Math.sin(t*20+i)*.05,.09,.06);}}c.strokeStyle=fire?'#ffd973':shot.power?'#fff3ad':'#e6bb72';c.lineWidth=shot.power||fire?.085:.055;c.beginPath();c.moveTo(-.5,0);c.lineTo(0,0);c.stroke();c.fillStyle='#fff4d0';c.beginPath();c.moveTo(.1,0);c.lineTo(-.1,-.08);c.lineTo(-.1,.08);c.fill();c.restore();}
     for(const e of game.effects){const p=1-e.life/e.max;if(!Number.isFinite(p))continue;c.save();c.globalAlpha=1-p;if(e.type==='coin'){c.fillStyle='#ffdb68';c.strokeStyle='#87662f';c.lineWidth=.035;c.beginPath();c.ellipse(e.x,e.y-p*1.5,.12,.17,0,0,Math.PI*2);c.fill();c.stroke();c.fillStyle='#fff3bb';c.fillRect(e.x-.035,e.y-p*1.5-.1,.035,.12);c.restore();continue;}c.strokeStyle=e.type==='repair'?'#cbffd1':e.type==='block'?'#c2f7ef':e.type==='power'?'#fff0a4':'#ffd178';c.lineWidth=.07*(1-p);c.beginPath();c.ellipse(e.x,e.y,.15+p*.85,.08+p*.4,0,0,Math.PI*2);c.stroke();if(e.type==='repair'){const y=e.y-.8-p;c.lineWidth=.09;c.beginPath();c.moveTo(e.x-.16,y);c.lineTo(e.x+.16,y);c.moveTo(e.x,y-.16);c.lineTo(e.x,y+.16);c.stroke();}else for(let i=0;i<5;i++){const a=i*Math.PI*2/5;c.beginPath();c.moveTo(e.x+Math.cos(a)*p*.5,e.y+Math.sin(a)*p*.5);c.lineTo(e.x+Math.cos(a)*p*.9,e.y+Math.sin(a)*p*.9);c.stroke();}c.restore();}
-    if(game.state.prologueRound>=15&&leader)drawHeroWelcome(c,leader,reduced?0:t,Math.max(0,welcomeUntil-t));
+    if(!game.western&&game.prologueComplete&&leader)drawHeroWelcome(c,leader,reduced?0:t,Math.max(0,welcomeUntil-t));
     c.restore();
   });
   if(t>uiAt){updateHUD();uiAt=t+.18;}
@@ -76,13 +94,15 @@ function render(t){
 function updateHUD(){
   $('coins').textContent=game.state.coins;
   const leader=game.leader(),y=leader?.y||HOME.y;
-  $('region').textContent=game.trial?'The proving arena':y>130?'The Eternal City':y>98?'Fernwood Trails':y>66?'The Silverwater Woods':y>30?'The Old Pines':'The Thorn King';
+  $('region').textContent=game.western?'The Amber Highlands':game.trial?'The proving arena':y>130?'The Eternal City':y>98?'Fernwood Trails':y>66?'The Silverwater Woods':y>30?'The Old Pines':'The Thorn King';
+  $('region').textContent+=' · '+BUILD;
   const friends=game.units.filter(u=>u.team===0);
   if($('health').children.length!==friends.length)$('health').innerHTML=friends.map(u=>`<div class="health-bot" data-health="${u.id}" aria-label="Soldier ${u.index+1} health"><canvas width="96" height="96" aria-hidden="true"></canvas><span class="health-track"><i></i></span></div>`).join('');
   for(const el of $('health').children){const u=friends.find(v=>v.id===el.dataset.health);if(!u)continue;const ratio=u.hp/u.maxHp;el.className=`health-bot ${ratio<.2?'critical':ratio<.5?'hurt':''}`;el.querySelector('i').style.width=`${Math.max(0,ratio)*100}%`;el.setAttribute('aria-label',`Soldier ${u.index+1}: ${Math.round(Math.max(0,ratio)*100)}% health`);frame(el.querySelector('canvas'),(c,w,h)=>portrait(c,w,h,u,u.index));}
   nearby=game.trial?null:leader?[HOME,...CAMPS].find(p=>distance(p,leader)<2.9):null;
   $('context').hidden=!nearby;
   if(nearby)$('context').innerHTML=nearby.id===HOME.id?`${icon('home')} Workshop`:`${icon('tent')} Rest`;
+  if(game.prologueComplete&&!game.trial&&leader&&distance(leader,game.western?HOME:WEST_GATE)<2.9){nearby={id:'gate'};$('context').hidden=false;$('context').innerHTML=icon('next')+(game.western?' Rome':' Highlands');}
   if(!game.trial&&game.state.prologueRound<15&&leader&&distance(leader,ARENA_ENTRY)<3.2){nearby={id:'arena'};$('context').hidden=false;$('context').innerHTML=icon('sword')+' Arena';}
   else if(!game.trial&&game.state.prologueRound<15){nearby={id:'arena-route'};$('context').hidden=false;$('context').innerHTML=icon('sword')+' To the arena';}
   if(game.trial?.phase==='finished'){$('context').hidden=false;$('context').innerHTML=icon(game.trial.winner===0?'next':'replay')+(game.trial.winner===0?' Continue':' Try again');}
@@ -111,10 +131,19 @@ function drawPanel(){
     for(const el of document.querySelectorAll('[data-gear]'))frame(el,(c,w,h)=>{const[kind,id]=el.dataset.gear.split(':');c.scale(w/64,h/64);drawGear(c,kind,id,game.time,game.state.weaponTier);});
     if($('preview'))frame($('preview'),(c,w,h)=>portrait(c,w,h,game.state.squad[slot],slot));
   }
-  if(panelKind==='atlas'&&$('mapCanvas'))frame($('mapCanvas'),(c,w,h)=>{drawAtlas(c,w,h,game.state,game.leader());});
+  if(panelKind==='atlas'&&$('mapCanvas')){
+    const canvas=$('mapCanvas');
+    if(game.western&&westArt.atlasAspect)canvas.style.height=clamp(canvas.getBoundingClientRect().width/westArt.atlasAspect({...game.state,conquered:game.regionComplete},game.leader())+48,160,440)+'px';
+    frame(canvas,(c,w,h)=>{drawAtlas(c,w,h,{...game.state,conquered:game.regionComplete},game.leader());});
+  }
 }
-function atlas(){if(game.state.prologueRound<15){openPanel('The Eternal City','cityMap',`<button class="wide" data-action="arena">${icon('sword')} Walk to the arena</button><button class="wide quiet" data-action="home">${icon('home')} Walk home</button>`);return;}openPanel('The Northern Wilds','atlas','<canvas id="mapCanvas" class="atlas" width="800" height="1100" aria-label="Map of the northern journey"></canvas><div class="seal-row" aria-label="Walk to a refuge">'+CAMPS.map(p=>`<button data-camp="${p.id}" aria-label="Walk to ${p.name}" title="${p.name}">${icon('tent')}</button>`).join('')+'</div>');}
-function settings(){openPanel('Adventure settings','settings',`<label class="setting">Squad size<select id="squadSize"><option value="3" ${game.state.squadSize===3?'selected':''}>Captain + 2 companions</option><option value="5" ${game.state.squadSize===5?'selected':''}>Captain + 4 companions</option></select></label><p>Changing your squad takes effect at home. The courtyard game is unchanged.</p><button class="wide quiet" data-action="courtyard">${icon('sword')} Courtyard battle</button><button class="wide quiet" data-action="restart">${icon('replay')} <span class="red">Start this adventure again</span></button>${localStorage.getItem(KEY+'-backup')?'<button class="wide quiet" data-action="restore">Restore previous adventure</button>':''}<p class="build">roman17 · Northern adventure</p>`);}
+function atlas(){
+  if(!game.prologueComplete){openPanel('The Eternal City','cityMap',`<button class="wide" data-action="arena">${icon('sword')} Walk to the arena</button><button class="wide quiet" data-action="home">${icon('home')} Walk home</button>`);return;}
+  const active=CAMPS.findIndex(c=>!game.state.camps.includes(c.id));
+  const shown=game.western?CAMPS.filter((c,i)=>active<0||i<=active||game.state.refuges.includes(c.id)):CAMPS;
+  openPanel(game.western?'The Amber Highlands':'The Northern Wilds','atlas','<canvas id="mapCanvas" class="atlas" width="800" height="1100" aria-label="Map of the journey"></canvas><div class="seal-row" aria-label="Walk to a refuge">'+shown.map(p=>{const status=game.campStatus(p.id);return `<button data-camp="${p.id}" aria-label="Walk to ${p.name}" title="${p.name}">${icon('tent')}${game.western?`<small>${status.cleared} / ${status.required}</small>`:''}</button>`;}).join('')+'</div><button class="wide quiet" data-action="gate">'+icon('next')+(game.western?' Walk back to Rome':' Walk to the western gate')+'</button>');
+}
+function settings(){openPanel('Adventure settings','settings',`<label class="setting">Squad size<select id="squadSize"><option value="3" ${game.state.squadSize===3?'selected':''}>Captain + 2 companions</option><option value="5" ${game.state.squadSize===5?'selected':''}>Captain + 4 companions</option></select></label><p>Changing your squad takes effect at home. The courtyard game is unchanged.</p><button class="wide quiet" data-action="courtyard">${icon('sword')} Courtyard battle</button><button class="wide quiet" data-action="restart">${icon('replay')} <span class="red">Start this adventure again</span></button>${localStorage.getItem(KEY+'-backup')?'<button class="wide quiet" data-action="restore">Restore previous adventure</button>':''}<p class="build">roman18 · Northern adventure</p>`);}
 function pause(){openPanel('Take a breather','pause',`<button class="wide" data-action="close" aria-label="Keep playing">${icon('play')}</button><button class="wide quiet" data-action="atlas">${icon('map')} Map</button><button class="wide quiet" data-action="settings">${icon('edit')} Advanced settings</button>`);}
 
 $('panelBody').addEventListener('click',e=>{
@@ -130,8 +159,9 @@ $('panelBody').addEventListener('click',e=>{
   if(b.dataset.action==='settings')settings();
   if(b.dataset.action==='arena'){closePanel();game.moveTo(ARENA_ENTRY);toast('The arena is waiting');}
   if(b.dataset.action==='home'){closePanel();game.moveTo(HOME);}
+  if(b.dataset.action==='gate'){closePanel();game.moveTo(game.western?HOME:WEST_GATE);}
   if(b.dataset.camp){const camp=CAMPS.find(c=>c.id===b.dataset.camp);if(camp){closePanel();game.moveTo(camp);toast('Following the trail to a refuge');}}
-  if(b.dataset.action==='courtyard'){save();location.href='../index.html?v=roman17';}
+  if(b.dataset.action==='courtyard'){save();location.href='../index.html?v=roman18';}
   if(b.dataset.action==='restart')openPanel('Start again?','confirm','<p>This starts the northern adventure from the beginning. Your current adventure will be kept as one recovery save.</p><button class="wide quiet" data-action="close">Keep playing</button><button class="wide" data-action="confirmRestart"><span class="red">Save this journey and restart</span></button>');
   if(b.dataset.action==='confirmRestart'){try{localStorage.setItem(KEY+'-backup',JSON.stringify(game.serialize()));saveSuppressed=true;localStorage.removeItem(KEY);location.reload();}catch{saveSuppressed=false;toast('Could not save a recovery copy. Restart cancelled.');}}
   if(b.dataset.action==='restore')openPanel('Restore the previous journey?','confirm','<p>This replaces your current northern adventure with the recovery save.</p><button class="wide quiet" data-action="close">Keep playing</button><button class="wide" data-action="confirmRestore">Restore previous adventure</button>');
@@ -141,7 +171,7 @@ $('panelBody').addEventListener('click',e=>{
 $('panelBody').addEventListener('change',e=>{if(e.target.id==='squadSize'){if(distance(game.leader()||HOME,HOME)>=3||!game.setSquadSize(Number(e.target.value))){toast('Change the squad at the home workshop');e.target.value=game.state.squadSize;}else{updateHUD();save();}}});
 $('world').addEventListener('pointerdown',e=>{if($('panel').open||e.button!==0)return;e.preventDefault();const r=$('world').getBoundingClientRect(),p={x:(e.clientX-r.left-layout.ox)/layout.scale,y:(e.clientY-r.top-layout.oy)/layout.scale};const enemy=game.enemyAt(p,layout.scale);if(enemy)game.tapEnemy(enemy);else game.moveTo(p);});
 $('world').addEventListener('keydown',e=>{const d={ArrowUp:[0,-3],ArrowDown:[0,3],ArrowLeft:[-3,0],ArrowRight:[3,0]}[e.key],u=game.leader();if(d&&u){e.preventDefault();game.moveTo({x:u.x+d[0],y:u.y+d[1]});}});
-$('context').onclick=()=>{if(game.trial?.phase==='finished'){game.finishTrialRound();updateHUD();save();return;}if(nearby?.id==='arena-route'){game.moveTo(ARENA_ENTRY);return;}if(nearby?.id==='arena'){game.enterArena();updateHUD();save();return;}if(nearby?.id===HOME.id)showWorkshop();else if(nearby)game.restAt(nearby.id);save();};
+$('context').onclick=()=>{if(nearby?.id==='gate'){game.crossGate();updateHUD();save();return;}if(game.trial?.phase==='finished'){game.finishTrialRound();updateHUD();save();return;}if(nearby?.id==='arena-route'){game.moveTo(ARENA_ENTRY);return;}if(nearby?.id==='arena'){game.enterArena();updateHUD();save();return;}if(nearby?.id===HOME.id)showWorkshop();else if(nearby)game.restAt(nearby.id);save();};
 $('home').onclick=()=>{game.moveTo(HOME);toast('Walking home');};
 $('workshop').onclick=showWorkshop;$('atlas').onclick=atlas;$('pause').onclick=pause;$('close').onclick=closePanel;
 $('utility').onclick=()=>{if(!game.useUtility())toast(game.utilityCd>0?`Recharging · ${Math.ceil(game.utilityCd)}s`:game.state.utility==='repair'?(game.state.utilityLeft>0?'The squad is already healthy':'Rest at a camp to refill your packs'):'Power charge is recharging');updateHUD();save();};

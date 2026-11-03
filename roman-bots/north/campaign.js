@@ -1,27 +1,28 @@
-import {Battle,distance} from '../engine.js?v=roman17';
-import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman17';
-import {WIDTH,HEIGHT,HOME,CAMPS,ENCOUNTERS,passable,findPath,nearestWalkable,isSafe as worldSafe} from './world.js?v=roman17';
-import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman17';
+import {Battle,distance} from '../engine.js?v=roman18';
+import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman18';
+import * as NORTH from './world.js?v=roman18';
+import * as WEST from './west-world.js?v=roman18';
+import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman18';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const number=(n,a,b,f=a)=>Number.isFinite(n)?clamp(n,a,b):f;
 const integer=(n,a,b,f=a)=>Math.floor(number(n,a,b,f));
 const point=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y);
-const isSafe=(x,y)=>worldSafe({x,y});
+const worlds={north:NORTH,west:WEST};
+export const WEST_GATE=Object.freeze({x:6,y:138});
 const defaults=()=>[{weapon:'sword',shield:'tower'},{weapon:'hammer',shield:'none'},{weapon:'bow',shield:'none'},{weapon:'sword',shield:'round'},{weapon:'spear',shield:'none'}];
 export const UPGRADE_PRICES=Object.freeze({weapon:[100,240,420],armor:[80,200,360],utility:[120,260]});
-const home={...HOME,id:'home'};
-const encounters=()=>ENCOUNTERS;
 function cleanSave(saved){
   const s=saved&&typeof saved==='object'?saved:{};
-  const ids=new Set(encounters().map(e=>e.id));
+  const world=worlds[s.region==='west'?'west':'north'];
+  const ids=new Set([...NORTH.ENCOUNTERS,...WEST.ENCOUNTERS].map(e=>e.id));
   const completed=[...new Set(Array.isArray(s.completed)?s.completed.filter(id=>ids.has(id)):[])];
-  const camps=[...new Set(Array.isArray(s.camps)?s.camps.filter(id=>CAMPS.some(c=>c.id===id)):[])];
+  const camps=[...new Set(Array.isArray(s.camps)?s.camps.filter(id=>[...NORTH.CAMPS,...WEST.CAMPS].some(c=>c.id===id)):[])];
   const prologueRound=integer(s.prologueRound,0,15,s.version===1?15:0);
-  return {version:2,prologueRound,squad:defaults().map((slot,i)=>normalizeSlot(Array.isArray(s.squad)?s.squad[i]||slot:slot)),squadSize:s.squadSize===5?5:3,
+  return {version:3,region:s.region==='west'&&prologueRound>=PROLOGUE_ROUNDS?'west':'north',prologueRound,squad:defaults().map((slot,i)=>normalizeSlot(Array.isArray(s.squad)?s.squad[i]||slot:slot)),squadSize:s.squadSize===5?5:3,
     weaponTier:integer(s.weaponTier,0,3),armorTier:integer(s.armorTier,0,3),utility:s.utility==='charge'?'charge':'repair',utilityTier:integer(s.utilityTier,0,2),
-    coins:integer(s.coins,0,100000),camps,completed,conquered:camps.length===CAMPS.length&&completed.includes(encounters().find(e=>e.kind==='boss')?.id),
-    position:point(s.position)?{x:number(s.position.x,.5,WIDTH-.5),y:number(s.position.y,.5,HEIGHT-.5)}:{x:HOME.x,y:HOME.y},
+    coins:integer(s.coins,0,100000),camps,refuges:[...new Set([...camps,...(Array.isArray(s.refuges)?s.refuges.filter(id=>[...NORTH.CAMPS,...WEST.CAMPS].some(c=>c.id===id)):[])])],completed,conquered:NORTH.CAMPS.every(c=>camps.includes(c.id))&&completed.includes('north-king'),westConquered:WEST.CAMPS.every(c=>camps.includes(c.id))&&completed.includes(WEST.ENCOUNTERS.find(e=>e.kind==='boss')?.id),
+    position:point(s.position)?{x:number(s.position.x,.5,world.WIDTH-.5),y:number(s.position.y,.5,world.HEIGHT-.5)}:{...world.HOME},
     health:Array.from({length:5},(_,i)=>number(Array.isArray(s.health)?s.health[i]:undefined,0,1,1)),utilityLeft:integer(s.utilityLeft,0,1+integer(s.utilityTier,0,2),1+integer(s.utilityTier,0,2)),utilityCd:number(s.utilityCd,0,45),chargeTime:number(s.chargeTime,0,20),recoveries:integer(s.recoveries,0,100000)};
 }
 
@@ -29,11 +30,11 @@ function cleanSave(saved){
 // projectiles, initiative, formations and body separation.
 export class Campaign extends Battle {
   constructor(saved=null,{onEvent=()=>{},seed=1729}={}){
-    const state=cleanSave(saved);
-    super(state.squad,defaults(),{seed:Number.isFinite(seed)?seed:1729,healthBonus:50,onEvent,bounds:{minX:.5,maxX:WIDTH-.5,minY:.5,maxY:HEIGHT-.5}});
+    const state=cleanSave(saved),world=worlds[state.region];
+    super(state.squad,defaults(),{seed:Number.isFinite(seed)?seed:1729,healthBonus:50,onEvent,bounds:{minX:.5,maxX:world.WIDTH-.5,minY:.5,maxY:world.HEIGHT-.5}});
     this.state=state;this.trial=null;this.celebrationTime=0;this.phase='battle';this.units=this.units.filter(u=>u.team===0&&u.index<this.earnedCount);
     this.activeEncounter=null;this.wave=0;this.waveAt=null;this.travelGoal=null;this.paths=new Map();this.utilityCd=state.utilityCd;this.chargeTime=state.chargeTime;this.serial=0;
-    let start=nearestWalkable(this.prologueComplete?state.position:cityPoint(state.position))||HOME;
+    let start=this.world.nearestWalkable(this.prologueComplete?state.position:cityPoint(state.position))||this.world.HOME;
     if(!this.prologueComplete)start=cityPoint(start);
     this.placeSquad(start);
     for(const u of this.units){this.configureAlly(u);u.hp=u.maxHp*(state.health[u.index]??1);}
@@ -42,6 +43,22 @@ export class Campaign extends Battle {
     // Reloading an unfinished fight retries it; no wave rewards are retained.
   }
   checkFinished(){}
+  get world(){return worlds[this.state?.region]||NORTH;}
+  get western(){return this.state?.region==='west';}
+  get regionComplete(){return this.western?this.state.westConquered:this.state.conquered;}
+  get sealsReady(){return this.world.CAMPS.every(c=>this.state.camps.includes(c.id));}
+  safe(x,y){return this.world.isSafe({x,y});}
+  crossGate(){
+    const gate=this.western?this.world.HOME:WEST_GATE;
+    if(this.paused||this.trial||!this.prologueComplete||this.activeEncounter||!this.leader()||distance(this.leader(),gate)>3)return false;
+    this.state.region=this.western?'north':'west';
+    this.bounds={minX:.5,maxX:this.world.WIDTH-.5,minY:.5,maxY:this.world.HEIGHT-.5};
+    this.travelGoal=null;this.goal=null;this.focus=null;this.pendingPower=null;this.focusOwner=null;this.pendingOwner=null;
+    this.units=this.units.filter(u=>u.team===0);this.projectiles=[];this.effects=[];this.paths.clear();
+    this.placeSquad(this.western?this.world.HOME:WEST_GATE);
+    this.state.position={x:this.leader().x,y:this.leader().y};
+    this.emit('region',{region:this.state.region});return true;
+  }
   boundX(v){const x=super.boundX(v);return this.state&&!this.prologueComplete?clamp(x,5,47):x;}
   boundY(v){const y=super.boundY(v);return this.state&&!this.prologueComplete?clamp(y,132,145.5):y;}
   get prologueComplete(){return this.state.prologueRound>=PROLOGUE_ROUNDS;}
@@ -95,9 +112,9 @@ export class Campaign extends Battle {
     u.maxHp=(WEAPONS[u.weapon].hp+SHIELDS[u.shield].hp)*1.8*(u.captain?1.35:1)*1.5*(1+this.state.armorTier*.22);
     u.hp=u.maxHp*ratio;
   }
-  validPosition(p,team=0){return point(p)&&passable(p.x,p.y)&&(team!==0||this.prologueComplete||p.x>=5&&p.x<=47&&p.y>=132&&p.y<=145.5)&&(team===0||!isSafe(p.x,p.y));}
+  validPosition(p,team=0){return point(p)&&this.world.passable(p.x,p.y)&&(team!==0||this.prologueComplete||p.x>=5&&p.x<=47&&p.y>=132&&p.y<=145.5)&&(team===0||!this.safe(p.x,p.y));}
   clearLine(a,b){
-    if(!point(a)||!point(b)||!passable(a.x,a.y)||!passable(b.x,b.y))return false;
+    if(!point(a)||!point(b)||!this.world.passable(a.x,a.y)||!this.world.passable(b.x,b.y))return false;
     // Traverse exact cell crossings: fixed-distance samples can miss a thin
     // forest corner and repeatedly choose an impossible movement shortcut.
     const dx=b.x-a.x,dy=b.y-a.y;
@@ -106,17 +123,17 @@ export class Campaign extends Battle {
     let t=0;
     while(t<1){
       const next=Math.min(tx,ty,1),mid=(t+next)/2;
-      if(!passable(a.x+dx*mid,a.y+dy*mid))return false;
+      if(next-t>1e-10&&!this.world.passable(a.x+dx*mid,a.y+dy*mid))return false;
       if(next===1)break;
-      if(tx===next)tx+=1/Math.abs(dx);
-      if(ty===next)ty+=1/Math.abs(dy);
+      if(Math.abs(tx-next)<1e-10)tx+=1/Math.abs(dx);
+      if(Math.abs(ty-next)<1e-10)ty+=1/Math.abs(dy);
       t=next;
     }
     return true;
   }
   placeSquad(center){
     if(!this.prologueComplete)center=cityPoint(center);
-    this.alive(0).forEach((u,i)=>{const p=nearestWalkable({x:center.x+(i%3-1)*1.5,y:center.y+Math.floor(i/3)*1.5})||center;Object.assign(u,this.prologueComplete?p:cityPoint(p),{action:null,target:null,retreat:null});});
+    this.alive(0).forEach((u,i)=>{const p=this.world.nearestWalkable({x:center.x+(i%3-1)*1.5,y:center.y+Math.floor(i/3)*1.5})||center;Object.assign(u,this.prologueComplete?p:cityPoint(p),{action:null,target:null,retreat:null});});
     const captain=this.leader();if(captain)Object.assign(captain,{x:center.x,y:center.y});
     this.separateBodies();
   }
@@ -132,19 +149,27 @@ export class Campaign extends Battle {
     const buddy=this.units.find(v=>v.id===u.buddy&&v.hp>0);
     if(buddy&&!this.travelGoal&&this.alive(1-u.team).some(v=>distance(u,v)<6&&this.clearLine(u,v)))return super.slotFor(u);
     const leader=this.leader(u.team);if(!leader||leader===u)return {x:u.x,y:u.y};
+    if(this.travelGoal&&distance(u,leader)>4)return {x:leader.x,y:leader.y};
     const a=leader.angle,side=(u.index%2?1:-1)*1.5,back=1.6+Math.floor((u.index-1)/2)*1.5;
-    return {x:this.boundX(leader.x-Math.cos(a)*back-Math.sin(a)*side),y:this.boundY(leader.y-Math.sin(a)*back+Math.cos(a)*side)};
+    const slot={x:this.boundX(leader.x-Math.cos(a)*back-Math.sin(a)*side),y:this.boundY(leader.y-Math.sin(a)*back+Math.cos(a)*side)};
+    if(this.travelGoal&&!this.world.passable(slot.x,slot.y)){
+      const nearby=this.world.nearestWalkable(slot);
+      // At a switchback, an off-road slot can lie farther away than the
+      // regroup leash. Follow the captain through the bend instead.
+      return nearby&&distance(nearby,leader)<3.6?nearby:{x:leader.x,y:leader.y};
+    }
+    return slot;
   }
   walk(u,to,dt){
     if(!point(to)||dt<=0)return;
     if(u.team===0&&!this.prologueComplete)to=cityPoint(to);
     let destination={x:this.boundX(to.x),y:this.boundY(to.y)};
-    if(!this.validPosition(destination,u.team))destination=nearestWalkable(destination);
+    if(!this.validPosition(destination,u.team))destination=this.world.nearestWalkable(destination);
     if(!destination||!this.validPosition(destination,u.team))return;
     let cached=this.paths?.get(u.id);
     if(!this.clearLine(u,destination)){
       const key=`${Math.floor(destination.x)},${Math.floor(destination.y)}`;
-      if(!cached||cached.key!==key||this.time-cached.at>1){cached={key,at:this.time,points:findPath(u,destination)||[]};this.paths?.set(u.id,cached);}
+      if(!cached||cached.key!==key||this.time-cached.at>1){cached={key,at:this.time,points:this.world.findPath(u,destination)||[]};this.paths?.set(u.id,cached);}
       while(cached.points.length&&distance(u,cached.points[0])<.25)cached.points.shift();
       if(!cached.points.length)return;
       // A cell-center waypoint must not pin a fighter behind a companion.
@@ -162,8 +187,8 @@ export class Campaign extends Battle {
   }
   pickTarget(u){
     if(this.travelGoal&&u.team===0)return null;
-    if(u.team===0&&isSafe(u.x,u.y))return null;
-    const valid=this.alive(1-u.team).filter(v=>distance(u,v)<6&&!isSafe(v.x,v.y)&&this.clearLine(u,v));
+    if(u.team===0&&this.safe(u.x,u.y))return null;
+    const valid=this.alive(1-u.team).filter(v=>distance(u,v)<6&&!this.safe(v.x,v.y)&&this.clearLine(u,v));
     if(!valid.length)return null;
     // Reuse shared partner/focus scoring, restricted to visible aggro candidates.
     const original=this.units;
@@ -172,19 +197,19 @@ export class Campaign extends Battle {
   }
   bowTarget(u){
     const target=super.bowTarget(u);
-    return target&&!isSafe(target.x,target.y)&&this.clearLine(u,target)?target:null;
+    return target&&!this.safe(target.x,target.y)&&this.clearLine(u,target)?target:null;
   }
   startAttack(u,target,power=false){
-    if(distance(u,target)>4.1||isSafe(target.x,target.y)||isSafe(u.x,u.y)||!this.clearLine(u,target)||this.travelGoal&&u.team===0)return;
+    if(distance(u,target)>4.1||this.safe(target.x,target.y)||this.safe(u.x,u.y)||!this.clearLine(u,target)||this.travelGoal&&u.team===0)return;
     super.startAttack(u,target,power);
   }
   resolveAttack(u){
     const target=this.units.find(v=>v.id===u.action?.target&&v.hp>0);
-    if(!target||distance(u,target)>4.1||!this.clearLine(u,target)||isSafe(u.x,u.y)||isSafe(target.x,target.y))return;
+    if(!target||distance(u,target)>4.1||!this.clearLine(u,target)||this.safe(u.x,u.y)||this.safe(target.x,target.y))return;
     super.resolveAttack(u);
   }
   hit(attacker,target,power=false,projectile=false,source=attacker){
-    if(isSafe(target.x,target.y)||isSafe(attacker.x,attacker.y)||!this.clearLine(source,target))return;
+    if(this.safe(target.x,target.y)||this.safe(attacker.x,attacker.y)||!this.clearLine(source,target))return;
     if(!projectile&&distance(attacker,target)>Math.min(4.1,WEAPONS[attacker.weapon].range+.12))return;
     const old={x:target.x,y:target.y};
     super.hit(attacker,target,power,projectile,source);
@@ -195,7 +220,7 @@ export class Campaign extends Battle {
     if(this.trial){if(!point(p)||this.paused)return false;const result=this.trial.moveTo(p);this.syncTrial();return result;}
     if(!point(p)||!this.leader())return false;
     if(!this.prologueComplete)p=cityPoint(p);
-    let destination=nearestWalkable({x:this.boundX(p.x),y:this.boundY(p.y)});
+    let destination=this.world.nearestWalkable({x:this.boundX(p.x),y:this.boundY(p.y)});
     if(destination&&!this.prologueComplete)destination=cityPoint(destination);
     if(!point(destination))return false;
     this.travelGoal={x:destination.x,y:destination.y};this.goal=this.travelGoal;this.focus=null;this.pendingPower=null;this.focusOwner=null;this.pendingOwner=null;this.paths.clear();
@@ -204,21 +229,21 @@ export class Campaign extends Battle {
   }
   tapEnemy(enemy){
     if(this.trial){if(this.paused||!this.trial.units.includes(enemy))return false;const result=this.trial.tapEnemy(enemy);this.syncTrial();return result;}
-    if(!enemy||!this.units.includes(enemy)||enemy.hp<=0||enemy.team!==1||isSafe(enemy.x,enemy.y))return false;
+    if(!enemy||!this.units.includes(enemy)||enemy.hp<=0||enemy.team!==1||this.safe(enemy.x,enemy.y))return false;
     this.travelGoal=null;return super.tapEnemy(enemy);
   }
   tryPower(){
     if(this.trial){if(this.paused)return false;const result=this.trial.tryPower();this.syncTrial();return result;}
     if(!this.state)return false;
     const leader=this.leader(),target=this.units.find(u=>u.id===this.pendingPower&&u.hp>0);
-    if(!leader||!target||this.travelGoal||isSafe(leader.x,leader.y)||isSafe(target.x,target.y)||!this.clearLine(leader,target))return false;
+    if(!leader||!target||this.travelGoal||this.safe(leader.x,leader.y)||this.safe(target.x,target.y)||!this.clearLine(leader,target))return false;
     return super.tryPower();
   }
   beginEncounter(e){
     if(this.trial||!this.prologueComplete)return false;
-    e=encounters().find(candidate=>candidate.id===e?.id);if(!e)return false;
+    e=this.world.ENCOUNTERS.find(candidate=>candidate.id===e?.id);if(!e)return false;
     if(this.activeEncounter||this.state.completed.includes(e.id))return false;
-    if(e.kind==='boss'&&this.state.camps.length<CAMPS.length)return false;
+    if(e.kind==='boss'&&!this.sealsReady)return false;
     // An ambush interrupts a long journey once. Subsequent ground orders are
     // deliberate squad retreats and remain in force throughout this encounter.
     this.travelGoal=null;this.goal=null;this.focus=null;this.pendingPower=null;this.focusOwner=null;this.pendingOwner=null;this.paths.clear();
@@ -229,17 +254,17 @@ export class Campaign extends Battle {
     const e=this.activeEncounter;if(!e)return;
     this.units=this.units.filter(u=>u.team===0);this.projectiles=[];this.wave++;this.paths.clear();
     const kingWave=e.kind==='boss'&&this.wave===integer(e.waves,2,3,3);
-    const count=kingWave?3:integer(e.count,5,6,5),stage=integer(e.stage,0,3);
-    const roster=Array.from({length:5},(_,i)=>({weapon:i%3===0?'bow':'sword',shield:'none'}));
+    const count=kingWave?3:integer(e.count,5,6,5),stage=integer(e.stage,0,4);
+    const roster=Array.from({length:5},(_,i)=>this.western?{weapon:i===0?'bow':i===2?'spear':i===4?'hammer':'sword',shield:i===1?'round':'none'}:{weapon:i%3===0?'bow':'sword',shield:'none'});
     const factory=new Battle(this.state.squad,roster,{seed:this.seed,healthBonus:0,bounds:this.bounds});
     const templates=factory.units.filter(u=>u.team===1);
     for(let i=0;i<count;i++){
       const u={...templates[i%5],id:`forest-${++this.serial}`,index:i,captain:i===0,boss:kingWave&&i===0,buddy:null,action:null,target:null};
-      if(kingWave)Object.assign(u,normalizeSlot(i===0?{weapon:'hammer',shield:'none'}:i===1?{weapon:'sword',shield:'none'}:{weapon:'bow',shield:'none'}));
-      const a=i/count*Math.PI*2,p=nearestWalkable({x:this.boundX(e.x+Math.cos(a)*2.3),y:this.boundY(e.y+Math.sin(a)*2.3)})||e;
+      if(kingWave)Object.assign(u,normalizeSlot(i===0?{weapon:'hammer',shield:'none'}:i===1?{weapon:'sword',shield:this.western?'tower':'none'}:{weapon:'bow',shield:'none'}));
+      const a=i/count*Math.PI*2,p=this.world.nearestWalkable({x:this.boundX(e.x+Math.cos(a)*2.3),y:this.boundY(e.y+Math.sin(a)*2.3)})||e;
       if(!this.validPosition(p,1))continue;
       Object.assign(u,{x:p.x,y:p.y});
-      u.maxHp=u.boss?WEAPONS[u.weapon].hp*(1+stage*.18)*10:WEAPONS[u.weapon].hp*.58*(1+stage*.22)*(e.kind==='boss'&&!kingWave?1.8:1);u.hp=u.maxHp;
+      u.maxHp=u.boss?WEAPONS[u.weapon].hp*(1+stage*.18)*10:WEAPONS[u.weapon].hp*.58*(1+stage*.22)*(e.kind==='boss'&&!kingWave?1.8:1);if(this.western)u.maxHp*=1.15;u.hp=u.maxHp;
       u.damageScale=u.boss?.60:.24+stage*.035;u.forestWeapon=u.weapon;this.units.push(u);
     }
     this.refreshPartners();this.separateBodies();
@@ -249,7 +274,7 @@ export class Campaign extends Battle {
     if(!this.state.completed.includes(e.id)){
       this.state.completed.push(e.id);const reward=integer(e.reward,0,500,35+integer(e.stage,0,3)*15);this.state.coins=Math.min(100000,this.state.coins+reward);
       this.emit('cleared',{id:e.id,reward});
-      if(e.kind==='boss'){this.state.conquered=true;this.emit('complete',{id:e.id});}
+      if(e.kind==='boss'){this.state[this.western?'westConquered':'conquered']=true;this.emit('complete',{id:e.id,region:this.state.region});}
     }
     this.activeEncounter=null;this.waveAt=null;this.units=this.units.filter(u=>u.team===0);this.projectiles=[];
   }
@@ -262,8 +287,8 @@ export class Campaign extends Battle {
     this.refreshPartners();
   }
   nearestCamp(){
-    const p=this.leader()||this.units.find(u=>u.team===0)||HOME;
-    return [home,...CAMPS.filter(c=>this.state.camps.includes(c.id))].sort((a,b)=>distance(a,p)-distance(b,p))[0];
+    const p=this.leader()||this.units.find(u=>u.team===0)||this.world.HOME;
+    return [this.world.HOME,...this.world.CAMPS.filter(c=>this.state.refuges.includes(c.id))].sort((a,b)=>distance(a,p)-distance(b,p))[0];
   }
   recover(){
     const camp=this.nearestCamp();this.units=this.units.filter(u=>u.team===0);this.activeEncounter=null;this.waveAt=null;this.travelGoal=null;this.goal=null;this.focus=null;this.pendingPower=null;this.focusOwner=null;this.pendingOwner=null;this.projectiles=[];this.effects=[];this.chargeTime=0;this.paths?.clear();
@@ -273,13 +298,14 @@ export class Campaign extends Battle {
   }
   nearbyCamp(){
     if(this.trial)return null;
-    const leader=this.leader();if(!leader||!isSafe(leader.x,leader.y))return null;
-    return [home,...CAMPS.filter(c=>this.state.camps.includes(c.id))].find(c=>distance(c,leader)<3.5)||null;
+    const leader=this.leader();if(!leader||!this.safe(leader.x,leader.y))return null;
+    return [this.world.HOME,...this.world.CAMPS].find(c=>distance(c,leader)<3.5)||null;
   }
   campStatus(id){
-    const stage=CAMPS.findIndex(c=>c.id===id);if(stage<0)return null;
-    const cleared=encounters().filter(e=>e.stage===stage&&e.kind!=='boss'&&this.state.completed.includes(e.id)).length;
-    return {cleared,required:0,ready:true,activated:this.state.camps.includes(id)};
+    const stage=this.world.CAMPS.findIndex(c=>c.id===id);if(stage<0)return null;
+    const required=this.world.CAMPS[stage].required||[];
+    const cleared=required.length?required.filter(id=>this.state.completed.includes(id)).length:this.world.ENCOUNTERS.filter(e=>e.stage===stage&&e.kind!=='boss'&&this.state.completed.includes(e.id)).length;
+    return {cleared,required:required.length,ready:required.every(id=>this.state.completed.includes(id)),activated:this.state.camps.includes(id)};
   }
   restAt(id){
     const camp=this.nearbyCamp();if(!camp||camp.id!==id)return false;
@@ -313,7 +339,7 @@ export class Campaign extends Battle {
       const factory=new Battle(this.state.squad,defaults(),{seed:this.seed,healthBonus:50,bounds:this.bounds});
       for(const template of factory.units.filter(u=>u.team===0&&u.index>=3)){const u={...template};this.configureAlly(u);u.hp=u.maxHp*(health[u.index]??1);this.units.push(u);}
     }
-    this.state.squadSize=size;this.placeSquad(this.nearbyCamp()||HOME);this.refreshPartners();return true;
+    this.state.squadSize=size;this.placeSquad(this.nearbyCamp()||this.world.HOME);this.refreshPartners();return true;
   }
   useUtility(){
     if(this.trial&&this.trial.phase!=='battle')return false;
@@ -338,35 +364,38 @@ export class Campaign extends Battle {
       if(u.weapon!==weapon){u.weapon=weapon;u.action=null;}
     }
     // Terrain also intercepts shared homing arrows before the next physics step.
-    this.projectiles=this.projectiles.filter(s=>{const t=this.units.find(u=>u.id===s.target&&u.hp>0);return t&&!isSafe(t.x,t.y)&&this.clearLine(s,t);});
+    this.projectiles=this.projectiles.filter(s=>{const t=this.units.find(u=>u.id===s.target&&u.hp>0);return t&&!this.safe(t.x,t.y)&&this.clearLine(s,t);});
     super.tick(dt);
     if(!this.alive(0).length){this.recover();return;}
     const leader=this.leader();
     if(this.travelGoal){
       // Different forest branches can give a slower companion a longer route.
       // Regroup during peaceful travel; never hold up an active combat retreat.
-      const regroup=!this.activeEncounter&&this.alive(0).some(u=>u!==leader&&distance(u,leader)>4.5);
+      const regroup=!this.activeEncounter&&this.alive(0).some(u=>u!==leader&&distance(u,leader)>(this.state.squadSize===5?6.5:4.5));
       for(const u of this.alive(0))if(u!==leader||!regroup)this.walk(u,u===leader?this.travelGoal:this.slotFor(u),dt);
       if(distance(leader,this.travelGoal)<.3){this.travelGoal=null;this.goal=null;}else this.goal=this.travelGoal;
     }else{
       const focused=this.units.find(u=>u.id===this.focus&&u.team===1&&u.hp>0);
       // Explicit enemy taps may seek around trees; automatic aggro still needs
       // sight. Never take a second movement step or move during an attack.
-      if(focused&&!leader.moving&&!leader.action&&distance(leader,focused)<12&&!isSafe(focused.x,focused.y)&&(distance(leader,focused)>WEAPONS[leader.weapon].range||!this.clearLine(leader,focused)))this.walk(leader,focused,dt);
+      if(focused&&!leader.moving&&!leader.action&&distance(leader,focused)<12&&!this.safe(focused.x,focused.y)&&(distance(leader,focused)>WEAPONS[leader.weapon].range||!this.clearLine(leader,focused)))this.walk(leader,focused,dt);
       for(const u of this.alive(0))if(u!==leader&&!this.pickTarget(u)&&distance(u,leader)>2)this.walk(u,this.slotFor(u),dt);
     }
     this.separateBodies();
-    if(this.activeEncounter&&(distance(leader,this.activeEncounter)>12||isSafe(leader.x,leader.y))){this.abandonEncounter();return;}
-    for(const camp of CAMPS)if(!this.state.camps.includes(camp.id)&&distance(leader,camp)<3&&isSafe(leader.x,leader.y)){this.state.camps.push(camp.id);this.emit('camp',{id:camp.id});}
+    if(this.activeEncounter&&(distance(leader,this.activeEncounter)>12||this.safe(leader.x,leader.y))){this.abandonEncounter();return;}
+    for(const camp of this.world.CAMPS)if(distance(leader,camp)<3&&this.safe(leader.x,leader.y)){
+      if(!this.state.refuges.includes(camp.id)){this.state.refuges.push(camp.id);this.emit('refuge',{id:camp.id});}
+      if(!this.state.camps.includes(camp.id)&&this.campStatus(camp.id).ready){this.state.camps.push(camp.id);this.emit('camp',{id:camp.id});}
+    }
     if(this.activeEncounter){
       if(!this.alive(1).length){
         if(this.wave>=integer(this.activeEncounter.waves,2,3,2))this.finishEncounter();
         else if(this.waveAt===null)this.waveAt=this.time+2.5;
-        else if(this.time>=this.waveAt&&distance(leader,this.activeEncounter)<8&&!isSafe(leader.x,leader.y)){this.waveAt=null;this.spawnWave();}
+        else if(this.time>=this.waveAt&&distance(leader,this.activeEncounter)<8&&!this.safe(leader.x,leader.y)){this.waveAt=null;this.spawnWave();}
       }
     }else{
-      const e=encounters().find(e=>!this.state.completed.includes(e.id)&&distance(leader,e)<5.5&&(e.kind!=='boss'||this.state.camps.length===CAMPS.length));
-      if(e&&!isSafe(leader.x,leader.y))this.beginEncounter(e);
+      const e=this.world.ENCOUNTERS.find(e=>!this.state.completed.includes(e.id)&&distance(leader,e)<5.5&&(e.kind!=='boss'||this.sealsReady));
+      if(e&&!this.safe(leader.x,leader.y))this.beginEncounter(e);
     }
   }
   serialize(){
