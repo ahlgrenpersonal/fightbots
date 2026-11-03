@@ -1,4 +1,4 @@
-import { actionPose, bowGrip, shieldOpening } from './geometry.js?v=roman24';
+import { actionPose, bowGrip, shieldOpening } from './geometry.js?v=roman25';
 const TAU = Math.PI * 2;
 const INK = '#314b50';
 const GOLD = '#d8ae54';
@@ -433,6 +433,12 @@ function robotBody(c, unit, colors, time, aim, bob, battle = false) {
     box(c,-30,-35,60,7,2,'#f0d68d',INK,2);
     oval(c,0,-48,4,5,unit.boss?'#aeece4':'#dd8b8e',INK,1.5);
     if(unit.boss){for(const s of [-1,1])for(let i=0;i<4;i++)oval(c,s*(15+i*4),-55+i*3,4,2.2,'#f6d779',INK,.7);}
+  } else if (unit.faction === 'pirate') {
+    path(c,[[-30,-30],[-27,-45],[-13,-54],[13,-54],[27,-45],[30,-30]],'#258b92',INK,3);
+    path(c,[[-28,-42],[-8,-39],[14,-43],[29,-36],[27,-29],[-28,-33]],'#f6d47c',INK,2);
+    path(c,[[26,-39],[43,-35],[33,-24],[28,-29],[41,-22],[29,-18],[23,-31]],'#e8a86d',INK,2);
+    oval(c,0,-48,4,4,'#f5e6bc',INK,1.5);
+    if(unit.boss){path(c,[[-32,-49],[-18,-67],[0,-59],[18,-67],[32,-49]],'#f5d077',INK,2.5);}
   } else if (unit.faction === 'punic') {
     path(c,[[-29,-30],[-28,-45],[-14,-58],[14,-58],[28,-45],[29,-30]],metal(c,-25,-58,25,-30,'#fff1c7','#c9a35c','#7c6b43'),INK,3);
     path(c,[[-21,-52],[-14,-65],[14,-65],[21,-52]],'#934c79',INK,2);

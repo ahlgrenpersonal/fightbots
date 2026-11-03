@@ -1,6 +1,7 @@
-import { WIDTH, HEIGHT, HOME, CAMPS, KING, ENCOUNTERS, BRIDGES, tileAt } from './world.js?v=roman24';
-import { drawBot } from '../art.js?v=roman24';
-import { normalizeSlot } from '../data.js?v=roman24';
+import {drawQuestAtlas} from './quest-art.js?v=roman25';
+import { WIDTH, HEIGHT, HOME, CAMPS, KING, ENCOUNTERS, BRIDGES, tileAt } from './world.js?v=roman25';
+import { drawBot } from '../art.js?v=roman25';
+import { normalizeSlot } from '../data.js?v=roman25';
 
 const TAU=Math.PI*2;
 const INK='#314b50';
@@ -346,6 +347,7 @@ export function drawAtlas(c,width,height,state={},player){
   for(let y=0;y<HEIGHT;y++)for(let x=0;x<WIDTH;x++)box(c,x,y,1.03,1.03,colors[tileAt(x,y)]);
   const completed=collection(state.completed),camps=collection(state.camps);
   for(const site of ENCOUNTERS){
+    if(state.returnQuest)continue;
     if(state.conquered)oval(c,site.x,site.y,.65,.65,site.kind==='boss'?'#f1db8e':'#51b2a1');
     else if(!completed.has(site.id))oval(c,site.x,site.y,.85,.85,site.kind==='boss'?'#963e66':'#b45f68');
   }
@@ -353,6 +355,7 @@ export function drawAtlas(c,width,height,state={},player){
     oval(c,site.x,site.y,1.75,1.75,INK);
     oval(c,site.x,site.y,1.25,1.25,site===HOME||camps.has(site.id)?'#f1db8e':'#e4e9dc');
   }
+  drawQuestAtlas(c,{quest:state.returnQuest,completed:state.completed,scale,top:0,bottom:HEIGHT});
   if(player&&Number.isFinite(player.x)&&Number.isFinite(player.y)){
     // Keep the equipped miniature legible independently of atlas zoom or aspect.
     c.save();c.translate(player.x,player.y);c.scale(1/scale,1/scale);

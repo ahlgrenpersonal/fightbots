@@ -1,22 +1,23 @@
-import {Campaign,UPGRADE_PRICES,WEST_GATE,SOUTH_DOCK,EAST_DOCK} from './campaign.js?v=roman24';
-import * as NORTH from './world.js?v=roman24';
-import * as northArt from './scenery.js?v=roman24';
-import * as westArt from './west-scenery.js?v=roman24';
-import * as southArt from './south-scenery.js?v=roman24';
-import * as eastArt from './east-scenery.js?v=roman24';
-import {drawBot,drawGear} from '../art.js?v=roman24';
-import {BUILD,WEAPONS,SHIELDS} from '../data.js?v=roman24';
-import {guardsAgainst,distance,MELEE_TOLERANCE} from '../engine.js?v=roman24';
-import {BOT_SIZE} from '../geometry.js?v=roman24';
-import {icon} from '../icons.js?v=roman24';
-import {drawCity,drawHeroWelcome,ARENA_ENTRY} from './city.js?v=roman24';
-import {RouteGesture,previewRoute,nextDestination,hintPoint,drawSignposts} from './navigation.js?v=roman24';
+import {Campaign,UPGRADE_PRICES,WEST_GATE,SOUTH_DOCK,EAST_DOCK} from './campaign.js?v=roman25';
+import * as NORTH from './world.js?v=roman25';
+import * as northArt from './scenery.js?v=roman25';
+import * as westArt from './west-scenery.js?v=roman25';
+import * as southArt from './south-scenery.js?v=roman25';
+import * as eastArt from './east-scenery.js?v=roman25';
+import {drawBot,drawGear} from '../art.js?v=roman25';
+import {BUILD,WEAPONS,SHIELDS} from '../data.js?v=roman25';
+import {guardsAgainst,distance,MELEE_TOLERANCE} from '../engine.js?v=roman25';
+import {BOT_SIZE} from '../geometry.js?v=roman25';
+import {icon} from '../icons.js?v=roman25';
+import {drawCity,drawHeroWelcome,ARENA_ENTRY} from './city.js?v=roman25';
+import {RouteGesture,previewRoute,nextDestination,hintPoint,drawSignposts} from './navigation.js?v=roman25';
+import {drawQuestSites,drawQuestBadge,drawQuestWarning} from './quest-art.js?v=roman25';
 
 const $=id=>document.getElementById(id),KEY='roman-bots-north-v1',PREFS='roman-bots-north-preferences-v1';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let saved=null,prefs={sound:true};
 try{saved=JSON.parse(localStorage.getItem(KEY));const p=JSON.parse(localStorage.getItem(PREFS));if(p)prefs.sound=p.sound!==false;}catch{}
-let last=performance.now(),saveAt=0,uiAt=0,toastUntil=0,slot=0,panelKind='',nearby=null,audioContext,musicUnlocked=false,saveSuppressed=false,welcomeUntil=0;
+let last=performance.now(),saveAt=0,uiAt=0,toastUntil=0,slot=0,panelKind='',nearby=null,audioContext,musicUnlocked=false,saveSuppressed=false,welcomeUntil=0,knownQuest=null;
 let camera={x:NORTH.HOME.x,y:NORTH.HOME.y},layout={scale:30,ox:0,oy:0,width:1,height:1},mapZoom=1;
 const game=new Campaign(saved,{onEvent:handleEvent,seed:Date.now()>>>0});
 let {HOME,CAMPS,KING,ENCOUNTERS,WIDTH,HEIGHT}=game.world;
@@ -28,7 +29,7 @@ function guide(target=nextDestination(game)){hintTarget=target;hintUntil=game.ti
 
 function save(){if(saveSuppressed)return false;try{localStorage.setItem(KEY,JSON.stringify(game.serialize()));return true;}catch{toast('Save unavailable. Keep this window open.');return false;}}
 function toast(message){
-  const symbol=/won|peace|secured|general|companion/i.test(message)?'shield':/repair|refill|healthy|refuge|camp/i.test(message)?'heart':/recharg|power/i.test(message)?'bolt':/awaits|welcome|highlands/i.test(message)?'compass':'info';
+  const symbol=/won|peace|secured|general|companion|complete/i.test(message)?'shield':/repair|refill|healthy|refuge|camp/i.test(message)?'heart':/recharg|power/i.test(message)?'bolt':/awaits|welcome|highlands/i.test(message)?'compass':'info';
   const warning=/save unavailable|could not|cancelled/i.test(message);
   $('toast').classList.toggle('warning',warning);if(warning)$('toast').textContent=message;else $('toast').innerHTML=icon(symbol);$('toast').setAttribute('aria-label',message);$('toast').hidden=false;toastUntil=performance.now()+(warning?6000:1800);
 }
@@ -49,7 +50,7 @@ function handleEvent(e){
   if(e.type==='camp'){toast('A new refuge!');tone(420,740,.3);saveAt=0;}
   if(e.type==='rest'){toast('Squad repaired. Packs refilled.');tone(400,800,.4);saveAt=0;for(const u of game.units.filter(u=>u.team===0))game.effects.push({type:'repair',x:u.x,y:u.y,life:2,max:2});}
   if(e.type==='recovered'){toast('Safe at camp. Your equipment is still yours.');saveAt=0;}
-  if(e.type==='complete'){toast('Region complete');tone(500,1100,.6);saveAt=0;const u=game.leader();if(u)for(let i=0;i<16;i++)game.effects.push({type:'coin',x:u.x+Math.sin(i*2.4)*2,y:u.y+Math.cos(i*2.4)*1.5,life:2.5,max:2.5});}
+  if(e.type==='complete'||e.type==='questComplete'){toast('Region complete');tone(500,1100,.6);saveAt=0;const u=game.leader();if(u)for(let i=0;i<16;i++)game.effects.push({type:'coin',x:u.x+Math.sin(i*2.4)*2,y:u.y+Math.cos(i*2.4)*1.5,life:2.5,max:2.5});queueMicrotask(()=>guide());}
   if(e.type==='hit')tone(e.weapon==='hammer'?100:250,65,.06);
   if(e.type==='block')tone(880,400,.04);
 }
@@ -76,7 +77,7 @@ function drawWestGate(c,t){
   c.restore();
 }
 function drawArrivalMarkers(c,t){
-  for(const site of game.interactionSites().filter(s=>s.action==='gate'||s.action==='ship')){
+  for(const site of game.interactionSites().filter(s=>(s.action==='gate'||s.action==='ship')&&!(game.harborBattle&&s.id==='east-dock'))){
     if(Math.abs(site.x-camera.x)>10||Math.abs(site.y-camera.y)>15)continue;
     c.save();c.translate(site.x,site.y);c.lineWidth=.07;c.strokeStyle='#244c55';c.fillStyle='#ffe28b';
     c.beginPath();c.ellipse(0,.1,.57,.46,0,0,Math.PI*2);c.fill();c.stroke();
@@ -96,6 +97,9 @@ function render(t){
     c.save();c.translate(ox,oy);c.scale(scale,scale);
     drawLandscape(c,{bounds:{left:camera.x-halfW-3,top:camera.y-halfH-4,right:camera.x+halfW+3,bottom:camera.y+halfH+4},time:reduced?0:t,state:{...game.state,conquered:game.regionComplete}});
     if(game.state.region==='north'&&camera.y+halfH>128){drawCity(c,reduced?0:t,game.state);drawWestGate(c,t);southArt.drawRomanDock(c,reduced?0:t,game.prologueComplete);eastArt.drawRomanDock(c,reduced?0:t,game.prologueComplete);}
+    if(game.localQuest)drawQuestSites(c,{quest:game.localQuest,completed:game.state.completed,bounds:{left:camera.x-halfW-3,top:camera.y-halfH-4,right:camera.x+halfW+3,bottom:camera.y+halfH+4},time:reduced?0:t});
+    if(game.state.region==='north'&&game.earlyGreece&&camera.y+halfH>128){c.save();c.translate(44,131.3);c.scale(1/scale,1/scale);drawQuestWarning(c,0,-24,reduced?0:t);c.restore();}
+    if(game.harborBattle){c.save();c.strokeStyle='#f5d77c';c.lineWidth=.1;c.setLineDash([.24,.18]);c.beginPath();c.moveTo(38,132);c.lineTo(38,139.5);c.lineTo(47.8,139.5);c.stroke();c.restore();}
     if(!game.trial)drawArrivalMarkers(c,t);
     if(!game.trial)drawSignposts(c,game.world,{left:camera.x-halfW,top:camera.y-halfH,right:camera.x+halfW,bottom:camera.y+halfH});
     if(preview.length){c.save();c.strokeStyle='#214c50bb';c.lineWidth=.16;c.beginPath();preview.forEach((p,i)=>i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y));c.stroke();c.setLineDash([.08,.27]);c.strokeStyle='#ffeb9a';c.lineWidth=.09;c.stroke();c.setLineDash([]);const end=preview.at(-1);c.fillStyle='#ffe59b';c.strokeStyle='#244e52';c.lineWidth=.06;c.beginPath();c.arc(end.x,end.y,.22,0,Math.PI*2);c.fill();c.stroke();c.restore();}
@@ -107,7 +111,7 @@ function render(t){
       const active=u===leader,target=u.action&&game.units.find(v=>v.id===u.action.target),strikeTarget=u.action?.contact||(target&&distance(u,target)<=WEAPONS[u.weapon].range+MELEE_TOLERANCE?{...target,guarding:guardsAgainst(target,u)}:null);
       if(active){c.fillStyle='#70efba55';c.strokeStyle='#ffe17d';c.lineWidth=.075;c.beginPath();c.ellipse(u.x,u.y+.32,.63,.29,0,0,Math.PI*2);c.fill();c.stroke();}
       if(u.team===0&&u.hp>0&&game.chargeTime>0){c.strokeStyle='#ffdf8588';c.lineWidth=.08;c.beginPath();c.ellipse(u.x,u.y+.22,.68,.28,0,t*2,t*2+Math.PI*1.5);c.stroke();for(let i=0;i<3;i++){const a=t*3+i*Math.PI*2/3;c.fillStyle='#fff2b4';c.fillRect(u.x+Math.cos(a)*.5-.035,u.y-.4+Math.sin(a)*.25,.07,.13);}}
-      drawBot(c,{...u,strikeTarget,faction:u.team===1&&!game.trial?(game.eastern?'greek':game.southern?'punic':game.western?'highland':'forest'):undefined,weaponTier:u.team===0?game.state.weaponTier:0,armorTier:u.team===0?game.state.armorTier:0},reduced?0:t,{size:BOT_SIZE*(u.boss?1.5:u.champion?1.2:1),promoted:active});
+      drawBot(c,{...u,strikeTarget,faction:u.faction||(u.team===1&&!game.trial?(game.eastern?'greek':game.southern?'punic':game.western?'highland':'forest'):undefined),weaponTier:u.team===0?game.state.weaponTier:0,armorTier:u.team===0?game.state.armorTier:0},reduced?0:t,{size:BOT_SIZE*(u.boss?1.5:u.champion?1.2:1),promoted:active});
       if(u.hp>0){const ratio=u.hp/u.maxHp,bw=u.boss?1.2:.75,by=u.y-(u.boss?1.48:1.04);c.fillStyle='#183d3c';c.fillRect(u.x-bw/2,by,bw,.095);c.fillStyle=u.team===1?'#f3836e':ratio<.2?'#fa8b63':ratio<.5?'#ffd36a':'#8fe0a5';c.fillRect(u.x-bw/2,by,bw*ratio,.095);}
     }
     for(const shot of game.projectiles){const target=game.units.find(u=>u.id===shot.target),owner=game.units.find(u=>u.id===shot.owner);if(!target)continue;const a=Math.atan2(target.y-shot.y,target.x-shot.x),fire=owner?.team===0&&game.state.weaponTier>=3;c.save();c.translate(shot.x,shot.y);c.rotate(a);if(fire){c.strokeStyle='#ff9a4366';c.lineWidth=.18;c.beginPath();c.moveTo(-.65,0);c.lineTo(0,0);c.stroke();for(let i=0;i<3;i++){c.fillStyle=i%2?'#ffe68c':'#ffb94c';c.fillRect(-.18-i*.18,-.04+Math.sin(t*20+i)*.05,.09,.06);}}c.strokeStyle=fire?'#ffd973':shot.power?'#fff3ad':'#e6bb72';c.lineWidth=shot.power||fire?.085:.055;c.beginPath();c.moveTo(-.5,0);c.lineTo(0,0);c.stroke();c.fillStyle='#fff4d0';c.beginPath();c.moveTo(.1,0);c.lineTo(-.1,-.08);c.lineTo(-.1,.08);c.fill();c.restore();}
@@ -138,6 +142,9 @@ function updateHUD(){
   $('campSeals').classList.toggle('trial-progress',game.state.prologueRound<15);
   $('campSeals').hidden=!!game.voyage;
   $('campSeals').innerHTML=game.state.prologueRound<15?Array.from({length:15},(_,i)=>`<i class="${i<game.state.prologueRound?'won':''}"></i>`).join(''):CAMPS.map(p=>`<span class="${game.state.camps.includes(p.id)?'found':''}">${icon('tent')}</span>`).join('');
+  const quest=game.activeQuest;$('campSeals').classList.toggle('quest-progress',!!quest&&game.regionComplete);
+  if(quest&&game.regionComplete){$('campSeals').innerHTML='<canvas id="questMark" width="64" height="64" aria-label="Return mission"></canvas><div class="quest-dots">'+quest.encounters.map(e=>`<i class="${game.state.completed.includes(e.id)?'won':''}"></i>`).join('')+'</div>';frame($('questMark'),(c,w,h)=>drawQuestBadge(c,w/2,h/2,quest.kind,1,game.time));}
+  if(quest?.id!==knownQuest){knownQuest=quest?.id||null;if(quest&&game.regionComplete)guide();}
 }
 
 function openPanel(title,kind,body){gesture.cancel();preview=[];panelKind=kind;game.paused=true;$('panel').dataset.kind=kind;$('panelTitle').setAttribute('aria-label',title);if(kind==='settings'||kind==='confirm')$('panelTitle').textContent=title;else $('panelTitle').innerHTML=icon(kind==='workshop'||kind==='forge'?'shield':kind==='atlas'||kind==='cityMap'?'map':kind==='victory'?'shield':'pause');$('panelBody').innerHTML=body;if(!$('panel').open)$('panel').showModal();updateHUD();syncSound();drawPanel();}
@@ -165,7 +172,7 @@ function drawPanel(){
   if(panelKind==='atlas'&&$('mapCanvas')){
     const canvas=$('mapCanvas');
     if(regionArt().atlasAspect)canvas.style.height=clamp(canvas.getBoundingClientRect().width/regionArt().atlasAspect({...game.state,conquered:game.regionComplete,atlasOverview:mapZoom===0},game.leader())+48,160,440)+'px';
-    frame(canvas,(c,w,h)=>{drawAtlas(c,w,h,{...game.state,conquered:game.regionComplete,atlasOverview:mapZoom===0},game.leader());});
+    frame(canvas,(c,w,h)=>{drawAtlas(c,w,h,{...game.state,conquered:game.regionComplete,atlasOverview:mapZoom===0,returnQuest:game.localQuest},game.leader());});
   }
 }
 function atlas(showOverview=false){
@@ -178,7 +185,7 @@ function atlas(showOverview=false){
   const modeLabel=mapZoom?'Show explored coast':'Show nearby district';
   openPanel(title,'atlas',(game.eastern?`<div class="atlas-tools"><button class="square" data-action="atlasView" aria-label="${modeLabel}" title="${modeLabel}">`+icon(mapZoom?'map':'compass')+'</button></div>':'')+'<canvas id="mapCanvas" class="atlas" width="800" height="1100" aria-label="Map of the journey"></canvas><div class="seal-row" aria-label="Camp progress">'+shown.map(p=>{const status=game.campStatus(p.id);return `<span data-camp-progress="${p.id}">${icon('tent')}${game.western||game.southern||game.eastern?`<small>${status.cleared} / ${status.required}</small>`:''}</span>`;}).join('')+'</div>');
 }
-function settings(){openPanel('Adventure settings','settings',`<label class="setting">Squad size<select id="squadSize"><option value="3" ${game.state.squadSize===3?'selected':''}>Captain + 2 companions</option><option value="5" ${game.state.squadSize===5?'selected':''}>Captain + 4 companions</option></select></label><p>Changing your squad takes effect at home. The courtyard game is unchanged.</p><button class="wide quiet" data-action="courtyard">${icon('sword')} Courtyard battle</button><button class="wide quiet" data-action="restart">${icon('replay')} <span class="red">Start this adventure again</span></button>${localStorage.getItem(KEY+'-backup')?'<button class="wide quiet" data-action="restore">Restore previous adventure</button>':''}<p class="build">roman24 · Northern adventure</p>`);}
+function settings(){openPanel('Adventure settings','settings',`<label class="setting">Squad size<select id="squadSize"><option value="3" ${game.state.squadSize===3?'selected':''}>Captain + 2 companions</option><option value="5" ${game.state.squadSize===5?'selected':''}>Captain + 4 companions</option></select></label><p>Changing your squad takes effect at home. The courtyard game is unchanged.</p><button class="wide quiet" data-action="courtyard">${icon('sword')} Courtyard battle</button><button class="wide quiet" data-action="restart">${icon('replay')} <span class="red">Start this adventure again</span></button>${localStorage.getItem(KEY+'-backup')?'<button class="wide quiet" data-action="restore">Restore previous adventure</button>':''}<p class="build">roman25 · Northern adventure</p>`);}
 function pause(){openPanel('Take a breather','pause',`<button class="wide" data-action="close" aria-label="Keep playing">${icon('play')}</button><button class="wide quiet" data-action="atlas" aria-label="Map">${icon('map')}</button><button class="wide quiet" data-action="settings" aria-label="Advanced settings">${icon('edit')}</button>`);}
 
 $('panelBody').addEventListener('click',e=>{
@@ -193,7 +200,7 @@ $('panelBody').addEventListener('click',e=>{
   if(b.dataset.action==='atlas')atlas();
   if(b.dataset.action==='atlasView'&&game.eastern){atlas(mapZoom!==0);$('panelBody').querySelector('[data-action="atlasView"]')?.focus?.();}
   if(b.dataset.action==='settings')settings();
-  if(b.dataset.action==='courtyard'){save();location.href='../index.html?v=roman24';}
+  if(b.dataset.action==='courtyard'){save();location.href='../index.html?v=roman25';}
   if(b.dataset.action==='restart')openPanel('Start again?','confirm','<p>This starts the northern adventure from the beginning. Your current adventure will be kept as one recovery save.</p><button class="wide quiet" data-action="close">Keep playing</button><button class="wide" data-action="confirmRestart"><span class="red">Save this journey and restart</span></button>');
   if(b.dataset.action==='confirmRestart'){try{localStorage.setItem(KEY+'-backup',JSON.stringify(game.serialize()));saveSuppressed=true;localStorage.removeItem(KEY);location.reload();}catch{saveSuppressed=false;toast('Could not save a recovery copy. Restart cancelled.');}}
   if(b.dataset.action==='restore')openPanel('Restore the previous journey?','confirm','<p>This replaces your current northern adventure with the recovery save.</p><button class="wide quiet" data-action="close">Keep playing</button><button class="wide" data-action="confirmRestore">Restore previous adventure</button>');

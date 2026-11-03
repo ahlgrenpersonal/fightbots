@@ -1,6 +1,7 @@
-import * as world from './south-world.js?v=roman24';
-import { drawBot } from '../art.js?v=roman24';
-import { normalizeSlot } from '../data.js?v=roman24';
+import {drawQuestAtlas} from './quest-art.js?v=roman25';
+import * as world from './south-world.js?v=roman25';
+import { drawBot } from '../art.js?v=roman25';
+import { normalizeSlot } from '../data.js?v=roman25';
 
 const { WIDTH, HEIGHT, HOME, KING, CAMPS, ENCOUNTERS, LANDSCAPES, LANDMARKS, tileAt, passable } = world;
 const TAU = Math.PI * 2;
@@ -628,7 +629,7 @@ export function drawAtlas(c, w, h, state = {}, player) {
   }
   const done = sets(state.completed), camps = sets(state.camps), required = new Set(CAMPS.flatMap(s => s.required ?? []));
   for (const site of ENCOUNTERS) {
-    if (!shownAt(site.y) || site.kind === 'boss') continue;
+    if (state.returnQuest || !shownAt(site.y) || site.kind === 'boss') continue;
     const cleared = done.has(site.id) || state.conquered;
     oval(c, site.x, site.y, (required.has(site.id) ? 3 : 2) / scale, (required.has(site.id) ? 3 : 2) / scale, cleared ? GOLD : '#734e76');
     if (!cleared && required.has(site.id)) oval(c, site.x, site.y, 1.2 / scale, 1.2 / scale, '#f5dbde');
@@ -648,6 +649,7 @@ export function drawAtlas(c, w, h, state = {}, player) {
   }
   const next = objective(state);
   if (next && shownAt(next.y)) beacon(c, next.x, next.y, 0, 5 / scale);
+  drawQuestAtlas(c,{quest:state.returnQuest,completed:state.completed,scale,top:view.top,bottom:view.bottom});
   if (Number.isFinite(player?.x) && Number.isFinite(player?.y) && shownAt(player.y)) {
     c.save(); c.translate(player.x, player.y); c.scale(1 / scale, 1 / scale);
     oval(c, 0, 0, 17, 17, '#234d54'); oval(c, 0, 0, 15, 15, GOLD); oval(c, 0, 0, 12, 12, '#edf5e1');
