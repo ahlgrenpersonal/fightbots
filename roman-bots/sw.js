@@ -1,4 +1,4 @@
-const CACHE='roman-bots-roman14',ASSETS=['./','./index.html','./styles.css?v=roman14','./app.js?v=roman14','./data.js?v=roman14','./engine.js?v=roman14','./art.js?v=roman14','./geometry.js?v=roman14','./icons.js?v=roman14','./manifest.webmanifest','./version.json','./refresh.html','./assets/icon-192.png','./assets/icon-512.png','./assets/courtyard-theme.mp3'];
+const CACHE='roman-bots-roman15',ASSETS=['./','./index.html','./styles.css?v=roman15','./app.js?v=roman15','./data.js?v=roman15','./engine.js?v=roman15','./art.js?v=roman15','./geometry.js?v=roman15','./icons.js?v=roman15','./manifest.webmanifest','./version.json','./refresh.html','./assets/icon-192.png','./assets/icon-512.png','./assets/courtyard-theme.mp3'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('roman-bots-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{

@@ -1,4 +1,4 @@
-import { actionPose, bowGrip, shieldOpening } from './geometry.js?v=roman14';
+import { actionPose, bowGrip, shieldOpening } from './geometry.js?v=roman15';
 const TAU = Math.PI * 2;
 const INK = '#314b50';
 const GOLD = '#d8ae54';
@@ -265,7 +265,9 @@ function weaponArt(c, id, colors, draw = 0, released = false, extension = 0) {
     c.beginPath(); c.moveTo(8, -32); c.lineTo(5 - draw * 23, 0); c.lineTo(8, 32);
     c.strokeStyle = '#f2ebc8'; c.lineWidth = 1.5; c.stroke();
     for (const y of [-29, 29]) oval(c, 11, y, 3, 3, GOLD, INK, 1);
-    box(c, 23, -7, 7, 14, 2, colors.dark, INK, 1.5);
+    box(c, 23, -7, 7, 14, 2, '#9a592d', INK, 1.5);
+    for (const y of [-6, 4]) box(c, 23, y, 7, 2, .6, GOLD);
+    line(c, 25, -3, 25, 3, '#e4b36c', 1.3);
     if (!released) {
       const rear = 3 - draw * 23;
       line(c, rear - 12, 0, rear + 43, 0, INK, 3.5);
@@ -558,7 +560,7 @@ export function drawBot(ctx, unit, time = 0, { size = 1, preview = false, promot
         oval(c, mix(elbowX, supportX, .65), mix(elbowY, supportY, .65), 6, 5, colors.main, INK, 1.8);
       } else {
         line(c, -side * (shoulder - 1), 9 + bob, supportX, supportY, INK, preview ? 9 : 7);
-        line(c, -side * (shoulder - 1), 8 + bob, supportX, supportY - 1, '#a8bfc1', preview ? 5 : 4);
+        line(c, -side * (shoulder - 1), 8 + bob, supportX, supportY - 1, colors.main, preview ? 5 : 4);
         oval(c, supportX, supportY, 5, 5, GOLD, INK, 1.6);
       }
     }

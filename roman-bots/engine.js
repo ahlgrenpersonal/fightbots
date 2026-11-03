@@ -1,5 +1,5 @@
-import {WEAPONS,SHIELDS,normalizeSquad} from './data.js?v=roman14';
-import {bowReleasePoint,shieldOpening} from './geometry.js?v=roman14';
+import {WEAPONS,SHIELDS,normalizeSquad} from './data.js?v=roman15';
+import {bowReleasePoint,shieldOpening} from './geometry.js?v=roman15';
 
 export const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 export const BODY_SPACING=1.4;
