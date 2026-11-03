@@ -1,10 +1,10 @@
-const CACHE='roman-bots-roman27',ASSETS=['./','./index.html','./styles.css?v=roman27','./app.js?v=roman27','./data.js?v=roman27','./engine.js?v=roman27','./art.js?v=roman27','./geometry.js?v=roman27','./icons.js?v=roman27','./manifest.webmanifest','./version.json','./refresh.html','./assets/icon-192.png','./assets/icon-512.png','./assets/courtyard-theme.mp3','./north/index.html','./north/north.css?v=roman27','./north/north.js?v=roman27','./north/campaign.js?v=roman27','./north/world.js?v=roman27','./north/scenery.js?v=roman27'];
-ASSETS.push('./north/prologue.js?v=roman27','./north/city.js?v=roman27');
-ASSETS.push('./north/west-world.js?v=roman27','./north/west-scenery.js?v=roman27');
-ASSETS.push('./north/navigation.js?v=roman27');
-ASSETS.push('./north/south-world.js?v=roman27','./north/south-scenery.js?v=roman27');
-ASSETS.push('./north/east-world.js?v=roman27','./north/east-scenery.js?v=roman27');
-ASSETS.push('./north/return-quests.js?v=roman27','./north/quest-art.js?v=roman27');
+const CACHE='roman-bots-roman28',ASSETS=['./','./index.html','./styles.css?v=roman28','./app.js?v=roman28','./data.js?v=roman28','./engine.js?v=roman28','./art.js?v=roman28','./geometry.js?v=roman28','./icons.js?v=roman28','./manifest.webmanifest','./version.json','./refresh.html','./assets/icon-192.png','./assets/icon-512.png','./assets/courtyard-theme.mp3','./north/index.html','./north/north.css?v=roman28','./north/north.js?v=roman28','./north/campaign.js?v=roman28','./north/world.js?v=roman28','./north/scenery.js?v=roman28'];
+ASSETS.push('./north/prologue.js?v=roman28','./north/city.js?v=roman28');
+ASSETS.push('./north/west-world.js?v=roman28','./north/west-scenery.js?v=roman28');
+ASSETS.push('./north/navigation.js?v=roman28');
+ASSETS.push('./north/south-world.js?v=roman28','./north/south-scenery.js?v=roman28');
+ASSETS.push('./north/east-world.js?v=roman28','./north/east-scenery.js?v=roman28');
+ASSETS.push('./north/return-quests.js?v=roman28','./north/quest-art.js?v=roman28');
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('roman-bots-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{
@@ -18,12 +18,15 @@ self.addEventListener('fetch',event=>{
     const shell=url.pathname===scope.pathname||url.pathname===new URL('./index.html',scope).pathname;
     const north=url.pathname===new URL('./north/',scope).pathname||url.pathname===new URL('./north/index.html',scope).pathname;
     const fallback=shell?'./index.html':north?'./north/index.html':event.request;
-    event.respondWith(fetch(event.request).then(async res=>{if(res.ok){const cache=await caches.open(CACHE);await cache.put(fallback,res.clone());}return res;}).catch(()=>caches.match(fallback)));return;
+    event.respondWith(fetch(event.request).then(async res=>{await remember(fallback,res);return res;}).catch(()=>cachedResponse(fallback)));return;
   }
-  event.respondWith(caches.match(event.request).then(cached=>cached||fetch(event.request).then(async res=>{if(res.ok){const cache=await caches.open(CACHE);await cache.put(event.request,res.clone());}return res;})));
+  event.respondWith(cachedResponse(event.request).then(cached=>cached||fetch(event.request).then(async res=>{await remember(event.request,res);return res;})));
 });
+// Cache Storage is optional while online, including when a device is out of space.
+async function cachedResponse(request){try{return await caches.match(request);}catch{return undefined;}}
+async function remember(request,response){if(response.ok)try{const cache=await caches.open(CACHE);await cache.put(request,response.clone());}catch{}}
 async function audioRange(request){
-  const cached=await caches.match(request.url);if(!cached)return fetch(request);
+  const cached=await cachedResponse(request.url);if(!cached)return fetch(request);
   const bytes=await cached.arrayBuffer(),length=bytes.byteLength;
   const match=/^bytes=(\d*)-(\d*)$/.exec(request.headers.get('range'));
   if(!match||(!match[1]&&!match[2]))return fetch(request);

@@ -1,11 +1,11 @@
-import {Battle,distance,BODY_SPACING} from '../engine.js?v=roman27';
-import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman27';
-import * as NORTH from './world.js?v=roman27';
-import * as WEST from './west-world.js?v=roman27';
-import * as SOUTH from './south-world.js?v=roman27';
-import * as EAST from './east-world.js?v=roman27';
-import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman27';
-import {RETURN_QUESTS,INVASION,activeReturnQuest,questFinished,inHarbor,HARBOR_FRONT} from './return-quests.js?v=roman27';
+import {Battle,distance,BODY_SPACING} from '../engine.js?v=roman28';
+import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman28';
+import * as NORTH from './world.js?v=roman28';
+import * as WEST from './west-world.js?v=roman28';
+import * as SOUTH from './south-world.js?v=roman28';
+import * as EAST from './east-world.js?v=roman28';
+import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman28';
+import {RETURN_QUESTS,INVASION,activeReturnQuest,questFinished,inHarbor,HARBOR_FRONT} from './return-quests.js?v=roman28';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const number=(n,a,b,f=a)=>Number.isFinite(n)?clamp(n,a,b):f;
@@ -507,6 +507,9 @@ export class Campaign extends Battle {
     }
     // Terrain also intercepts shared homing arrows before the next physics step.
     this.projectiles=this.projectiles.filter(s=>{const t=this.units.find(u=>u.id===s.target&&u.hp>0);return t&&!this.safe(t.x,t.y)&&this.clearLine(s,t);});
+    // Recovery must use this battlefield even if the whole squad falls before
+    // the next autosave can capture a living leader.
+    const beforeCombat=this.leader();if(beforeCombat)this.state.position={x:beforeCombat.x,y:beforeCombat.y};
     super.tick(dt);
     if(!this.alive(0).length){this.recover();return;}
     const leader=this.leader();
@@ -547,7 +550,7 @@ export class Campaign extends Battle {
       if(!this.alive(1).length){
         if(this.wave>=integer(this.activeEncounter.waves,2,this.activeEncounter.quest?6:3,2))this.finishEncounter();
         else if(this.waveAt===null)this.waveAt=this.time+2.5;
-        else if(this.time>=this.waveAt&&(this.harborBattle?inHarbor(leader):distance(leader,this.activeEncounter)<(this.activeEncounter.quest?12:8))&&!this.safe(leader.x,leader.y)){this.waveAt=null;this.spawnWave();}
+        else if(this.time>=this.waveAt&&(this.harborBattle?inHarbor(leader):distance(leader,this.activeEncounter)<=12)&&!this.safe(leader.x,leader.y)){this.waveAt=null;this.spawnWave();}
       }
     }else{
       const e=this.encounters.find(e=>!this.state.completed.includes(e.id)&&distance(leader,e)<5.5&&(e.quest?(e.kind!=='boss'&&!e.ordered||this.localQuest.encounters.slice(0,this.localQuest.encounters.indexOf(e)).every(p=>this.state.completed.includes(p.id))):e.kind!=='boss'||this.sealsReady));

@@ -1,27 +1,27 @@
-import {Campaign,UPGRADE_PRICES,WEST_GATE,SOUTH_DOCK,EAST_DOCK} from './campaign.js?v=roman27';
-import * as NORTH from './world.js?v=roman27';
-import * as northArt from './scenery.js?v=roman27';
-import * as westArt from './west-scenery.js?v=roman27';
-import * as southArt from './south-scenery.js?v=roman27';
-import * as eastArt from './east-scenery.js?v=roman27';
-import {drawBot,drawGear} from '../art.js?v=roman27';
-import {BUILD,WEAPONS,SHIELDS} from '../data.js?v=roman27';
-import {guardsAgainst,distance,MELEE_TOLERANCE} from '../engine.js?v=roman27';
-import {botSize} from '../geometry.js?v=roman27';
-import {icon} from '../icons.js?v=roman27';
-import {drawCity,drawHeroWelcome,ATLAS_SIGN,drawWorldBoard} from './city.js?v=roman27';
-import {RouteGesture,previewRoute,nextDestination,hintPoint,drawSignposts} from './navigation.js?v=roman27';
-import {drawQuestSites,drawQuestBadge,drawQuestWarning} from './quest-art.js?v=roman27';
-import {HARBOR_FRONT} from './return-quests.js?v=roman27';
+import {Campaign,UPGRADE_PRICES,WEST_GATE,SOUTH_DOCK,EAST_DOCK} from './campaign.js?v=roman28';
+import * as NORTH from './world.js?v=roman28';
+import * as northArt from './scenery.js?v=roman28';
+import * as westArt from './west-scenery.js?v=roman28';
+import * as southArt from './south-scenery.js?v=roman28';
+import * as eastArt from './east-scenery.js?v=roman28';
+import {drawBot,drawGear} from '../art.js?v=roman28';
+import {BUILD,WEAPONS,SHIELDS} from '../data.js?v=roman28';
+import {guardsAgainst,distance,MELEE_TOLERANCE} from '../engine.js?v=roman28';
+import {botSize} from '../geometry.js?v=roman28';
+import {icon} from '../icons.js?v=roman28';
+import {drawCity,drawHeroWelcome,ATLAS_SIGN,drawWorldBoard} from './city.js?v=roman28';
+import {RouteGesture,previewRoute,nextDestination,hintPoint,drawSignposts} from './navigation.js?v=roman28';
+import {drawQuestSites,drawQuestBadge,drawQuestWarning} from './quest-art.js?v=roman28';
+import {HARBOR_FRONT} from './return-quests.js?v=roman28';
 
-const $=id=>document.getElementById(id),KEY='roman-bots-north-v1',PREFS='roman-bots-north-preferences-v1';
+const $=id=>document.getElementById(id),KEY='roman-bots-north-v1',PREFS='roman-bots-north-preferences-v1',SAVE_WARNING='Save unavailable. Keep this window open.';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 function validSave(s){
   return !!s&&typeof s==='object'&&!Array.isArray(s)&&Number.isInteger(s.version)&&s.version>=1&&s.version<=4&&Number.isFinite(s.position?.x)&&Number.isFinite(s.position?.y)&&(s.completed===undefined||Array.isArray(s.completed))&&(s.camps===undefined||Array.isArray(s.camps))&&
     (s.squad===undefined||Array.isArray(s.squad)&&s.squad.length>=3&&s.squad.length<=5&&s.squad.every(u=>u&&Object.hasOwn(WEAPONS,u.weapon)&&Object.hasOwn(SHIELDS,u.shield)))&&
     (s.health===undefined||Array.isArray(s.health)&&s.health.every(n=>Number.isFinite(n)&&n>=0&&n<=1));
 }
-let saved=null,prefs={sound:true},expectedSaveRaw=null,loadIssue=false,saveConflict=false;
+let saved=null,prefs={sound:true},expectedSaveRaw=null,loadIssue=false,saveConflict=false,saveWarning=false;
 try{expectedSaveRaw=localStorage.getItem(KEY);if(expectedSaveRaw!==null){saved=JSON.parse(expectedSaveRaw);if(!validSave(saved))throw new Error('Invalid adventure');}}catch{saved=null;loadIssue=true;}
 try{const p=JSON.parse(localStorage.getItem(PREFS));if(p)prefs.sound=p.sound!==false;}catch{}
 let last=performance.now(),saveAt=0,uiAt=0,toastUntil=0,slot=0,panelKind='',nearby=null,audioContext,musicUnlocked=false,saveSuppressed=loadIssue,welcomeUntil=0,knownQuest=null;
@@ -42,7 +42,9 @@ function currentSave(){
   openPanel('Newer adventure found','saveConflict','<p>Another window changed this adventure. Load that saved journey to continue safely.</p><button class="wide" data-action="reloadLatest">Load latest adventure</button>');
   return false;
 }
-function save(){if(saveSuppressed)return false;try{if(!currentSave())return false;const raw=JSON.stringify(game.serialize());localStorage.setItem(KEY,raw);expectedSaveRaw=raw;return true;}catch{toast('Save unavailable. Keep this window open.');return false;}}
+function warnSave(){saveWarning=true;toast(SAVE_WARNING);}
+function checkCurrentSave(){try{return currentSave();}catch{warnSave();return false;}}
+function save(){if(saveSuppressed)return false;try{if(!currentSave())return false;const raw=JSON.stringify(game.serialize());localStorage.setItem(KEY,raw);expectedSaveRaw=raw;saveWarning=false;if($('panelMessage').textContent===SAVE_WARNING)$('panelMessage').hidden=true;if($('toast').textContent===SAVE_WARNING)$('toast').hidden=true;return true;}catch{warnSave();return false;}}
 function toast(message){
   const symbol=/won|peace|secured|general|companion|complete/i.test(message)?'shield':/repair|refill|healthy|refuge|camp/i.test(message)?'heart':/recharg|power/i.test(message)?'bolt':/awaits|welcome|highlands/i.test(message)?'compass':'info';
   const warning=/save unavailable|could not|cancelled/i.test(message);
@@ -78,9 +80,9 @@ function tone(start,end,duration){
 function context(){return audioContext||(audioContext=new(window.AudioContext||window.webkitAudioContext)());}
 function syncSound(){const music=$('music');music.volume=.22;if(!prefs.sound||document.hidden||$('panel').open){music.pause();return;}if(musicUnlocked){context().resume().catch(()=>{});music.play().catch(()=>{});}}
 document.addEventListener('pointerup',e=>{if(e.isTrusted){musicUnlocked=true;syncSound();}},{passive:true});
-document.addEventListener('visibilitychange',()=>{cancelRestartHold();save();syncSound();last=performance.now();});
-window.addEventListener('pagehide',()=>{cancelRestartHold();save();});
-window.addEventListener('storage',e=>{if(e.key===KEY&&!saveSuppressed){try{currentSave();}catch{toast('Save unavailable. Keep this window open.');}}});
+document.addEventListener('visibilitychange',()=>{cancelInput();save();syncSound();last=performance.now();});
+window.addEventListener('pagehide',()=>{cancelInput();save();});
+window.addEventListener('storage',e=>{if(!saveSuppressed&&(e.key===KEY||e.key===null)&&e.storageArea===localStorage)checkCurrentSave();});
 
 function frame(canvas,draw){const r=canvas.getBoundingClientRect();if(!r.width||!r.height)return;const dpr=Math.min(devicePixelRatio||1,2),w=Math.round(r.width*dpr),h=Math.round(r.height*dpr);if(canvas.width!==w)canvas.width=w;if(canvas.height!==h)canvas.height=h;const c=canvas.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,r.width,r.height);draw(c,r.width,r.height);}
 function portrait(c,w,h,build,index=0,live=false){
@@ -172,9 +174,10 @@ function updateHUD(){
   if(quest?.id!==knownQuest){knownQuest=quest?.id||null;if(quest&&game.regionComplete)guide();}
 }
 
-function openPanel(title,kind,body){if(saveConflict&&kind!=='saveConflict')return;cancelRestartHold();gesture.cancel();preview=[];panelKind=kind;game.paused=true;$('panel').dataset.kind=kind;$('close').hidden=kind==='saveConflict'||kind==='saveRecovery';$('panelMessage').hidden=true;$('panelTitle').setAttribute('aria-label',title);if(['settings','confirm','saveConflict','saveRecovery'].includes(kind))$('panelTitle').textContent=title;else $('panelTitle').innerHTML=icon(kind==='workshop'||kind==='forge'?'shield':kind==='atlas'||kind==='cityMap'||kind==='worldBoard'?'map':kind==='victory'?'shield':'pause');$('panelBody').innerHTML=body;if(!$('panel').open)$('panel').showModal();updateHUD();syncSound();drawPanel();}
-function closePanel(){cancelRestartHold();if(saveConflict)return;if(loadIssue){recoveryPanel();return;}if(panelKind==='workshop')game.state.needsLoadout=false;if($('panel').open)$('panel').close();panelKind='';game.paused=false;last=performance.now();save();syncSound();}
+function openPanel(title,kind,body){if(kind!=='saveConflict'&&!saveSuppressed)checkCurrentSave();if(saveConflict&&kind!=='saveConflict')return;cancelRestartHold();gesture.cancel();preview=[];panelKind=kind;game.paused=true;$('panel').dataset.kind=kind;$('close').hidden=kind==='saveConflict'||kind==='saveRecovery';$('panelMessage').hidden=true;$('panelTitle').setAttribute('aria-label',title);if(['settings','confirm','saveConflict','saveRecovery'].includes(kind))$('panelTitle').textContent=title;else $('panelTitle').innerHTML=icon(kind==='workshop'||kind==='forge'?'shield':kind==='atlas'||kind==='cityMap'||kind==='worldBoard'?'map':kind==='victory'?'shield':'pause');$('panelBody').innerHTML=body;if(!$('panel').open)$('panel').showModal();if(saveWarning&&!saveSuppressed)toast(SAVE_WARNING);updateHUD();syncSound();drawPanel();}
+function closePanel(){cancelRestartHold();if(!saveSuppressed)checkCurrentSave();if(saveConflict)return;if(loadIssue){recoveryPanel();return;}if(panelKind==='workshop')game.state.needsLoadout=false;if($('panel').open)$('panel').close();panelKind='';game.paused=false;last=performance.now();save();syncSound();}
 function showWorkshop(){
+  if(!saveSuppressed)checkCurrentSave();if(saveConflict)return;
   const camp=game.nearbyCamp();
   if(game.eastern&&camp&&camp.id!==HOME.id&&game.state.refuges.includes(camp.id)){
     game.restAt(camp.id);
@@ -222,12 +225,13 @@ function atlas(showOverview=false){
 }
 function hasBackup(){try{return !!localStorage.getItem(KEY+'-backup');}catch{return false;}}
 function recoveryPanel(){openPanel('Saved adventure needs attention','saveRecovery','<p>The saved adventure could not be read. It has been left untouched. Try loading it again, restore the recovery save, or deliberately start again.</p><button class="wide" data-action="reloadLatest">Try loading again</button>'+(hasBackup()?'<button class="wide quiet" data-action="restore">Restore previous adventure</button>':'')+'<button class="wide quiet" data-action="restart">Start again</button>');}
-function settings(){const atHome=game.nearbyCamp()?.id==='home';openPanel('Adventure settings','settings',`<label class="setting">Squad size<select id="squadSize" ${atHome?'':'disabled'}><option value="3" ${game.state.squadSize===3?'selected':''}>Captain + 2 companions</option><option value="5" ${game.state.squadSize===5?'selected':''}>Captain + 4 companions</option></select></label><p>Change the squad at the home workshop. All regions are open from the start.</p><button class="wide quiet" data-action="restart">${icon('replay')} <span class="red">Start this adventure again</span></button>${hasBackup()?'<button class="wide quiet" data-action="restore">Restore previous adventure</button>':''}<p class="build">roman27 · Roman adventure</p>`);}
+function settings(){const atHome=game.nearbyCamp()?.id==='home';openPanel('Adventure settings','settings',`<label class="setting">Squad size<select id="squadSize" ${atHome?'':'disabled'}><option value="3" ${game.state.squadSize===3?'selected':''}>Captain + 2 companions</option><option value="5" ${game.state.squadSize===5?'selected':''}>Captain + 4 companions</option></select></label><p>Change the squad at the home workshop. All regions are open from the start.</p><button class="wide quiet" data-action="restart">${icon('replay')} <span class="red">Start this adventure again</span></button>${hasBackup()?'<button class="wide quiet" data-action="restore">Restore previous adventure</button>':''}<p class="build">roman28 · Roman adventure</p>`);}
 function pause(){openPanel('Take a breather','pause',`<button class="wide" data-action="close" aria-label="Keep playing">${icon('play')}</button><button class="wide quiet" data-action="settings" aria-label="Advanced settings">${icon('edit')}</button>`);}
 function cancelRestartHold(){
   const hold=restartHold;restartHold=null;if(!hold)return;
   clearTimeout(hold.timer);hold.button.classList.toggle('holding',false);
 }
+function cancelInput(){cancelRestartHold();gesture.cancel();preview=[];}
 function restartJourney(){
   try{if(!currentSave())return;if(loadIssue){if(expectedSaveRaw!==null)localStorage.setItem(KEY+'-unreadable',expectedSaveRaw);}else localStorage.setItem(KEY+'-backup',JSON.stringify(game.serialize()));saveSuppressed=true;localStorage.removeItem(KEY);expectedSaveRaw=null;location.reload();}
   catch{saveSuppressed=loadIssue||saveConflict;toast('Could not save a recovery copy. Restart cancelled.');}
@@ -255,17 +259,18 @@ $('panelBody').addEventListener('keydown',e=>{if(!e.repeat&&[' ','Enter'].includ
 $('panelBody').addEventListener('keyup',e=>{if(restartHold?.input===e.key)cancelRestartHold();});
 document.addEventListener('keyup',e=>{if(restartHold?.input===e.key)cancelRestartHold();});
 document.addEventListener('focusout',e=>{if(restartHold?.button===e.target)cancelRestartHold();});
-window.addEventListener('blur',cancelRestartHold);
+window.addEventListener('blur',cancelInput);
 
 $('panelBody').addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b||b.disabled)return;
+  if(['slot','weapon','shield','utility','upgrade'].some(key=>b.dataset[key]!==undefined)&&(saveSuppressed||!checkCurrentSave()))return;
   const focusKey=document.activeElement===b?['slot','weapon','shield','utility','upgrade'].find(key=>b.dataset[key]!==undefined):null;
   const scroll=$('panel').scrollTop;
   if(b.dataset.slot!==undefined){slot=Number(b.dataset.slot);showWorkshop();}
   if(b.dataset.weapon){game.setLoadout(slot,{...game.state.squad[slot],weapon:b.dataset.weapon});showWorkshop();}
   if(b.dataset.shield){game.setLoadout(slot,{...game.state.squad[slot],shield:b.dataset.shield});showWorkshop();}
   if(b.dataset.utility){game.setUtility(b.dataset.utility);showWorkshop();}
-  if(b.dataset.upgrade){if(game.upgrade(b.dataset.upgrade)){tone(500,1000,.3);save();}showWorkshop();}
+  if(b.dataset.upgrade){const upgraded=game.upgrade(b.dataset.upgrade);showWorkshop();if(upgraded){tone(500,1000,.3);save();}}
   if(b.dataset.action==='close')closePanel();
   if(b.dataset.action==='atlas')worldBoard();
   if(b.dataset.action==='atlasView'&&game.eastern){atlas(mapZoom!==0);$('panelBody').querySelector('[data-action="atlasView"]')?.focus?.();}
@@ -273,10 +278,10 @@ $('panelBody').addEventListener('click',e=>{
   if(b.dataset.action==='restart')openPanel('Start again?','confirm','<p>Hold the red button for 2 seconds to start from the beginning. Your current adventure will be kept as one recovery save.</p><button class="wide quiet" data-action="close">Keep playing</button><button class="wide danger" data-action="confirmRestart" aria-label="Hold for 2 seconds to save this journey and restart">Hold for 2 seconds to restart</button>');
   if(b.dataset.action==='restore')openPanel('Restore the previous journey?','confirm','<p>This replaces your current northern adventure with the recovery save.</p><button class="wide quiet" data-action="close">Keep playing</button><button class="wide" data-action="confirmRestore">Restore previous adventure</button>');
   if(b.dataset.action==='reloadLatest'){saveSuppressed=true;location.reload();}
-  if(b.dataset.action==='confirmRestore'){try{if(!currentSave())return;const backup=localStorage.getItem(KEY+'-backup');if(backup){const decoded=JSON.parse(backup);if(!validSave(decoded))throw new Error('Invalid recovery');const valid=new Campaign(decoded),raw=JSON.stringify(valid.serialize());if(loadIssue&&expectedSaveRaw!==null)localStorage.setItem(KEY+'-unreadable',expectedSaveRaw);saveSuppressed=true;localStorage.setItem(KEY,raw);expectedSaveRaw=raw;location.reload();}}catch{saveSuppressed=loadIssue||saveConflict;toast('Recovery save could not be read.');}}
+  if(b.dataset.action==='confirmRestore'){try{if(!currentSave())return;const backup=localStorage.getItem(KEY+'-backup');if(!backup)throw new Error('Missing recovery');const decoded=JSON.parse(backup);if(!validSave(decoded))throw new Error('Invalid recovery');const valid=new Campaign(decoded),raw=JSON.stringify(valid.serialize());if(loadIssue&&expectedSaveRaw!==null)localStorage.setItem(KEY+'-unreadable',expectedSaveRaw);saveSuppressed=true;localStorage.setItem(KEY,raw);expectedSaveRaw=raw;location.reload();}catch{saveSuppressed=loadIssue||saveConflict;toast('Recovery save could not be read.');}}
   if($('panel').open){if(focusKey)$('panelBody').querySelector(`[data-${focusKey}="${b.dataset[focusKey]}"]`)?.focus?.({preventScroll:true});$('panel').scrollTop=scroll;}
 });
-$('panelBody').addEventListener('change',e=>{if(e.target.id==='squadSize'){if(distance(game.leader()||HOME,HOME)>=3||!game.setSquadSize(Number(e.target.value))){toast('Change the squad at the home workshop');e.target.value=game.state.squadSize;}else{updateHUD();save();}}});
+$('panelBody').addEventListener('change',e=>{if(e.target.id==='squadSize'){if(saveSuppressed||!checkCurrentSave()){e.target.value=game.state.squadSize;return;}if(distance(game.leader()||HOME,HOME)>=3||!game.setSquadSize(Number(e.target.value))){toast('Change the squad at the home workshop');e.target.value=game.state.squadSize;}else{updateHUD();save();}}});
 function groundPoint(e){const r=$('world').getBoundingClientRect(),x=r.width?clamp(e.clientX-r.left,0,r.width):e.clientX-r.left,y=r.height?clamp(e.clientY-r.top,0,r.height):e.clientY-r.top;return {x:(x-layout.ox)/layout.scale,y:(y-layout.oy)/layout.scale};}
 $('world').addEventListener('pointerdown',e=>{if($('panel').open||e.button!==0)return;e.preventDefault();const p=groundPoint(e);if(!gesture.begin(e.pointerId,p,game.enemyAt(p,layout.scale)))return;$('world').setPointerCapture(e.pointerId);preview=gesture.enemy?[]:previewRoute(game,p);});
 $('world').addEventListener('pointermove',e=>{if(!gesture.update(e.pointerId,groundPoint(e)))return;preview=gesture.enemy?[]:previewRoute(game,gesture.point);});
@@ -298,7 +303,7 @@ requestAnimationFrame(loop);
 const localPreview=['127.0.0.1','localhost'].includes(location.hostname);
 if('serviceWorker'in navigator&&!localPreview)navigator.serviceWorker.register('../sw.js',{updateViaCache:'none'}).catch(()=>{});
 let checkingUpdate=false;
-const canUpdate=()=>!game.voyage&&!game.activeEncounter&&!game.travelGoal&&game.leader()&&distance(game.leader(),HOME)<3&&!document.hidden;
+const canUpdate=()=>!$('panel').open&&gesture.id===null&&!game.voyage&&!game.activeEncounter&&!game.travelGoal&&game.leader()&&distance(game.leader(),HOME)<3&&!document.hidden;
 async function checkUpdate(){
   if(localPreview||checkingUpdate||!canUpdate())return;
   checkingUpdate=true;

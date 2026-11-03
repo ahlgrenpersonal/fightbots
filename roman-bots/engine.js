@@ -1,5 +1,5 @@
-import {WEAPONS,SHIELDS,normalizeSquad} from './data.js?v=roman27';
-import {bowReleasePoint,bowContainsPoint,shieldOpening,botScale} from './geometry.js?v=roman27';
+import {WEAPONS,SHIELDS,normalizeSquad} from './data.js?v=roman28';
+import {bowReleasePoint,bowContainsPoint,shieldOpening,botScale} from './geometry.js?v=roman28';
 
 export const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 export const BODY_SPACING=1.4;
@@ -18,18 +18,19 @@ export class Battle {
     this.headings=[-Math.PI/2,Math.PI/2];
     this.goal=null;this.focus=null;this.pendingPower=null;this.powerCd=0;this.effects=[];this.projectiles=[];this.units=[];this.lastHit=0;
     this.metrics={blocks:0,flanks:0,power:0,damage:[0,0],shieldBreaks:0,interceptions:0,meleeInterceptions:0,supportThrusts:0,openingStrikes:0};
+    const centerX=(this.bounds.minX+this.bounds.maxX)/2,offsetY=(this.bounds.minY+this.bounds.maxY)/2-7.75;
     [normalizeSquad(squad),normalizeSquad(opponent)].forEach((slots,team)=>slots.forEach((slot,index)=>{
       const weapon=WEAPONS[slot.weapon],shield=SHIELDS[slot.shield],captain=index===0;
       const assist=[0,15,50,100,200].includes(healthBonus)?1+healthBonus/100:gentle?1.15:1;
       const hp=(weapon.hp+shield.hp)*1.8*(captain?1.35:1)*(team===0?assist:1);
-      this.units.push({...slot,id:`${team}-${index}`,team,index,captain,x:5,y:team===0?10.3:4.7,angle:this.headings[team],hp,maxHp:hp,cd:.3+this.random()*.5,action:null,flash:0,blockFlash:0,guardBroken:0,stun:0,retreatCd:0,retreats:0,retreat:null,moving:false,target:null,buddy:null});
+      this.units.push({...slot,id:`${team}-${index}`,team,index,captain,x:centerX,y:this.boundY((team===0?10.3:4.7)+offsetY),angle:this.headings[team],hp,maxHp:hp,cd:.3+this.random()*.5,action:null,flash:0,blockFlash:0,guardBroken:0,stun:0,retreatCd:0,retreats:0,retreat:null,moving:false,target:null,buddy:null});
     }));
     this.activeId=this.leader()?.id;this.focusOwner=null;this.pendingOwner=null;
     this.refreshPartners();
     for(const team of [0,1]){
       const units=this.alive(team),front=units.filter(u=>!['bow','spear'].includes(u.weapon));
       const line=front.length?front:units;
-      line.forEach((u,i)=>u.x=5+(i-(line.length-1)/2)*1.65);
+      line.forEach((u,i)=>u.x=this.boundX(centerX+(i-(line.length-1)/2)*1.65));
       for(const u of units.filter(u=>!line.includes(u)))Object.assign(u,this.slotFor(u));
     }
     this.separateBodies();
@@ -147,7 +148,10 @@ export class Battle {
     }
     if(!target)return;
     if(distance(unit,target)>w.range+(unit.weapon==='bow'?.38:MELEE_TOLERANCE))return;
-    if(unit.weapon==='bow')this.projectiles.push({...bowReleasePoint(unit),target:target.id,owner:unit.id,power:action.power,life:1.2});
+    if(unit.weapon==='bow'){
+      const origin=bowReleasePoint(unit);
+      this.projectiles.push({...origin,angle:Math.atan2(target.y-origin.y,target.x-origin.x),target:target.id,owner:unit.id,power:action.power,life:1.2});
+    }
     else{
       const defender=this.projectileBlocker(unit,target,target.team)||target;
       if(defender!==target)this.metrics.meleeInterceptions++;
@@ -238,10 +242,11 @@ export class Battle {
   projectileBlocker(from,to,team){
     const dx=to.x-from.x,dy=to.y-from.y,length=dx*dx+dy*dy;if(length<1e-9)return null;
     const magnitude=Math.sqrt(length);
+    // A recovered guard cannot catch an arrow that has already passed it.
     return this.alive(team).filter(u=>u.shield!=='none'&&guardsAgainst(u,{x:u.x-dx/magnitude,y:u.y-dy/magnitude})).map(u=>{
-      const t=clamp(((u.x-from.x)*dx+(u.y-from.y)*dy)/length,0,1),point={x:from.x+dx*t,y:from.y+dy*t};
-      return {u,t,d:distance(u,point)};
-    }).filter(hit=>hit.d<=(hit.u.shield==='tower'?.68:.44)).sort((a,b)=>a.t-b.t)[0]?.u||null;
+      const projection=((u.x-from.x)*dx+(u.y-from.y)*dy)/length,t=clamp(projection,0,1),point={x:from.x+dx*t,y:from.y+dy*t};
+      return {u,t,projection,d:distance(u,point)};
+    }).filter(hit=>hit.projection>=0&&hit.d<=(hit.u.shield==='tower'?.68:.44)).sort((a,b)=>a.t-b.t)[0]?.u||null;
   }
   tick(dt){
     if(this.paused||this.phase==='finished')return;dt=clamp(dt,0,.05);this.time+=dt;
@@ -283,10 +288,13 @@ export class Battle {
     for(const shot of this.projectiles){
       shot.life-=dt;const target=this.units.find(u=>u.id===shot.target&&u.hp>0),owner=this.units.find(u=>u.id===shot.owner);if(!target||!owner){shot.life=0;continue;}
       const d=distance(shot,target),step=Math.min(d,dt*8);
+      if(d>0)shot.angle=Math.atan2(target.y-shot.y,target.x-shot.x);
+      else if(!Number.isFinite(shot.angle))shot.angle=Math.atan2(target.y-owner.y,target.x-owner.x);
       const next={x:shot.x+(target.x-shot.x)/Math.max(d,.001)*step,y:shot.y+(target.y-shot.y)/Math.max(d,.001)*step};
       const blocker=this.projectileBlocker(shot,next,target.team);
       if(blocker){this.hit(owner,blocker,shot.power,true,{x:blocker.x-(next.x-shot.x),y:blocker.y-(next.y-shot.y)});if(blocker!==target)this.metrics.interceptions++;shot.life=0;}
-      else if(d<=step+.22){this.hit(owner,target,shot.power,true,{x:shot.x,y:shot.y});shot.life=0;}
+      // Probe facing locally at exact overlap; inherited hit() also checks terrain.
+      else if(d<=step+.22){this.hit(owner,target,shot.power,true,d===0?{x:target.x-Math.cos(shot.angle)*.001,y:target.y-Math.sin(shot.angle)*.001}:{x:shot.x,y:shot.y});shot.life=0;}
       else{shot.x=next.x;shot.y=next.y;}
     }
     this.projectiles=this.projectiles.filter(s=>s.life>0);

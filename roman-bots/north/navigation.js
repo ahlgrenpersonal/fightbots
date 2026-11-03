@@ -12,7 +12,7 @@ export function previewRoute(game,p){
 export function nextDestination(game,home=false){
   if(home)return game.world.HOME;
   if(!game.prologueComplete)return {x:33,y:142,kind:'arena'};
-  if(game.alive(0).some(u=>u.hp/u.maxHp<.25))return game.nearestCamp();
+  if(game.units.some(u=>u.team===0&&u.hp/u.maxHp<.25))return game.nearestCamp();
   if(game.regionComplete){const quest=game.questTarget?.();if(quest)return quest;}
   const {CAMPS,ENCOUNTERS}=game.world;
   const camp=CAMPS.find(c=>!game.state.camps.includes(c.id));
