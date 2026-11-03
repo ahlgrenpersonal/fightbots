@@ -1,10 +1,10 @@
-import {Battle,distance} from '../engine.js?v=roman21';
-import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman21';
-import * as NORTH from './world.js?v=roman21';
-import * as WEST from './west-world.js?v=roman21';
-import * as SOUTH from './south-world.js?v=roman21';
-import * as EAST from './east-world.js?v=roman21';
-import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman21';
+import {Battle,distance,BODY_SPACING} from '../engine.js?v=roman22';
+import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman22';
+import * as NORTH from './world.js?v=roman22';
+import * as WEST from './west-world.js?v=roman22';
+import * as SOUTH from './south-world.js?v=roman22';
+import * as EAST from './east-world.js?v=roman22';
+import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman22';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const number=(n,a,b,f=a)=>Number.isFinite(n)?clamp(n,a,b):f;
@@ -17,6 +17,11 @@ export const WEST_GATE=Object.freeze({x:6,y:138});
 export const SOUTH_DOCK=Object.freeze({x:16,y:144});
 export const EAST_DOCK=Object.freeze({x:46,y:133});
 const defaults=()=>[{weapon:'sword',shield:'tower'},{weapon:'hammer',shield:'none'},{weapon:'bow',shield:'none'},{weapon:'sword',shield:'round'},{weapon:'spear',shield:'none'}];
+const GREEK_SQUADS={
+  phalanx:[{weapon:'sword',shield:'tower'},{weapon:'sword',shield:'round'},{weapon:'spear',shield:'none'},{weapon:'bow',shield:'none'},{weapon:'hammer',shield:'none'}],
+  skirmish:[{weapon:'sword',shield:'round'},{weapon:'sword',shield:'round'},{weapon:'bow',shield:'none'},{weapon:'bow',shield:'none'},{weapon:'spear',shield:'none'}],
+  breakers:[{weapon:'sword',shield:'round'},{weapon:'hammer',shield:'none'},{weapon:'sword',shield:'round'},{weapon:'hammer',shield:'none'},{weapon:'bow',shield:'none'}]
+};
 export const UPGRADE_PRICES=Object.freeze({weapon:[100,240,420],armor:[80,200,360],utility:[120,260]});
 function cleanSave(saved){
   const s=saved&&typeof saved==='object'?saved:{};
@@ -42,10 +47,11 @@ export class Campaign extends Battle {
     super(state.squad,defaults(),{seed:Number.isFinite(seed)?seed:1729,healthBonus:50,onEvent,bounds:{minX:.5,maxX:world.WIDTH-.5,minY:.5,maxY:world.HEIGHT-.5}});
     this.state=state;this.trial=null;this.celebrationTime=0;this.phase='battle';this.units=this.units.filter(u=>u.team===0&&u.index<this.earnedCount);
     this.activeEncounter=null;this.wave=0;this.waveAt=null;this.travelGoal=null;this.paths=new Map();this.utilityCd=state.utilityCd;this.chargeTime=state.chargeTime;this.serial=0;
-    let start=this.world.nearestWalkable(this.prologueComplete?state.position:cityPoint(state.position))||this.world.HOME;
-    if(!this.prologueComplete)start=cityPoint(start);
-    this.placeSquad(start);
     for(const u of this.units){this.configureAlly(u);u.hp=u.maxHp*(state.health[u.index]??1);}
+    const requested=this.prologueComplete?state.position:cityPoint(state.position);
+    let start=this.validPosition(requested)?{x:requested.x,y:requested.y}:this.world.nearestWalkable(requested)||this.world.HOME;
+    if(!this.prologueComplete)start=cityPoint(start);
+    this.state.position={x:start.x,y:start.y};this.placeSquad(start);
     if(!this.alive(0).length)this.recover();
     this.activeId=this.leader()?.id;this.refreshPartners();
     // Reloading an unfinished fight retries it; no wave rewards are retained.
@@ -158,9 +164,21 @@ export class Campaign extends Battle {
   }
   placeSquad(center){
     if(!this.prologueComplete)center=cityPoint(center);
-    this.alive(0).forEach((u,i)=>{const p=this.world.nearestWalkable({x:center.x+(i%3-1)*1.5,y:center.y+Math.floor(i/3)*1.5})||center;Object.assign(u,this.prologueComplete?p:cityPoint(p),{action:null,target:null,retreat:null});});
-    const captain=this.leader();if(captain)Object.assign(captain,{x:center.x,y:center.y});
-    this.separateBodies();
+    const captain=this.leader();if(!captain)return;
+    Object.assign(captain,{x:center.x,y:center.y,action:null,target:null,retreat:null});
+    const placed=[captain],safe=this.safe(center.x,center.y);
+    for(const [i,u]of this.alive(0).filter(u=>u!==captain).entries()){
+      const preferred={x:center.x+(i%2?1:-1)*1.5,y:center.y+(i<2?1:-1)*1.1};
+      const candidates=[preferred];
+      for(let y=-9;y<=9;y++)for(let x=-9;x<=9;x++)candidates.push({x:center.x+x*.75,y:center.y+y*.75});
+      const rank=p=>distance(p,preferred)+(safe&&!this.safe(p.x,p.y)?20:0);
+      candidates.sort((a,b)=>rank(a)-rank(b));
+      const p=candidates.find(p=>{if(!this.validPosition(p)||placed.some(v=>distance(p,v)<BODY_SPACING+.04))return false;const path=this.world.findPath(center,p);return path.length>0&&path.length<=10;});
+      // Objective clearings fit the entire squad; never overlap the saved
+      // captain and then rely on body separation to push that anchor elsewhere.
+      if(!p){this.placeSquad(this.world.HOME);return;}
+      Object.assign(u,p,{action:null,target:null,retreat:null});placed.push(u);
+    }
   }
   separateBodies(){
     // Super's constructor calls this before campaign state exists.
@@ -217,7 +235,16 @@ export class Campaign extends Battle {
   pickTarget(u){
     if(this.travelGoal&&u.team===0&&(u===this.leader()||distance(u,this.leader())>5))return null;
     if(u.team===0&&this.safe(u.x,u.y))return null;
-    const valid=this.alive(1-u.team).filter(v=>distance(u,v)<6&&!this.safe(v.x,v.y)&&this.clearLine(u,v));
+    // Once a Greek patrol has engaged, short bow/spear backsteps must not leave
+    // both sides idle just beyond the initial six-unit aggro boundary.
+    const aggro=this.eastern&&this.activeEncounter?10:6;
+    const near=this.alive(1-u.team).filter(v=>distance(u,v)<aggro&&!this.safe(v.x,v.y));
+    let valid=near.filter(v=>this.clearLine(u,v));
+    if(!valid.length&&this.eastern&&this.activeEncounter&&distance(u,this.activeEncounter)<12){
+      // Continue a local fight around a short corner, never across the world.
+      // Only movement may use this path; every attack still checks sight.
+      valid=near.filter(v=>{if(distance(v,this.activeEncounter)>10)return false;const path=this.world.findPath(u,v);return path.length>0&&path.length<=14;});
+    }
     if(!valid.length)return null;
     // Reuse shared partner/focus scoring, restricted to visible aggro candidates.
     const original=this.units;
@@ -286,7 +313,7 @@ export class Campaign extends Battle {
     this.units=this.units.filter(u=>u.team===0);this.projectiles=[];this.wave++;this.paths.clear();
     const kingWave=e.kind==='boss'&&this.wave===integer(e.waves,2,3,3);
     const count=kingWave?3:integer(e.count,5,6,5),stage=integer(e.stage,0,4);
-    const roster=Array.from({length:5},(_,i)=>this.eastern?{weapon:i===0||i===1?'sword':i===2?'spear':i===3?'bow':'hammer',shield:i===0?'tower':i===1?'round':'none'}:this.southern?{weapon:i===0?'bow':i===2?'spear':i===4?'hammer':'sword',shield:i===1?'round':i===3&&e.kind==='elite'?'tower':'none'}:this.western?{weapon:i===0?'bow':i===2?'spear':i===4?'hammer':'sword',shield:i===1?'round':'none'}:{weapon:i%3===0?'bow':'sword',shield:'none'});
+    const roster=this.eastern?(GREEK_SQUADS[e.roster]||GREEK_SQUADS.phalanx):Array.from({length:5},(_,i)=>this.southern?{weapon:i===0?'bow':i===2?'spear':i===4?'hammer':'sword',shield:i===1?'round':i===3&&e.kind==='elite'?'tower':'none'}:this.western?{weapon:i===0?'bow':i===2?'spear':i===4?'hammer':'sword',shield:i===1?'round':'none'}:{weapon:i%3===0?'bow':'sword',shield:'none'});
     const factory=new Battle(this.state.squad,roster,{seed:this.seed,healthBonus:0,bounds:this.bounds});
     const templates=factory.units.filter(u=>u.team===1);
     for(let i=0;i<count;i++){
@@ -321,7 +348,7 @@ export class Campaign extends Battle {
     this.refreshPartners();
   }
   nearestCamp(){
-    const p=this.leader()||this.units.find(u=>u.team===0)||this.world.HOME;
+    const p=this.leader()||this.state.position||this.world.HOME;
     return [this.world.HOME,...this.world.CAMPS.filter(c=>this.state.refuges.includes(c.id))].sort((a,b)=>distance(a,p)-distance(b,p))[0];
   }
   recover(){
@@ -355,7 +382,8 @@ export class Campaign extends Battle {
     this.refreshPartners();return true;
   }
   upgrade(category){
-    if(this.nearbyCamp()?.id!=='home'||!Object.hasOwn(UPGRADE_PRICES,category))return false;
+    const camp=this.nearbyCamp(),fieldForge=this.eastern&&camp&&this.state.refuges.includes(camp.id);
+    if(camp?.id!=='home'&&!fieldForge||!Object.hasOwn(UPGRADE_PRICES,category))return false;
     const key=`${category}Tier`,cost=UPGRADE_PRICES[category][this.state[key]];
     if(cost===undefined||this.state.coins<cost)return false;
     this.state.coins-=cost;this.state[key]++;
@@ -416,6 +444,13 @@ export class Campaign extends Battle {
       }
       if(distance(leader,this.travelGoal)<.3){this.travelGoal=null;this.goal=null;}else this.goal=this.travelGoal;
     }else{
+      if(this.eastern&&this.activeEncounter)for(const u of [...this.alive(0),...this.alive(1)]){
+        const target=this.units.find(v=>v.id===u.target&&v.hp>0&&v.team!==u.team);
+        if(target&&!this.safe(u.x,u.y)&&!this.safe(target.x,target.y)&&!u.moving&&!u.action&&!this.clearLine(u,target)&&distance(u,target)<10){
+          const path=this.world.findPath(u,target);
+          if(path.length>0&&path.length<=14)this.walk(u,target,dt);
+        }
+      }
       const focused=this.units.find(u=>u.id===this.focus&&u.team===1&&u.hp>0);
       // Explicit enemy taps may seek around trees; automatic aggro still needs
       // sight. Never take a second movement step or move during an attack.

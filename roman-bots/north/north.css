@@ -12,3 +12,4 @@ nav #utility.cooldown{background:#879c84;border-bottom-color:#627d6b;color:#edf0
 #campSeals.trial-progress{display:grid;grid-template-columns:repeat(5,8px);gap:5px;background:#173e3da8;padding:7px;border-radius:5px}#campSeals.trial-progress i{width:8px;height:8px;border-radius:50%;background:#83978a;border:1px solid #d4dfbe}#campSeals.trial-progress i.won{background:#ffda73;border-color:#ffe8a6}
 .seal-row{gap:8px;padding:14px 0}.seal-row button{flex:1;max-width:64px;min-width:0;height:62px;padding:6px}.seal-row small{font-size:11px;line-height:1.4;font-variant-numeric:tabular-nums}
 .seal-row>span{display:grid;place-items:center;gap:4px;min-width:44px;font-size:12px;color:#365949}
+.atlas-tools{display:flex;justify-content:flex-end;margin-bottom:8px}.atlas-tools .square{background:#d6e2ce;color:#31574f}

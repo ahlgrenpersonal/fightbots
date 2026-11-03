@@ -1,7 +1,7 @@
-import * as world from './east-world.js?v=roman21';
-import {drawBot} from '../art.js?v=roman21';
-import {normalizeSlot} from '../data.js?v=roman21';
-import {drawVoyage as seaVoyage} from './south-scenery.js?v=roman21';
+import * as world from './east-world.js?v=roman22';
+import {drawBot} from '../art.js?v=roman22';
+import {normalizeSlot} from '../data.js?v=roman22';
+import {drawVoyage as seaVoyage} from './south-scenery.js?v=roman22';
 const {WIDTH,HEIGHT,HOME,KING,CAMPS,ENCOUNTERS,LANDSCAPES,LANDMARKS,tileAt,passable}=world;
 const TAU=Math.PI*2,INK='#315364',GOLD='#f6d474';
 const hash=(x,y)=>{let n=Math.imul(x+831,374761393)^Math.imul(y+117,668265263);n=Math.imul(n^(n>>>13),1274126177);return((n^(n>>>16))>>>0)/4294967296;};
@@ -117,6 +117,23 @@ function ground(c,b,time){
     }else if(tile==='grass'&&n>.5){line(c,x+.3,y+.7,x+.36,y+.57,'#456f6138',.03);line(c,x+.36,y+.57,x+.44,y+.65,'#456f6138',.03);if(z===1&&n>.85){oval(c,x+.65,y+.3,.05,.04,'#dec8ec');oval(c,x+.72,y+.34,.04,.04,'#fff0dc');}if(z===2&&n>.7){oval(c,x+.55,y+.55,.13,.07,'#7c919367');line(c,x+.46,y+.52,x+.62,y+.5,'#eef1de',.03);}}
   }
 }
+function blockedGround(c,b){
+  for(let y=Math.max(0,Math.floor(b.top));y<Math.min(HEIGHT,Math.ceil(b.bottom));y++)for(let x=Math.max(0,Math.floor(b.left));x<Math.min(WIDTH,Math.ceil(b.right));x++){
+    if(tileAt(x,y)!=='forest')continue;
+    const z=zone(y),n=hash(x,y);
+    if(z===0||z===1){
+      // A low continuous hedge makes even narrow blocked strips unmistakable.
+      rect(c,x,y+.22,1.01,.79,z===0?'#477f75':'#617f59');
+      const leaf=z===0?(n>.5?'#79a88b':'#71a18a'):(n>.5?'#92ac76':'#85a174');
+      oval(c,x+.3,y+.33,.3,.23+n*.045,leaf);oval(c,x+.7,y+.32,.3,.24-n*.025,leaf);
+      line(c,x+.19,y+.25,x+.45,y+.21,'#d1dfaf66',.04);
+    }else{
+      poly(c,[[x+.03,y+.25],[x+.18,y+.08],[x+.76,y+.07],[x+.97,y+.28],[x+.94,y+.94],[x+.04,y+.9]],z===3?'#96aeb4':'#8091a5',INK,.025);
+      poly(c,[[x+.03,y+.25],[x+.18,y+.08],[x+.76,y+.07],[x+.97,y+.28],[x+.77,y+.48],[x+.18,y+.43]],z===3?'#dbe4dc':n>.5?'#c9d5db':'#b1c2ca');
+      line(c,x+.08,y+.7,x+.85,y+.72,z===3?'#6d8d9e':'#647f98',.03);
+    }
+  }
+}
 const features=[];
 for(let y=2;y<HEIGHT-3;y+=2)for(let x=2;x<WIDTH-3;x+=2){
   if(!blockedFootprint(x,y,2,2)||LANDMARKS.some(p=>Math.abs(p.x-x)<12&&Math.abs(p.y-y)<7))continue;
@@ -124,7 +141,7 @@ for(let y=2;y<HEIGHT-3;y+=2)for(let x=2;x<WIDTH-3;x+=2){
 }
 export function drawLandscape(c,{bounds={left:0,top:0,right:WIDTH,bottom:HEIGHT},time=0,state={}}={}){
   const b={left:Math.max(0,bounds.left),top:Math.max(0,bounds.top),right:Math.min(WIDTH,bounds.right),bottom:Math.min(HEIGHT,bounds.bottom)};
-  c.save();c.beginPath();c.rect(b.left,b.top,b.right-b.left,b.bottom-b.top);c.clip();c.lineJoin='round';c.lineCap='round';ground(c,b,time);
+  c.save();c.beginPath();c.rect(b.left,b.top,b.right-b.left,b.bottom-b.top);c.clip();c.lineJoin='round';c.lineCap='round';ground(c,b,time);blockedGround(c,b);
   for(const bridge of world.BRIDGES){for(let y=bridge.top;y<bridge.bottom;y+=.4){rect(c,bridge.left,y,bridge.right-bridge.left,.25,'#e4e5d4');for(const x of [bridge.left+.2,bridge.right-.3])rect(c,x,y,.12,.22,'#73a3af');}}
   for(const p of [HOME,...CAMPS])if(visible(p,b))camp(c,p,state,time);
   if(visible(HOME,b,15))harborBoat(c,time);
@@ -151,17 +168,25 @@ export function drawLandscape(c,{bounds={left:0,top:0,right:WIDTH,bottom:HEIGHT}
 function atlasView(state,player){
   const active=CAMPS.findIndex(p=>!(state.camps||[]).includes(p.id));
   const seen=Math.max(active<0?4:active,...CAMPS.map((p,i)=>(state.refuges||[]).includes(p.id)?i:0),player?zone(player.y):0);
-  return {top:LANDSCAPES[seen].top,bottom:HEIGHT,active:active<0?4:active};
+  const focus=player?zone(player.y):active<0?4:active;
+  return {top:state.atlasOverview?LANDSCAPES[seen].top:LANDSCAPES[focus].top,bottom:state.atlasOverview?HEIGHT:LANDSCAPES[focus].bottom,active:active<0?4:active};
 }
 export function atlasAspect(state={},player){const v=atlasView(state,player);return WIDTH/(v.bottom-v.top);}
 export function drawAtlas(c,w,h,state={},player){
   const v=atlasView(state,player),s=Math.min((w-24)/WIDTH,(h-24)/(v.bottom-v.top));
   rect(c,0,0,w,h,'#244d5b');c.save();c.translate((w-WIDTH*s)/2,(h-(v.bottom-v.top)*s)/2);c.scale(s,s);c.translate(0,-v.top);
-  for(let y=v.top;y<HEIGHT;y++)for(let x=0;x<WIDTH;x++){const t=tileAt(x,y),p=palettes[zone(y)];rect(c,x,y,1.02,1.02,t==='water'?'#4c9fb6':t==='forest'?p[3]:t==='path'?p[1]:t==='stone'?p[2]:p[0]);}
-  if(!state.conquered){const p=LANDSCAPES[v.active];rect(c,0,p.top,WIDTH,p.bottom-p.top,'#ffe39b28');for(const x of [.5,WIDTH-.5])line(c,x,p.top,x,p.bottom,GOLD,1.5/s);}
-  for(const e of ENCOUNTERS){if(e.y<v.top)continue;oval(c,e.x,e.y,3.3/s,3.3/s,INK);oval(c,e.x,e.y,2.3/s,2.3/s,done(state,e.id)?'#92d9be':e.kind==='boss'?'#eab66d':'#f4d68a');}
-  for(const p of [HOME,...CAMPS])if(p.y>=v.top){c.save();c.translate(p.x,p.y);c.scale(1/s,1/s);oval(c,0,0,8,8,INK);poly(c,[[-6,4],[0,-6],[6,4]],'#fff3d6');if(p.id==='home')rect(c,-3,0,6,5,'#65cbb8');c.restore();}
-  if(player&&player.y>=v.top){c.save();c.translate(player.x,player.y);c.scale(1/s,1/s);oval(c,0,0,18,18,INK);oval(c,0,0,16,16,GOLD);oval(c,0,0,13,13,'#e3f1df');drawBot(c,{...normalizeSlot(player),team:0,captain:true,x:0,y:4,angle:-.35,hp:1,maxHp:1,weaponTier:state.weaponTier,armorTier:state.armorTier},0,{size:24,preview:true});c.restore();}
+  for(let y=v.top;y<v.bottom;y++)for(let x=0;x<WIDTH;x++){const t=tileAt(x,y),p=palettes[zone(y)];rect(c,x,y,1.02,1.02,t==='water'?'#4c9fb6':t==='forest'?p[3]:t==='path'?p[1]:t==='stone'?p[2]:p[0]);}
+  if(!state.conquered){const p=LANDSCAPES[v.active];if(p.top<v.bottom&&p.bottom>v.top){rect(c,0,p.top,WIDTH,p.bottom-p.top,'#ffe39b28');for(const x of [.5,WIDTH-.5])line(c,x,p.top,x,p.bottom,GOLD,1.5/s);}}
+  for(const e of ENCOUNTERS){if(e.y<v.top||e.y>=v.bottom)continue;oval(c,e.x,e.y,4/s,4/s,INK);oval(c,e.x,e.y,2.8/s,2.8/s,done(state,e.id)?'#92d9be':e.kind==='boss'?'#eab66d':'#f4d68a');}
+  for(const p of [HOME,...CAMPS])if(p.y>=v.top&&p.y<v.bottom){
+    c.save();c.translate(p.x,p.y);c.scale(1/s,1/s);
+    const active=CAMPS[v.active]?.id===p.id&&!state.conquered,cleared=(state.camps||[]).includes(p.id);
+    if(active)oval(c,0,0,12,12,GOLD);oval(c,0,0,9,9,INK);
+    if(p.id==='home'){poly(c,[[-7,-1],[0,-7],[7,-1]],'#f6d474');rect(c,-5,0,10,6,'#f5f1df');rect(c,-2,1,4,5,'#3eab97');}
+    else{poly(c,[[-6,4],[0,-6],[6,4]],cleared?'#85dfb1':'#fff3d6');if(cleared){line(c,-3,0,-1,2,INK,1.4);line(c,-1,2,3,-3,INK,1.4);}}
+    c.restore();
+  }
+  if(player&&player.y>=v.top&&player.y<v.bottom){c.save();c.translate(player.x,player.y);c.scale(1/s,1/s);oval(c,0,0,18,18,INK);oval(c,0,0,16,16,GOLD);oval(c,0,0,13,13,'#e3f1df');drawBot(c,{...normalizeSlot(player),team:0,captain:true,x:0,y:4,angle:-.35,hp:1,maxHp:1,weaponTier:state.weaponTier,armorTier:state.armorTier},0,{size:24,preview:true});c.restore();}
   c.restore();
 }
 export function drawRomanDock(c,time=0,ready=false){
