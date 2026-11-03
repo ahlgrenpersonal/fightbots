@@ -1,4 +1,4 @@
-import {citizen} from './scenery.js?v=roman18';
+import {citizen} from './scenery.js?v=roman19';
 const TAU=Math.PI*2,INK='#314b50';
 export const ARENA_ENTRY={x:33,y:142};
 function line(c,x,y,xx,yy,color,width=.07){c.beginPath();c.moveTo(x,y);c.lineTo(xx,yy);c.strokeStyle=color;c.lineWidth=width;c.stroke();}

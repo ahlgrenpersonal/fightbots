@@ -1,6 +1,7 @@
-const CACHE='roman-bots-roman18',ASSETS=['./','./index.html','./styles.css?v=roman18','./app.js?v=roman18','./data.js?v=roman18','./engine.js?v=roman18','./art.js?v=roman18','./geometry.js?v=roman18','./icons.js?v=roman18','./manifest.webmanifest','./version.json','./refresh.html','./assets/icon-192.png','./assets/icon-512.png','./assets/courtyard-theme.mp3','./north/index.html','./north/north.css?v=roman18','./north/north.js?v=roman18','./north/campaign.js?v=roman18','./north/world.js?v=roman18','./north/scenery.js?v=roman18'];
-ASSETS.push('./north/prologue.js?v=roman18','./north/city.js?v=roman18');
-ASSETS.push('./north/west-world.js?v=roman18','./north/west-scenery.js?v=roman18');
+const CACHE='roman-bots-roman19',ASSETS=['./','./index.html','./styles.css?v=roman19','./app.js?v=roman19','./data.js?v=roman19','./engine.js?v=roman19','./art.js?v=roman19','./geometry.js?v=roman19','./icons.js?v=roman19','./manifest.webmanifest','./version.json','./refresh.html','./assets/icon-192.png','./assets/icon-512.png','./assets/courtyard-theme.mp3','./north/index.html','./north/north.css?v=roman19','./north/north.js?v=roman19','./north/campaign.js?v=roman19','./north/world.js?v=roman19','./north/scenery.js?v=roman19'];
+ASSETS.push('./north/prologue.js?v=roman19','./north/city.js?v=roman19');
+ASSETS.push('./north/west-world.js?v=roman19','./north/west-scenery.js?v=roman19');
+ASSETS.push('./north/navigation.js?v=roman19');
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('roman-bots-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{

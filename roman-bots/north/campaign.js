@@ -1,8 +1,8 @@
-import {Battle,distance} from '../engine.js?v=roman18';
-import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman18';
-import * as NORTH from './world.js?v=roman18';
-import * as WEST from './west-world.js?v=roman18';
-import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman18';
+import {Battle,distance} from '../engine.js?v=roman19';
+import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman19';
+import * as NORTH from './world.js?v=roman19';
+import * as WEST from './west-world.js?v=roman19';
+import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman19';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const number=(n,a,b,f=a)=>Number.isFinite(n)?clamp(n,a,b):f;
@@ -186,7 +186,7 @@ export class Campaign extends Battle {
     if(!this.validPosition(u,u.team)||!this.clearLine(before,u)){Object.assign(u,before);u.moving=false;this.paths?.delete(u.id);}
   }
   pickTarget(u){
-    if(this.travelGoal&&u.team===0)return null;
+    if(this.travelGoal&&u.team===0&&(u===this.leader()||distance(u,this.leader())>5))return null;
     if(u.team===0&&this.safe(u.x,u.y))return null;
     const valid=this.alive(1-u.team).filter(v=>distance(u,v)<6&&!this.safe(v.x,v.y)&&this.clearLine(u,v));
     if(!valid.length)return null;
@@ -200,7 +200,7 @@ export class Campaign extends Battle {
     return target&&!this.safe(target.x,target.y)&&this.clearLine(u,target)?target:null;
   }
   startAttack(u,target,power=false){
-    if(distance(u,target)>4.1||this.safe(target.x,target.y)||this.safe(u.x,u.y)||!this.clearLine(u,target)||this.travelGoal&&u.team===0)return;
+    if(distance(u,target)>4.1||this.safe(target.x,target.y)||this.safe(u.x,u.y)||!this.clearLine(u,target)||this.travelGoal&&u.team===0&&(u===this.leader()||distance(u,this.leader())>5))return;
     super.startAttack(u,target,power);
   }
   resolveAttack(u){
@@ -372,7 +372,12 @@ export class Campaign extends Battle {
       // Different forest branches can give a slower companion a longer route.
       // Regroup during peaceful travel; never hold up an active combat retreat.
       const regroup=!this.activeEncounter&&this.alive(0).some(u=>u!==leader&&distance(u,leader)>(this.state.squadSize===5?6.5:4.5));
-      for(const u of this.alive(0))if(u!==leader||!regroup)this.walk(u,u===leader?this.travelGoal:this.slotFor(u),dt);
+      for(const u of this.alive(0)){
+        if(u===leader&&regroup)continue;
+        if(u!==leader&&this.activeEncounter&&distance(u,leader)<=5&&(u.action||this.pickTarget(u)))continue;
+        if(u!==leader&&distance(u,leader)>5){u.action=null;u.target=null;}
+        this.walk(u,u===leader?this.travelGoal:this.slotFor(u),dt);
+      }
       if(distance(leader,this.travelGoal)<.3){this.travelGoal=null;this.goal=null;}else this.goal=this.travelGoal;
     }else{
       const focused=this.units.find(u=>u.id===this.focus&&u.team===1&&u.hp>0);
