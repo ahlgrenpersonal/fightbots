@@ -1,4 +1,4 @@
-import { actionPose, bowGrip, shieldOpening } from './geometry.js?v=roman16';
+import { actionPose, bowGrip, shieldOpening } from './geometry.js?v=roman17';
 const TAU = Math.PI * 2;
 const INK = '#314b50';
 const GOLD = '#d8ae54';

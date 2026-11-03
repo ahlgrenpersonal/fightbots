@@ -84,6 +84,7 @@ for(let y=1;y<HEIGHT-1;y++) for(let x=1;x<WIDTH-1;x++) {
   for(const lake of lakes) if(((px-lake.x)/lake.rx)**2+((py-lake.y)/lake.ry)**2<1) terrain=2;
   // Broad decks cross the southern shallows; water never blocks their surface.
   if(BRIDGES.some(b=>px>=b.left&&px<b.right&&py>=b.top&&py<b.bottom)) terrain=1;
+  if(py>=146||py>=130&&px>=48)terrain=2;
   tiles[y*WIDTH+x]=terrain;
 }
 
@@ -95,6 +96,7 @@ export function tileAt(x,y) {
   return inside(x,y)?names[tiles[y*WIDTH+x]]:'forest';
 }
 export function passable(x,y) {
+  if(y>=130&&y<132&&x>=3&&x<49&&(x<24||x>=32))return false;
   const tile=tileAt(x,y);
   return tile==='grass'||tile==='path'||tile==='stone';
 }

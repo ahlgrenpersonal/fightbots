@@ -9,3 +9,4 @@ dialog{padding:0;width:min(520px,calc(100% - 20px));max-height:calc(100dvh - env
 #panelBody h2{display:flex;align-items:center;gap:7px}#panelBody h2 svg{width:21px;height:21px}.seal-row button{width:54px;height:50px;display:grid;place-items:center;background:#d6e4d2;border-radius:6px;color:#365949}
 nav #utility.cooldown{background:#879c84;border-bottom-color:#627d6b;color:#edf0dd}
 .upgrade:disabled:has(.tiers i:last-child.lit){opacity:1;background:#ecdfb5;border-color:#b69b55;color:#735a2e}
+#campSeals.trial-progress{display:grid;grid-template-columns:repeat(5,8px);gap:5px;background:#173e3da8;padding:7px;border-radius:5px}#campSeals.trial-progress i{width:8px;height:8px;border-radius:50%;background:#83978a;border:1px solid #d4dfbe}#campSeals.trial-progress i.won{background:#ffda73;border-color:#ffe8a6}

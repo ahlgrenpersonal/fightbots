@@ -1,6 +1,6 @@
-import { WIDTH, HEIGHT, HOME, CAMPS, KING, ENCOUNTERS, BRIDGES, tileAt } from './world.js?v=roman16';
-import { drawBot } from '../art.js?v=roman16';
-import { normalizeSlot } from '../data.js?v=roman16';
+import { WIDTH, HEIGHT, HOME, CAMPS, KING, ENCOUNTERS, BRIDGES, tileAt } from './world.js?v=roman17';
+import { drawBot } from '../art.js?v=roman17';
+import { normalizeSlot } from '../data.js?v=roman17';
 
 const TAU=Math.PI*2;
 const INK='#314b50';
@@ -48,7 +48,7 @@ function rounded(c,x,y,w,h,r,fill,stroke=INK){
   c.beginPath();c.roundRect(x,y,w,h,r);c.fillStyle=fill;c.fill();
   if(stroke){c.strokeStyle=stroke;c.lineWidth=.045;c.stroke();}
 }
-function citizen(c,x,y,time,seed,activity='idle',size=1){
+export function citizen(c,x,y,time,seed,activity='idle',size=1){
   c.save();c.translate(x,y);c.scale(size,size);
   const cloth=['#d57889','#3fb9bc','#699bd1','#b68ac5'][seed%4];
   const bob=Math.sin(time*1.3+seed)*.025;
