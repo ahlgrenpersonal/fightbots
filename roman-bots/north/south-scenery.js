@@ -1,7 +1,7 @@
-import {drawQuestAtlas} from './quest-art.js?v=roman28';
-import * as world from './south-world.js?v=roman28';
-import { drawBot } from '../art.js?v=roman28';
-import { normalizeSlot } from '../data.js?v=roman28';
+import {drawQuestAtlas} from './quest-art.js?v=roman29';
+import * as world from './south-world.js?v=roman29';
+import { drawBot } from '../art.js?v=roman29';
+import { normalizeSlot } from '../data.js?v=roman29';
 
 const { WIDTH, HEIGHT, HOME, KING, CAMPS, ENCOUNTERS, LANDSCAPES, LANDMARKS, tileAt, passable } = world;
 const TAU = Math.PI * 2;

@@ -1,7 +1,7 @@
-import {drawQuestAtlas} from './quest-art.js?v=roman28';
-import { WIDTH, HEIGHT, HOME, CAMPS, KING, ENCOUNTERS, BRIDGES, tileAt } from './world.js?v=roman28';
-import { drawBot } from '../art.js?v=roman28';
-import { normalizeSlot } from '../data.js?v=roman28';
+import {drawQuestAtlas} from './quest-art.js?v=roman29';
+import { WIDTH, HEIGHT, HOME, CAMPS, KING, ENCOUNTERS, BRIDGES, tileAt } from './world.js?v=roman29';
+import { drawBot } from '../art.js?v=roman29';
+import { normalizeSlot } from '../data.js?v=roman29';
 
 const TAU=Math.PI*2;
 const INK='#314b50';

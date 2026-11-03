@@ -1,11 +1,11 @@
-import {Battle,distance,BODY_SPACING} from '../engine.js?v=roman28';
-import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman28';
-import * as NORTH from './world.js?v=roman28';
-import * as WEST from './west-world.js?v=roman28';
-import * as SOUTH from './south-world.js?v=roman28';
-import * as EAST from './east-world.js?v=roman28';
-import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman28';
-import {RETURN_QUESTS,INVASION,activeReturnQuest,questFinished,inHarbor,HARBOR_FRONT} from './return-quests.js?v=roman28';
+import {Battle,distance,BODY_SPACING} from '../engine.js?v=roman29';
+import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman29';
+import * as NORTH from './world.js?v=roman29';
+import * as WEST from './west-world.js?v=roman29';
+import * as SOUTH from './south-world.js?v=roman29';
+import * as EAST from './east-world.js?v=roman29';
+import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman29';
+import {RETURN_QUESTS,INVASION,activeReturnQuest,questFinished,inHarbor,HARBOR_FRONT} from './return-quests.js?v=roman29';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const number=(n,a,b,f=a)=>Number.isFinite(n)?clamp(n,a,b):f;
@@ -90,6 +90,8 @@ export class Campaign extends Battle {
   }
   approachPoint(p){
     if(this.trial||!point(p))return p;
+    // The pictured home buildings all lead to the workshop in the courtyard.
+    if(this.state.region==='north'&&NORTH.HOME_BUILDINGS.some(b=>p.x>=b.left&&p.x<=b.right&&p.y>=b.top&&p.y<=b.bottom))return this.world.HOME;
     // Tapping a pictured boat means walking to its quay, not into the water.
     const ports=this.interactionSites().filter(s=>s.action==='gate'||s.action==='ship'||s.action==='atlas');
     return ports.find(s=>s.boat&&distance(s.boat,p)<2.9)||ports.find(s=>distance(s,p)<1.8)||p;
