@@ -1,11 +1,11 @@
-import {Battle,distance,BODY_SPACING} from '../engine.js?v=roman30';
-import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman30';
-import * as NORTH from './world.js?v=roman30';
-import * as WEST from './west-world.js?v=roman30';
-import * as SOUTH from './south-world.js?v=roman30';
-import * as EAST from './east-world.js?v=roman30';
-import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman30';
-import {RETURN_QUESTS,INVASION,activeReturnQuest,questFinished,inHarbor,HARBOR_FRONT} from './return-quests.js?v=roman30';
+import {Battle,distance,BODY_SPACING} from '../engine.js?v=roman31';
+import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman31';
+import * as NORTH from './world.js?v=roman31';
+import * as WEST from './west-world.js?v=roman31';
+import * as SOUTH from './south-world.js?v=roman31';
+import * as EAST from './east-world.js?v=roman31';
+import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman31';
+import {RETURN_QUESTS,INVASION,activeReturnQuest,questFinished,inHarbor,HARBOR_FRONT} from './return-quests.js?v=roman31';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const number=(n,a,b,f=a)=>Number.isFinite(n)?clamp(n,a,b):f;
@@ -95,13 +95,13 @@ export class Campaign extends Battle {
     const house=this.state.region==='north'&&NORTH.HOME_BUILDINGS.find(b=>p.x>=b.left&&p.x<=b.right&&p.y>=b.top&&p.y<=b.bottom);
     if(house)return {x:house.x,y:house.y};
     // Tapping a pictured boat means walking to its quay, not into the water.
-    const ports=this.interactionSites().filter(s=>s.action==='gate'||s.action==='ship'||s.action==='atlas');
+    const ports=this.interactionSites().filter(s=>s.action==='gate'||s.action==='ship'||s.action==='atlas'||s.action==='rest');
     return ports.find(s=>s.boat&&distance(s.boat,p)<2.9)||ports.find(s=>distance(s,p)<1.8)||p;
   }
   arriveAtPlace(){
     if(!this.arrivalIntent||this.paused||this.trial||this.voyage||this.activeEncounter)return false;
     const leader=this.leader();if(!leader)return false;
-    const site=this.interactionSites().find(s=>distance(s,this.arrivalIntent)<1.25&&(s.action==='workshop'?distance(this.arrivalIntent,leader)<.3:distance(s,leader)<1.65));
+    const site=this.interactionSites().find(s=>distance(s,this.arrivalIntent)<1.25&&distance(this.arrivalIntent,leader)<.3);
     if(!site)return false;
     if(site.action==='gate')return this.crossGate();
     if(site.action==='ship')return this.boardShip();
@@ -229,6 +229,7 @@ export class Campaign extends Battle {
   }
   slotFor(u){
     if(!this.state)return super.slotFor(u);
+    if(this.travelGoal&&u.yieldPoint&&this.time<u.yieldUntil)return u.yieldPoint;
     const buddy=this.units.find(v=>v.id===u.buddy&&v.hp>0);
     if(buddy&&!this.travelGoal&&this.alive(1-u.team).some(v=>distance(u,v)<6&&this.clearLine(u,v)))return super.slotFor(u);
     const leader=this.leader(u.team);if(!leader||leader===u)return {x:u.x,y:u.y};
@@ -271,6 +272,13 @@ export class Campaign extends Battle {
         const dx=(destination.x-u.x)/d,dy=(destination.y-u.y)/d,bodies=this.units.filter(v=>v.hp>0&&v!==u);
         const blocker=bodies.filter(v=>{const x=v.x-u.x,y=v.y-u.y;return x*dx+y*dy>0&&Math.abs(x*dy-y*dx)<BODY_SPACING&&distance(u,v)<BODY_SPACING+.35;}).sort((a,b)=>distance(u,a)-distance(u,b))[0];
         if(blocker){
+          // At a stop, companions step aside so the captain can finish arriving.
+          if(u===this.leader()&&blocker.team===0&&this.safe(u.x,u.y)&&distance(u,this.travelGoal)<4&&this.interactionSites().some(s=>distance(s,this.travelGoal)<1.25)){
+            const spaces=[-1,1].map(side=>({x:blocker.x-dy*side*2,y:blocker.y+dx*side*2}));
+            spaces.push(...[-1,1].map(side=>({x:u.x-dx*1.7-dy*side*1.6,y:u.y-dy*1.7+dx*side*1.6})));
+            const space=spaces.find(p=>this.validPosition(p)&&this.clearLine(blocker,p)&&bodies.every(v=>v===blocker||distance(p,v)>BODY_SPACING+.1));
+            if(space){blocker.yieldPoint=space;blocker.yieldUntil=this.time+1.2;}
+          }
           // Choose among terrain-valid sides, not a blocked side followed by
           // another step into the companion occupying the original waypoint.
           const candidates=[-1,1].map(side=>({x:this.boundX(blocker.x-dy*side*(BODY_SPACING+.3)),y:this.boundY(blocker.y+dx*side*(BODY_SPACING+.3))}))
@@ -349,7 +357,7 @@ export class Campaign extends Battle {
     const leader=this.leader();
     if(distance(leader,destination)>.3)leader.angle=Math.atan2(destination.y-leader.y,destination.x-leader.x);
     this.travelGoal={x:destination.x,y:destination.y};this.goal=this.travelGoal;this.focus=null;this.pendingPower=null;this.focusOwner=null;this.pendingOwner=null;this.paths.clear();
-    for(const u of this.alive(0)){u.action=null;u.target=null;u.retreat=null;}
+    for(const u of this.alive(0)){u.action=null;u.target=null;u.retreat=null;u.yieldPoint=null;}
     return true;
   }
   tapEnemy(enemy){
@@ -441,7 +449,19 @@ export class Campaign extends Battle {
   nearbyCamp(){
     if(this.trial||this.voyage)return null;
     const leader=this.leader();if(!leader||!this.safe(leader.x,leader.y))return null;
-    return this.interactionSites().filter(c=>c.action==='workshop'||c.action==='rest').find(c=>distance(c,leader)<3.5)||null;
+    return this.interactionSites().filter(c=>c.action==='workshop'||c.action==='rest').find(c=>c.action==='workshop'?distance(c,leader)<3.5:this.atSite(c))||null;
+  }
+  atSite(site){
+    const leader=this.leader();if(!leader||distance(leader,site)>=1.1)return false;
+    this.sitePoints??=new Map();const key=`${this.state.region}:${site.x},${site.y}`;
+    if(!this.sitePoints.has(key))this.sitePoints.set(key,this.world.nearestWalkable(site));
+    const destination=this.sitePoints.get(key);
+    return !!leader&&(distance(leader,site)<.3||destination&&distance(leader,destination)<.3);
+  }
+  visitCamp(camp){
+    if(!this.atSite(camp)||!this.safe(this.leader().x,this.leader().y))return;
+    if(!this.state.refuges.includes(camp.id)){this.state.refuges.push(camp.id);this.emit('refuge',{id:camp.id});}
+    if(!this.state.camps.includes(camp.id)&&this.campStatus(camp.id).ready){this.state.camps.push(camp.id);this.emit('camp',{id:camp.id});}
   }
   campStatus(id){
     const stage=this.world.CAMPS.findIndex(c=>c.id===id);if(stage<0)return null;
@@ -451,12 +471,13 @@ export class Campaign extends Battle {
   }
   restAt(id){
     const camp=this.nearbyCamp();if(!camp||camp.id!==id)return false;
+    if(id!=='home')this.visitCamp(camp);
     const standing=this.alive(0),anchor={x:this.leader().x,y:this.leader().y};
     this.arrivalIntent=null;
     this.travelGoal=null;this.goal=null;this.focus=null;this.pendingPower=null;this.focusOwner=null;this.pendingOwner=null;this.paths.clear();
     for(const u of this.units.filter(u=>u.team===0)){u.hp=u.maxHp;u.action=null;u.guardBroken=0;u.stun=0;}
     this.state.utilityLeft=1+this.state.utilityTier;this.utilityCd=0;this.chargeTime=0;
-    this.placeSquad(id==='home'?anchor:camp,id==='home'?{stationary:standing}:{});
+    this.placeSquad(anchor,{stationary:standing});
     this.syncActive();this.emit('rest',{id});return true;
   }
   setLoadout(index,slot){
@@ -531,7 +552,7 @@ export class Campaign extends Battle {
         if(u!==leader&&distance(u,leader)>5){u.action=null;u.target=null;}
         this.walk(u,u===leader?this.travelGoal:this.slotFor(u),dt);
       }
-      if(distance(leader,this.travelGoal)<.3){this.travelGoal=null;this.goal=null;}else this.goal=this.travelGoal;
+      this.goal=this.travelGoal;
     }else{
       if(this.activeEncounter&&(this.eastern||this.activeEncounter.quest||this.time-this.lastCombatAt>=1))for(const u of [...this.alive(0),...this.alive(1)]){
         const target=this.units.find(v=>v.id===u.target&&v.hp>0&&v.team!==u.team);
@@ -548,12 +569,10 @@ export class Campaign extends Battle {
       for(const u of this.alive(0))if(u!==leader&&!this.pickTarget(u)&&distance(u,leader)>2)this.walk(u,this.slotFor(u),dt);
     }
     this.separateBodies();
+    if(this.travelGoal&&distance(leader,this.travelGoal)<.3){this.travelGoal=null;this.goal=null;}
     if(this.activeEncounter&&(distance(leader,this.activeEncounter)>12||this.safe(leader.x,leader.y))){this.abandonEncounter();return;}
     if(this.arriveAtPlace())return;
-    for(const camp of this.world.CAMPS)if(distance(leader,camp)<3&&this.safe(leader.x,leader.y)){
-      if(!this.state.refuges.includes(camp.id)){this.state.refuges.push(camp.id);this.emit('refuge',{id:camp.id});}
-      if(!this.state.camps.includes(camp.id)&&this.campStatus(camp.id).ready){this.state.camps.push(camp.id);this.emit('camp',{id:camp.id});}
-    }
+    for(const camp of this.world.CAMPS)if(distance(leader,camp)<1)this.visitCamp(camp);
     if(this.activeEncounter){
       if(!this.alive(1).length){
         if(this.wave>=integer(this.activeEncounter.waves,2,this.activeEncounter.quest?6:3,2))this.finishEncounter();
