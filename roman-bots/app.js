@@ -1,12 +1,12 @@
-import {BUILD,WEAPONS,SHIELDS,FORMATIONS,FORMATION_NAMES,freshSquad,normalizeSlot,normalizeSquad,OPPONENTS,HEALTH_ASSISTS,normalizeHealthBonus} from './data.js?v=roman10';
-import {Battle,distance,guardsAgainst,MELEE_TOLERANCE} from './engine.js?v=roman10';
-import {drawCourtyard,drawBot,drawGear,drawFormation} from './art.js?v=roman10';
-import {icon} from './icons.js?v=roman10';
-import {BOT_SIZE} from './geometry.js?v=roman10';
+import {BUILD,WEAPONS,SHIELDS,freshSquad,normalizeSlot,normalizeSquad,OPPONENTS,HEALTH_ASSISTS,normalizeHealthBonus} from './data.js?v=roman14';
+import {Battle,distance,guardsAgainst,MELEE_TOLERANCE} from './engine.js?v=roman14';
+import {drawCourtyard,drawBot,drawGear} from './art.js?v=roman14';
+import {icon} from './icons.js?v=roman14';
+import {BOT_SIZE} from './geometry.js?v=roman14';
 
 const $=id=>document.getElementById(id),SAVE_KEY='roman-bots-settings-v1';
-let config={squad:freshSquad(),formation:'wall',sound:true,healthBonus:50,opponent:0};
-try{const raw=JSON.parse(localStorage.getItem(SAVE_KEY));if(raw){config.squad=normalizeSquad(raw.squad);if(FORMATIONS.includes(raw.formation))config.formation=raw.formation;config.sound=raw.sound!==false;config.healthBonus=raw.healthBonus===undefined&&raw.gentle===false?0:normalizeHealthBonus(raw.healthBonus);if(Number.isInteger(raw.opponent)&&raw.opponent>=0&&raw.opponent<OPPONENTS.length)config.opponent=raw.opponent;}}catch{}
+let config={squad:freshSquad(),sound:true,healthBonus:50,opponent:0};
+try{const raw=JSON.parse(localStorage.getItem(SAVE_KEY));if(raw){config.squad=normalizeSquad(raw.squad);config.sound=raw.sound!==false;config.healthBonus=raw.healthBonus===undefined&&raw.gentle===false?0:normalizeHealthBonus(raw.healthBonus);if(Number.isInteger(raw.opponent)&&raw.opponent>=0&&raw.opponent<OPPONENTS.length)config.opponent=raw.opponent;}}catch{}
 let slot=0,details=false,battle=null,opponent=OPPONENTS[config.opponent],mode='builder',dialogMode='',last=performance.now(),endedAt=0,audio,ambient=0;
 let layout={scale:1,ox:0,oy:0,w:1,h:1};
 let camera={x:5,y:7.5,zoom:1,holdUntil:0};
@@ -38,7 +38,6 @@ function tone(frequency,duration=.08,volume=.025,type='triangle',end=frequency){
 function event(e){
   if(e.type==='block')tone(1100,.07,.014,'triangle',400);
   if(e.type==='hit')tone(e.weapon==='hammer'?90:290,e.power?.18:.07,e.power?.035:.017,'triangle',65);
-  if(e.type==='formation')tone(480,.12,.02,'sine',750);
   if(e.type==='finished'){endedAt=performance.now();tone(e.winner===0?550:300,.3,.025,'triangle',e.winner===0?900:440);}
 }
 function previewUnit(build,index=slot){return {...build,id:`preview-${index}`,team:0,captain:index===0,x:0,y:0,angle:-.35,hp:100,maxHp:100,flash:0,guardBroken:0,blockFlash:0};}
@@ -49,7 +48,7 @@ function drawPortrait(c,build,index,w,h,t,team=0){
 }
 function canvasFrame(canvas,draw){const r=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);if(!r.width||!r.height)return;const w=Math.round(r.width*dpr),h=Math.round(r.height*dpr);if(canvas.width!==w)canvas.width=w;if(canvas.height!==h)canvas.height=h;const c=canvas.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,r.width,r.height);draw(c,r.width,r.height);}
 function rememberFocus(){
-  const active=document.activeElement,key=['slot','weapon','shield','formation'].find(k=>active?.dataset?.[k]!==undefined),id=active?.id;
+  const active=document.activeElement,key=['slot','weapon','shield'].find(k=>active?.dataset?.[k]!==undefined),id=active?.id;
   return ()=>{const next=id?$(id):key?document.querySelector(`[data-${key}="${active.dataset[key]}"]`):null;if(next&&!next.disabled&&next!==document.activeElement)next.focus({preventScroll:true});};
 }
 function buildUI(){
@@ -79,16 +78,10 @@ function drawBuilder(t){
     for(const side of [-1,1]){const x=w/2+side*w*.39;c.fillStyle='#90aea8';c.fillRect(x-6,h*.26,12,h*.45);c.fillStyle='#e6eee2';c.fillRect(x-9,h*.22,18,8);c.fillRect(x-9,h*.71,18,6);}
   });
 }
-function formButtons(){
-  const restoreFocus=rememberFocus();
-  $('formations').innerHTML=FORMATIONS.map(id=>`<button class="formation-button ${config.formation===id?'selected':''}" data-formation="${id}" aria-label="${FORMATION_NAMES[id]}" aria-pressed="${config.formation===id}" title="${FORMATION_NAMES[id]}"><canvas width="144" height="144" data-formation-icon="${id}" aria-hidden="true"></canvas></button>`).join('');
-  for(const c of document.querySelectorAll('[data-formation-icon]'))canvasFrame(c,(ctx,w,h)=>{ctx.scale(w/64,h/64);drawFormation(ctx,c.dataset.formationIcon,c.closest('button').classList.contains('selected')?'#236c66':'#a9e9d0');});
-  restoreFocus();
-}
 function startBattle(){
   closeDialog();
-  battle=new Battle(config.squad,opponent.squad,{seed:crypto.getRandomValues(new Uint32Array(1))[0],formation:config.formation,enemyFormation:opponent.formation,healthBonus:config.healthBonus,onEvent:event});
-  mode='battle';endedAt=0;camera={x:5,y:7.5,zoom:1,holdUntil:0};$('builder').hidden=true;$('arena').hidden=false;$('battleControls').hidden=false;$('pause').hidden=false;$('info').hidden=true;$('locationName').textContent=opponent.name;formButtons();last=performance.now();tone(420,.12,.02,'triangle',650);save();
+  battle=new Battle(config.squad,opponent.squad,{seed:crypto.getRandomValues(new Uint32Array(1))[0],healthBonus:config.healthBonus,onEvent:event});
+  mode='battle';endedAt=0;camera={x:5,y:7.5,zoom:1,holdUntil:0};$('builder').hidden=true;$('arena').hidden=false;$('battleControls').hidden=false;$('pause').hidden=false;$('info').hidden=true;$('locationName').textContent=opponent.name;last=performance.now();tone(420,.12,.02,'triangle',650);save();
 }
 function editSquad(){closeDialog();mode='builder';battle=null;$('builder').hidden=false;$('arena').hidden=true;$('battleControls').hidden=true;$('pause').hidden=true;$('info').hidden=false;$('locationName').textContent='The Marble Courtyard';buildUI();}
 function showDialog(title,body,kind){dialogMode=kind;if(battle)battle.paused=true;$('dialogContent').innerHTML=`<div class="dialog-head"><h1 id="dialogTitle">${title}</h1>${kind==='result'?'':`<button class="icon-button" data-action="resume" aria-label="Close" title="Close">${icon('close')}</button>`}</div><div class="dialog-body">${body}</div>`;if(!$('dialog').open)$('dialog').showModal();}
@@ -103,7 +96,6 @@ function result(){
 }
 function effects(c,b,t){
   for(const effect of b.effects){
-    if(effect.type==='reform'){c.save();c.globalAlpha=Math.min(.7,effect.life*.6);for(const u of b.alive(0)){const p=b.slotFor(u);c.strokeStyle='#167f80';c.lineWidth=.04;c.setLineDash([.08,.08]);c.beginPath();c.moveTo(u.x,u.y+.3);c.lineTo(p.x,p.y);c.stroke();c.beginPath();c.arc(p.x,p.y,.35,0,Math.PI*2);c.stroke();}c.restore();continue;}
     const p=1-effect.life/effect.max;c.save();c.translate(effect.x,effect.y);c.globalAlpha=1-p;
     if(effect.type==='hammer'||effect.type==='power'){c.beginPath();c.ellipse(0,.18,.3+p*.8,.14+p*.35,0,0,Math.PI*2);c.strokeStyle=effect.type==='power'?'#fff6a6':'#a88654';c.lineWidth=.06*(1-p);c.stroke();}
     for(let i=0;i<7;i++){const a=i*Math.PI*2/7+t*.3,r=.1+p*(effect.type==='power'?1:.65);c.beginPath();c.moveTo(Math.cos(a)*r,Math.sin(a)*r);c.lineTo(Math.cos(a)*(r+.13),Math.sin(a)*(r+.13));c.strokeStyle=effect.type==='block'?'#d8ffff':i%2?'#e0a63b':'#fff9d9';c.lineWidth=.06*(1-p);c.stroke();}
@@ -127,8 +119,9 @@ function renderBattle(t){
     const ordered=[...battle.units].sort((a,b)=>a.y-b.y);
     for(const u of ordered){
       const target=u.action&&battle.units.find(v=>v.id===u.action.target),strikeTarget=u.action?.contact||(target&&distance(u,target)<=WEAPONS[u.weapon].range+MELEE_TOLERANCE?{...target,guarding:guardsAgainst(target,u)}:null);
-      drawBot(c,{...u,strikeTarget},reduced?0:t,{size:BOT_SIZE});
-      if(u.hp>0){const width=u.captain?.8:.62,y=u.y-(u.weapon==='spear'&&!u.captain?1.07:1);c.fillStyle='#254b5366';c.beginPath();c.roundRect(u.x-width/2,y,width,.075,.025);c.fill();c.fillStyle=u.team===0?'#147e71':'#b84659';c.beginPath();c.roundRect(u.x-width/2,y,width*Math.max(0,u.hp/u.maxHp),.075,.025);c.fill();}
+      const active=u.hp>0&&u===battle.leader(u.team),visualCaptain=u.captain||active;
+      drawBot(c,{...u,strikeTarget},reduced?0:t,{size:BOT_SIZE,promoted:active});
+      if(u.hp>0){const width=visualCaptain?.8:.62,y=u.y-(u.weapon==='spear'&&!visualCaptain?1.07:1);c.fillStyle='#254b5366';c.beginPath();c.roundRect(u.x-width/2,y,width,.075,.025);c.fill();c.fillStyle=u.team===0?'#147e71':'#b84659';c.beginPath();c.roundRect(u.x-width/2,y,width*Math.max(0,u.hp/u.maxHp),.075,.025);c.fill();}
     }
     for(const arrow of battle.projectiles){const target=battle.units.find(u=>u.id===arrow.target);if(!target)continue;const a=Math.atan2(target.y-arrow.y,target.x-arrow.x);c.save();c.translate(arrow.x,arrow.y);c.rotate(a);c.strokeStyle=arrow.power?'#fff0a1':'#7c654d';c.lineWidth=arrow.power?.065:.035;c.beginPath();c.moveTo(-.52,0);c.lineTo(-.05,0);c.stroke();c.beginPath();c.moveTo(-.13,-.07);c.lineTo(0,0);c.lineTo(-.13,.07);c.fillStyle='#f9fff3';c.fill();c.restore();}
     effects(c,battle,t);
@@ -139,7 +132,8 @@ function renderBattle(t){
   $('enemyStatus').innerHTML=battle.units.filter(u=>u.team===1).map(u=>`<span class="army-pip ${u.hp<=0?'down':''}" style="--health:${Math.max(0,u.hp/u.maxHp)*100}%" aria-label="${u.hp>0?'Standing':'Defeated'}"></span>`).join('');
   $('powerStatus').textContent=battle.powerCd>0?`${battle.powerCd.toFixed(1)}s`:'★';
   const currentLeader=battle.leader();$('captainIcon').dataset.unit=currentLeader?.id||'';
-  canvasFrame($('captainIcon'),(c,w,h)=>{if(currentLeader)drawBot(c,{...previewUnit(currentLeader,currentLeader.index),x:w/2,y:h*.62},t,{size:w*.8,preview:true});});
+  $('powerMeter').setAttribute('aria-label',currentLeader?`Active soldier ${currentLeader.index+1}, ${battle.powerCd>0?'power recharging':'power ready'}`:'No active soldier');
+  canvasFrame($('captainIcon'),(c,w,h)=>{if(currentLeader)drawPortrait(c,{...currentLeader,captain:true},0,w,h,t);});
 }
 function drawResult(t){
   canvasFrame($('resultArt'),(c,w,h)=>{
@@ -177,7 +171,6 @@ $('builder').addEventListener('click',e=>{
   if(b.id==='nextOpponent'){config.opponent=(config.opponent+1)%OPPONENTS.length;opponent=OPPONENTS[config.opponent];tone(440,.08,.02,'triangle',600);}
   if(b.id==='start'){startBattle();return;}buildUI();$('builder').scrollTop=scroll;save();
 });
-$('formations').addEventListener('click',e=>{const b=e.target.closest('[data-formation]');if(!b||!battle)return;config.formation=b.dataset.formation;battle.setFormation(config.formation);formButtons();save();});
 $('battleCanvas').addEventListener('pointerdown',e=>{
   if(!battle||battle.paused||battle.phase==='finished')return;e.preventDefault();camera.holdUntil=performance.now()+1200;const r=$('battleCanvas').getBoundingClientRect(),point={x:(e.clientX-r.left-layout.ox)/layout.scale,y:(e.clientY-r.top-layout.oy)/layout.scale};
   const enemy=battle.enemyAt(point,layout.scale);if(enemy)battle.tapEnemy(enemy);else battle.moveTo(point);
@@ -191,7 +184,6 @@ window.addEventListener('keydown',e=>{
   if(!battle||battle.phase==='finished'||$('dialog').open)return;
   if(e.key==='Escape'){pause();return;}
   if(e.target?.closest?.('button,input,select,textarea,a,[contenteditable="true"]'))return;
-  if(['1','2','3'].includes(e.key)){config.formation=FORMATIONS[Number(e.key)-1];battle.setFormation(config.formation);formButtons();}
   if(e.code==='Space'){e.preventDefault();const leader=battle.leader();if(leader){const target=battle.alive(1).sort((a,b)=>distance(a,leader)-distance(b,leader))[0];if(target)battle.tapEnemy(target);}}
 });
 $('info').innerHTML=icon('info');$('pause').innerHTML=icon('pause');$('start').innerHTML=`${icon('play')}<b>Battle</b>`;

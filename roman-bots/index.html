@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
   <link rel="icon" href="assets/icon-192.png" type="image/png">
-  <link rel="stylesheet" href="styles.css?v=roman10">
+  <link rel="stylesheet" href="styles.css?v=roman14">
 </head>
 <body>
   <main id="game">
@@ -23,14 +23,13 @@
       <p id="gearDescription" class="gear-description" hidden></p>
       <div class="builder-actions"><div class="opponent-heading"><b id="opponentName"></b></div><div class="opponent-row"><div id="opponentSquad" class="opponent-squad" aria-label="Opposing squad"></div><button id="nextOpponent" class="icon-button" aria-label="Next opponent" title="Next opponent"></button></div><button id="start" class="battle-button" aria-label="Start battle"><span>▶</span><b>Battle</b></button></div>
     </section>
-    <section id="arena" aria-label="Courtyard battle" hidden><canvas id="battleCanvas" aria-label="Battlefield. Tap to move or select an enemy." tabindex="0"></canvas><div id="battleBanner" class="battle-banner" role="status" hidden></div><div id="targetHint" class="target-hint" hidden></div></section>
+    <section id="arena" aria-label="Courtyard battle" hidden><canvas id="battleCanvas" aria-label="Battlefield. Tap the ground to move or an enemy for the active soldier's power attack." tabindex="0"></canvas><div id="battleBanner" class="battle-banner" role="status" hidden></div><div id="targetHint" class="target-hint" hidden></div></section>
     <footer id="battleControls" class="battle-controls" hidden>
-      <div class="squad-health"><div id="allyStatus" class="army-status" aria-label="Friendly squad"></div><div class="power-meter"><canvas id="captainIcon" width="80" height="80" aria-hidden="true"></canvas><span id="powerStatus" role="status"></span></div><div id="enemyStatus" class="army-status enemy-status" aria-label="Opposing squad"></div></div>
-      <div id="formations" class="formation-buttons" role="group" aria-label="Choose a formation"></div>
+      <div class="squad-health"><div id="allyStatus" class="army-status" aria-label="Friendly squad"></div><div id="powerMeter" class="power-meter" role="group" aria-label="Active soldier"><canvas id="captainIcon" width="80" height="80" aria-hidden="true"></canvas><span id="powerStatus" role="status"></span></div><div id="enemyStatus" class="army-status enemy-status" aria-label="Opposing squad"></div></div>
     </footer>
   </main>
   <dialog id="dialog" aria-labelledby="dialogTitle"><div id="dialogContent"></div></dialog>
   <audio id="music" src="assets/courtyard-theme.mp3" preload="auto" loop hidden></audio>
-  <script type="module" src="app.js?v=roman10"></script>
+  <script type="module" src="app.js?v=roman14"></script>
 </body>
 </html>

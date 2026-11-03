@@ -1,4 +1,4 @@
-import { actionPose, bowGrip } from './geometry.js?v=roman10';
+import { actionPose, bowGrip, shieldOpening } from './geometry.js?v=roman14';
 const TAU = Math.PI * 2;
 const INK = '#314b50';
 const GOLD = '#d8ae54';
@@ -459,7 +459,7 @@ function robotBody(c, unit, colors, time, aim, bob, battle = false) {
 export function shieldPose(unit, { preview = false } = {}) {
   const aim = Number.isFinite(unit.angle) ? unit.angle : -Math.PI / 2;
   const side = Math.cos(aim) < -.1 ? -1 : 1;
-  const effort = actionPose(unit), open = effort.wind * (1 - effort.recover);
+  const open = shieldOpening(unit);
   const broken = unit.guardBroken > 0;
   const tower = unit.shield === 'tower';
   // Present the shield face to the camera, rather than hiding it behind the head.
@@ -506,7 +506,8 @@ export function weaponPose(unit, time = 0, { size = 1, preview = false } = {}) {
     const reach = weaponLength * (id === 'sword' ? 60 : id === 'hammer' ? 59 : 80), needed = length - reach;
     const advance = Math.max(-64, Math.min(id === 'spear' ? 48 : 112, needed)), strike = pose.strike * (1 - pose.recover);
     handX += Math.cos(angle) * advance * strike; handY += Math.sin(angle) * advance * strike;
-    if (id === 'spear') extension = Math.min(140, Math.max(0, needed - advance) / weaponLength) * strike;
+    // Telescope the shaft to contact without stretching the two-handed grip.
+    if (id === 'spear') extension = Math.max(0, needed - advance) / weaponLength * strike;
     const aimed = aim + Math.atan2(Math.sin(angle - aim), Math.cos(angle - aim)) * pose.wind * (1 - pose.recover);
     const wind = id === 'sword' ? 1.45 : id === 'hammer' ? 1.9 : 0;
     rotation = aimed - wind * pose.wind * (1 - pose.strike) * (1 - pose.recover) + (id === 'spear' ? 0 : .45 * Math.sin(pose.recover * Math.PI));
@@ -520,7 +521,7 @@ export function weaponPose(unit, time = 0, { size = 1, preview = false } = {}) {
 }
 
 /** Friendly, upright robots with independently aimed equipment. */
-export function drawBot(ctx, unit, time = 0, { size = 1, preview = false } = {}) {
+export function drawBot(ctx, unit, time = 0, { size = 1, preview = false, promoted = false } = {}) {
   const c = ctx, colors = TEAMS[unit.team === 1 ? 1 : 0];
   const { aim, id, twoHands, pose, bob, weaponLength, shoulder, rotation, pull, side, handX, handY, effort, extension } = weaponPose(unit, time, { size, preview });
   const hasShield = !twoHands && (unit.shield === 'round' || unit.shield === 'tower'), broken = unit.guardBroken > 0;
@@ -594,7 +595,7 @@ export function drawBot(ctx, unit, time = 0, { size = 1, preview = false } = {})
   };
   c.save();
   if (!preview) c.scale(1.12, 1.03);
-  robotBody(c, unit, colors, time, aim, bob, !preview);
+  robotBody(c, promoted ? { ...unit, captain: true } : unit, colors, time, aim, bob, !preview);
   c.restore();
   shield();
   hand();

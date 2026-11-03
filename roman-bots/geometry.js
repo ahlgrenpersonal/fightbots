@@ -2,6 +2,12 @@ export const BOT_SIZE = 1.08;
 const clamp = n => Math.max(0, Math.min(1, n));
 const ease = n => { n = clamp(n); return n * n * (3 - 2 * n); };
 
+export function shieldOpening(unit) {
+  // Tower fighters expose themselves only around contact, not the whole swing.
+  if(unit.shield==='tower')return unit.action?clamp(1-Math.abs(unit.action.elapsed-unit.action.hitTime)/.08):0;
+  const pose=actionPose(unit);return pose.wind*(1-pose.recover);
+}
+
 export function actionPose(unit) {
   const a = unit.action;
   if (!a) return { active: false, wind: 0, strike: 0, recover: 0, swing: 0 };
