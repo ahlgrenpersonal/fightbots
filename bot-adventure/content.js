@@ -1,4 +1,4 @@
-import {relocateEntity,relocateMission} from './topology.js?v=world85';
+import {relocateEntity,relocateMission} from './topology.js?v=world86';
 const REGION_GUIDES={
   coast:['Salt air and bright harbor trails','Watch the blade fly out and come back. Keep rolling.'],
   scrapyard:['Giant magnets and mountains of spare parts','Move out of the glowing magnetic circle before the blast.'],
@@ -31,6 +31,7 @@ export function bossProfile(enemyOrRegion){
   const profile={weapon:r<5?['bumper','hammer','lightning','rocket','rocket'][r]:guns[theme]||'rail',armor:r===2?'reflect':r<5?'heavy':['aurora','lunar'].includes(theme)?'polar':['orbital','ancient'].includes(theme)?'star':'bastion',wheels:r>=5&&['lunar','orbital','storm'].includes(theme)?'hover':r>=5?'rover':'basic'};
   if(returnId==='copper-return')Object.assign(profile,{weapon:'tractor',armor:'bastion',wheels:'rover',color:'#ce7258'});
   if(returnId==='crystal-return')Object.assign(profile,{weapon:'frost',armor:'polar',wheels:'hover',color:'#82cddd'});
+  if(returnId==='copper-twins')Object.assign(profile,{weapon:enemyOrRegion.twin===1?'saw':'hammer',armor:'bastion',wheels:'treads',color:enemyOrRegion.twin===1?'#e9b45d':'#d77a48'});
   const surprise={
     bruiser:{weapon:'hammer',armor:'heavy',wheels:'treads',color:'#e5a14c'},
     skirmisher:{weapon:'blaster',armor:'light',wheels:'speed',color:'#70b6de'},
@@ -38,7 +39,7 @@ export function bossProfile(enemyOrRegion){
     fragment:{weapon:'bumper',armor:'steel',wheels:'speed',color:'#c6a1e5'}
   }[encounterRole];
   if(surprise)Object.assign(profile,surprise);
-  profile.pattern={bumper:'stomp',hammer:'slam',blaster:'salvo',lightning:'arc',rocket:'salvo',boomerang:'return',tractor:'vortex',flame:'cone',rail:'beam',gravity:'slam',frost:'ice',meteor:'impact',drone:'drone'}[profile.weapon];
+  profile.pattern={bumper:'stomp',hammer:'slam',saw:'slam',blaster:'salvo',lightning:'arc',rocket:'salvo',boomerang:'return',tractor:'vortex',flame:'cone',rail:'beam',gravity:'slam',frost:'ice',meteor:'impact',drone:'drone'}[profile.weapon];
   return profile;
 }
 // Optional road encounters have their own identities; they never replace a relay guardian.
@@ -53,7 +54,8 @@ export const LEGACY_WORKSHOPS=[
 ];
 export const LEGACY_RETURNS=[
   {id:'copper-return',r:1,unlock:8,boss:'The Copper Captain',x:28.5,y:52.5,sitePrefix:'reclaim-copper',sites:[[10.5,14.5],[27.5,32.5],[8.5,74.5]],hp:1600},
-  {id:'crystal-return',r:2,unlock:13,boss:'The Frost Commander',x:99.5,y:8.5,sitePrefix:'reclaim-crystal',sites:[[45.5,13.5],[62.5,36.5],[94.5,31.5]],hp:3400}
+  {id:'crystal-return',r:2,unlock:13,boss:'The Frost Commander',x:99.5,y:8.5,sitePrefix:'reclaim-crystal',sites:[[45.5,13.5],[62.5,36.5],[94.5,31.5]],hp:3400},
+  {id:'copper-twins',r:1,postRoyal:true,boss:'The Iron Twins Reforged',x:30.5,y:50.5,sitePrefix:'reforged-copper',sites:[[6.5,7.5],[29.5,21.5],[9.5,37.5],[29.5,61.5],[7.5,82.5]],hp:4500}
 ];
 export const ENCOUNTERS=LEGACY_ENCOUNTERS.map(relocateEntity);
 export const WORKSHOPS=LEGACY_WORKSHOPS.map(relocateEntity);

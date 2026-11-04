@@ -1,10 +1,10 @@
-import { MORE_REGIONS, NEW_EQUIPMENT, WORKSHOPS, RETURNS, ENCOUNTERS, LEGACY_WORKSHOPS, LEGACY_RETURNS, LEGACY_ENCOUNTERS } from './content.js?v=world85';
-import {LEGACY_TILES,WORLD_TILES,relocatePoint,relocateEntity,legacyPoint,worldGates} from './topology.js?v=world85';
-import {PANTHEON,inPantheon,buildPantheon} from './pantheon.js?v=world85';
+import { MORE_REGIONS, NEW_EQUIPMENT, WORKSHOPS, RETURNS, ENCOUNTERS, LEGACY_WORKSHOPS, LEGACY_RETURNS, LEGACY_ENCOUNTERS } from './content.js?v=world86';
+import {LEGACY_TILES,WORLD_TILES,relocatePoint,relocateEntity,legacyPoint,worldGates} from './topology.js?v=world86';
+import {PANTHEON,inPantheon,buildPantheon} from './pantheon.js?v=world86';
 export {PANTHEON};
 export { WORKSHOPS, RETURNS, ENCOUNTERS };
-export { bossProfile } from './content.js?v=world85';
-export const BUILD = 'world85';
+export { bossProfile } from './content.js?v=world86';
+export const BUILD = 'world86';
 export const REGION_W = 36;
 export const REGION_H = 44;
 export const WORLD_W = REGION_W * 5;
@@ -38,7 +38,7 @@ export const REGIONS = [
 ];
 export const TOTAL_CELLS=REGIONS.reduce((sum,_,r)=>sum+requiredCells(r),0);
 export const TOTAL_TREASURES=REGIONS.length*7;
-export const returnActive=(save,m)=>save.bosses.includes(m.unlock-1)&&!(save.returns||[]).includes(m.id);
+export const returnActive=(save,m)=>!!m&&(m.postRoyal?save.royalCourt?.phase==='victory':save.bosses.includes(m.unlock-1))&&!(save.returns||[]).includes(m.id);
 // The original FightBots' square chassis, eyes, colors and armor motifs are retained.
 // Adventure equipment has its own progression and continuous-time combat rules.
 export const EQUIPMENT = {
@@ -185,9 +185,14 @@ export function makeWorld() {
     arenas.push({r:mission.r,x:mission.x,y:mission.y,radius:3.8,returnId:mission.id});
     for(const [i,[x,y]] of mission.sites.entries()){
       const site={id:`${mission.sitePrefix}-${i}`,r:mission.r,x,y,index:i,returnId:mission.id,unlock:mission.unlock};sites.push(site);
-      for(let j=0;j<4;j++){const a=j*Math.PI/2,hp=mission.unlock===8?170:340;enemies.push({id:`${site.id}-bot-${j}`,site:site.id,wave:0,dormant:false,r:mission.r,x:x+Math.cos(a)*1.3,y:y+Math.sin(a)*1.3,homeX:x+Math.cos(a)*1.3,homeY:y+Math.sin(a)*1.3,hp,maxHp:hp,type:j%2?'shield':'sentry',damage:8,cd:j*.3,hit:0,swing:0,angle:0,returnId:mission.id,unlock:mission.unlock});}
+      const count=mission.postRoyal?5:4;
+      for(let j=0;j<count;j++){
+        const a=j*Math.PI*2/count,type=mission.postRoyal?['tank','ranged','shield','scout','sentry'][j]:j%2?'shield':'sentry';
+        const hp=mission.postRoyal?type==='tank'?2400:type==='shield'?1900:1600:mission.unlock===8?170:340;
+        enemies.push({id:`${site.id}-bot-${j}`,site:site.id,wave:0,dormant:false,r:mission.r,x:x+Math.cos(a)*1.3,y:y+Math.sin(a)*1.3,homeX:x+Math.cos(a)*1.3,homeY:y+Math.sin(a)*1.3,hp,maxHp:hp,type,damage:mission.postRoyal?12:8,cd:j*.3,hit:0,swing:0,angle:0,returnId:mission.id,unlock:mission.unlock});
+      }
     }
-    enemies.push({id:`${mission.id}-boss`,r:mission.r,x:mission.x,y:mission.y,homeX:mission.x,homeY:mission.y,hp:mission.hp,maxHp:mission.hp,type:'boss',damage:16,cd:2,hit:0,swing:0,angle:0,returnId:mission.id,unlock:mission.unlock});
+    for(let twin=0;twin<(mission.postRoyal?2:1);twin++)enemies.push({id:`${mission.id}-boss${mission.postRoyal?`-${twin}`:''}`,r:mission.r,x:mission.x+(mission.postRoyal?twin*2.6-1.3:0),y:mission.y,homeX:mission.x,homeY:mission.y,hp:mission.hp,maxHp:mission.hp,type:'boss',damage:mission.postRoyal?18:16,cd:2+twin,hit:0,swing:0,angle:0,returnId:mission.id,unlock:mission.unlock,...(mission.postRoyal?{twin,size:1.85}:{})});
   }
   for(const encounter of ENCOUNTERS){
     arenas.push({...encounter,radius:3.8,encounterId:encounter.id});
@@ -251,8 +256,8 @@ function relocateWorld(world){
   for(let y=0;y<WORLD_H;y++)for(let x=0;x<WORLD_W;x++)if(regionAt(x,y)<0){blocks.add(`${x},${y}`);if(y<REGION_H*2){if(hash(x,y)<.012)props.push({x:x+.5,y:y+.5,type:'mountain',r:2,seed:hash(x,y)});}else water.add(`${x},${y}`);}
   return {...world,sites:points(world.sites),enemies,chests:points(world.chests),stations:points(world.stations),arenas:points(world.arenas),props,blocks,water};
 }
-export function unlockedRegion(save) { let r=0;while(r<REGIONS.length-1&&save.bosses.includes(r))r++;for(const m of RETURNS)if(r>=m.unlock&&!(save.returns||[]).includes(m.id))r=Math.min(r,m.unlock-1);return r; }
-export const pantheonUnlocked=save=>REGIONS.every((_,r)=>save.bosses.includes(r))&&RETURNS.every(m=>(save.returns||[]).includes(m.id));
+export function unlockedRegion(save) { let r=0;while(r<REGIONS.length-1&&save.bosses.includes(r))r++;for(const m of RETURNS)if(!m.postRoyal&&r>=m.unlock&&!(save.returns||[]).includes(m.id))r=Math.min(r,m.unlock-1);return r; }
+export const pantheonUnlocked=save=>REGIONS.every((_,r)=>save.bosses.includes(r))&&RETURNS.filter(m=>!m.postRoyal).every(m=>(save.returns||[]).includes(m.id));
 export const areaUnlocked=(save,r)=>r===PANTHEON.r?pantheonUnlocked(save):r>=0&&r<=unlockedRegion(save);
 export const areaInfo=r=>r===PANTHEON.r?PANTHEON:REGIONS[r];
 export function cellsIn(save,r) { return new Set(save.cleared.filter(id=>{const m=/^site-(\d+)-(\d+)$/.exec(id);return m&&Number(m[1])===r&&Number(m[2])<requiredCells(r);})).size; }

@@ -1,5 +1,5 @@
-import {PANTHEON,COURT,ROYAL_SPECS,inRoyalChamber} from './pantheon.js?v=world85';
-import {pantheonUnlocked,canWalk,pathfind,regionAt} from './data.js?v=world85';
+import {PANTHEON,COURT,ROYAL_SPECS,inRoyalChamber} from './pantheon.js?v=world86';
+import {pantheonUnlocked,canWalk,pathfind,regionAt} from './data.js?v=world86';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const inside=p=>regionAt(p.x,p.y)===PANTHEON.r&&p.y>=229&&p.y<259;
 const finite=(v,fallback)=>Number.isFinite(v)?v:fallback;
@@ -27,6 +27,18 @@ export class RoyalCourt {
     if(this.phase==='awakening')this.transition=3;
     if(this.phase!=='sleeping'&&this.phase!=='victory')game.enemies.push(...this.units);
     this.normalizePhase();
+    this.prepareRematch();
+  }
+  prepareRematch(){
+    const g=this.game;
+    if(this.phase!=='victory'||!g.save.returns.includes('copper-twins')||g.save.royalRematchStarted)return false;
+    g.save.royalRematchStarted=true;
+    this.phase='sleeping';this.inspect=0;this.transition=0;this.healClock=0;this.rallying=false;this.openedAt=-10;
+    g.enemies=g.enemies.filter(e=>!e.royal);g.projectiles=g.projectiles.filter(e=>!e.royal);g.telegraphs=g.telegraphs.filter(e=>!e.royal);
+    for(const [i,e] of this.units.entries()){const p=COURT.find(p=>p.id===e.id);Object.assign(e,{x:p.x,y:p.y,hp:e.maxHp,angle:Math.PI/2,active:false,enteredArena:false,flanked:false,path:null,frozen:0,hit:0,swing:0,cd:2+i*.45});}
+    for(const key of g.world.courtSeal)g.world.blocks.add(key);
+    for(const keys of g.world.courtPlinths.values())for(const key of keys)g.world.blocks.add(key);
+    this.snapshot();return true;
   }
   get sealed(){return this.phase==='sleeping';}
   get active(){return ['guards','awakening','regents'].includes(this.phase);}

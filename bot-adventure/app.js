@@ -1,15 +1,15 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, visibleEquipment, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world85';
-import { Adventure, distance } from './engine.js?v=world85';
-import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon,atlasBot } from './art.js?v=world85';
-import { mountAtlas } from './atlas.js?v=world85';
-import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world85';
-import {AdventureSaves} from './adventure-saves.js?v=world85';
-import {bindHoldConfirmation} from './hold-confirm.js?v=world85';
-import {bindPowerControl,updatePowerControl} from './power-control.js?v=world85';
-import {atlasProgress} from './atlas-progress.js?v=world85';
-import {localProgress} from './quiet-ui.js?v=world85';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, visibleEquipment, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world86';
+import { Adventure, distance } from './engine.js?v=world86';
+import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon,atlasBot } from './art.js?v=world86';
+import { mountAtlas } from './atlas.js?v=world86';
+import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world86';
+import {AdventureSaves} from './adventure-saves.js?v=world86';
+import {bindHoldConfirmation} from './hold-confirm.js?v=world86';
+import {bindPowerControl,updatePowerControl} from './power-control.js?v=world86';
+import {atlasProgress} from './atlas-progress.js?v=world86';
+import {localProgress} from './quiet-ui.js?v=world86';
 
-const buildVersion = 'world85';
+const buildVersion = 'world86';
 const SAVE_KEY='bot-adventure-save-v1';
 const adventureSaves=new AdventureSaves({storage:()=>localStorage,key:SAVE_KEY});
 const $=id=>document.getElementById(id);
@@ -75,12 +75,12 @@ game.onEvent=e=>{
   if(e.type==='toast')toast(e.text);
   if(e.type==='defeat'){tone(e.boss?130:320,.12,'triangle',.03,75);}
   if(e.type==='explosion')tone(90,.35,'sawtooth',.035,30);
-  if(e.type==='cell'){const m=RETURNS.find(m=>m.id===e.returnId);toast(m?`Camp cleared! ${m.sites.filter((_,i)=>game.save.cleared.includes(`${m.sitePrefix}-${i}`)).length} / 3`:`Power cell found! ${Math.min(requiredCells(e.r),e.count)} / ${requiredCells(e.r)}`);tone(630,.2,'sine',.05,1000);persist();}
+  if(e.type==='cell'){const m=RETURNS.find(m=>m.id===e.returnId);toast(m?`Camp cleared! ${m.sites.filter((_,i)=>game.save.cleared.includes(`${m.sitePrefix}-${i}`)).length} / ${m.sites.length}`:`Power cell found! ${Math.min(requiredCells(e.r),e.count)} / ${requiredCells(e.r)}`);tone(630,.2,'sine',.05,1000);persist();}
   if(e.type==='chest'){toast(`Treasure! +${e.scrap} scrap · +1 gear`);tone(750,.18,'sine',.04,1200);persist();}
   if(e.type==='awake'){banner('The guardian is awake!',REGIONS[e.r].boss);}
   if(e.type==='region'){banner(areaInfo(e.r).name,areaInfo(e.r).subtitle);persist();}
   if(e.type==='guardian'){persist();setTimeout(()=>showGuardian(e.r),600);}
-  if(e.type==='return-complete'){persist();tone(700,.4,'triangle',.04,1400);setTimeout(()=>showReturnComplete(),600);}
+  if(e.type==='return-complete'){persist();tone(700,.4,'triangle',.04,1400);setTimeout(()=>showReturnComplete(e.id),600);}
   if(e.type==='home'){persist();}
   if(e.type==='home-arrived'){workshop();}
   if(e.type==='rescue'){persist();showRescue();}
@@ -88,7 +88,7 @@ game.onEvent=e=>{
   if(e.type==='equip'){tone(350,.08,'triangle',.025,500);persist();}
   if(e.type==='boost'){tone(250,.4,'triangle',.04,900);toast('Power surge!');}
   if(e.type==='royal-stage'){persist();banner(e.phase==='guards'?'The four sentinels awaken!':e.phase==='awakening'?'The royal pair is awakening…':'The king and queen are coming!');tone(100,.6,'triangle',.035,350);}
-  if(e.type==='royal-victory'){persist();openPanel('royal-victory',`${head('Royal Champion!','The king, queen and all four sentinels are defeated.','THE ROYAL FINALE')}<div class="panel-body"><canvas id="rewardBot" class="celebration" width="700" height="280"></canvas><p class="dialog-copy">The ancient court is yours. All your progress and equipment are saved. +250 scrap · +12 parts</p><div class="pause-actions"><button class="primary pictorial-action" data-action="close"><span>♛</span><small>Explore</small></button><button class="secondary pictorial-action" data-action="home"><span>⚙</span><small>Build</small></button></div></div>`);}
+  if(e.type==='royal-victory'){persist();openPanel('royal-victory',`${head('Royal Champion!','The king, queen and all four sentinels are defeated.','THE ROYAL FINALE')}<div class="panel-body"><canvas id="rewardBot" class="celebration" width="700" height="280"></canvas><p class="dialog-copy">The ancient court is yours. All your progress and equipment are saved. +250 scrap · +12 parts</p><div class="pause-actions"><button class="primary pictorial-action" data-action="map" aria-label="Open adventure map"><span>⚑</span><small>Explore</small></button><button class="secondary pictorial-action" data-action="home"><span>⚙</span><small>Build</small></button></div></div>`);}
 };
 function closePanel(){holdCleanup?.();holdCleanup=null;atlasController?.destroy();atlasController=null;if(panelMode==='workshop')workshopDetails=false;if(panel.open)panel.close();panelMode=null;game.paused=false;last=performance.now();persist();}
 function openPanel(mode,html){holdCleanup?.();holdCleanup=null;atlasController?.destroy();atlasController=null;game.paused=true;panelMode=mode;panel.dataset.mode=mode;$('panelContent').innerHTML=html;if(!panel.open)panel.showModal();panel.scrollTop=0;drawPanels();}
@@ -116,7 +116,7 @@ function adventureMap(){
   bot($('mapPlayerKey').getContext('2d'),40,43,64,{color:s.color,armor:s.build.armor,wheels:s.build.wheels,gun:s.build.weapon,gadget:s.build.gadget,reducedMotion:true});
   const stations=game.world.stations.filter(st=>progress.visible.has(st.r)&&s.discovered.includes(st.id));
   panel.querySelector('.region-list').insertAdjacentHTML('afterbegin',stations.map(st=>`<button class="region-row station-row" data-station="${st.id}"><span>＋</span><div><b>Charging station</b><small>${REGIONS[st.r].name} · 2 scrap · safe zone</small></div><em>Go ↗</em></button>`).join(''));
-  panel.querySelector('.region-list').insertAdjacentHTML('afterbegin',game.homes().map(h=>`<button class="region-row workshop-row" data-home="${h.id}"><span>⌂</span><div><b>${h.name}</b><small>Free repairs · walk home</small></div><em>Go ↗</em></button>`).join('')+RETURNS.filter(m=>returnActive(s,m)).map(m=>`<button class="region-row return-row" data-return="${m.id}"><span>⚑</span><div><b>${m.boss}</b><small>${REGIONS[m.r].name} · ${m.sites.filter((_,i)=>s.cleared.includes(`${m.sitePrefix}-${i}`)).length} / 3 camps</small></div><em>Go ↗</em></button>`).join(''));
+  panel.querySelector('.region-list').insertAdjacentHTML('afterbegin',game.homes().map(h=>`<button class="region-row workshop-row" data-home="${h.id}"><span>⌂</span><div><b>${h.name}</b><small>Free repairs · walk home</small></div><em>Go ↗</em></button>`).join('')+RETURNS.filter(m=>returnActive(s,m)).map(m=>`<button class="region-row return-row" data-return="${m.id}"><span>⚑</span><div><b>${m.boss}</b><small>${REGIONS[m.r].name} · ${m.sites.filter((_,i)=>s.cleared.includes(`${m.sitePrefix}-${i}`)).length} / ${m.sites.length} camps</small></div><em>Go ↗</em></button>`).join(''));
   const map=$('atlas'),stage=document.createElement('div');stage.className='atlas-stage';map.before(stage);stage.append(map);
   stage.insertAdjacentHTML('afterbegin',`<div class="atlas-tools" role="group" aria-label="Map zoom"><output id="mapZoom" class="atlas-zoom" aria-label="Map zoom level">100%</output><button id="mapZoomOut" aria-label="Zoom out" title="Zoom out">−</button><button id="mapZoomIn" aria-label="Zoom in" title="Zoom in">+</button><button id="mapFit" aria-label="Show whole map" title="Show whole map">⛶</button>${s.completed?'':'<button id="mapGo" class="atlas-go" aria-label="Follow highlighted trail" title="Follow highlighted trail">➜</button>'}</div>`);
   const status=document.createElement('p');status.className='atlas-status';status.setAttribute('role','status');stage.after(status);
@@ -140,6 +140,7 @@ function adventureMap(){
   if($('mapGo'))$('mapGo').onclick=()=>{const walking=game.route.length>0;closePanel();if(!walking)game.goNext();};
 }
 function goRegion(r){
+  const mission=RETURNS.find(m=>m.r===r&&returnActive(game.save,m));if(mission){goReturn(mission);return;}
   const sites=game.world.sites.filter(s=>!s.returnId&&s.r===r&&!game.save.cleared.includes(s.id)).sort((a,b)=>distance(a,game.player)-distance(b,game.player));
   const patrol=game.enemies.filter(e=>e.patrolSite&&e.r===r&&e.hp>0).sort((a,b)=>distance(a,game.player)-distance(b,game.player))[0];
   const o=regionOrigin(r),goal=cellsIn(game.save,r)>=requiredCells(r)&&!game.save.bosses.includes(r)?relayFor(r):sites[0]||patrol||{x:o.x+18.5,y:o.y+22.5};
@@ -190,9 +191,9 @@ function displayDetails(){
   $('displayReport').textContent=Object.entries(report).map(([key,value])=>`${key}: ${JSON.stringify(value)}`).join('\n');
 }
 function showRescue(){openPanel('rescue',`${head('A little rescue','Every good explorer gets a helping hand.','BACK HOME')}<div class="panel-body"><canvas class="celebration" id="rewardBot" width="700" height="280"></canvas><p class="dialog-copy">Your bot is fully repaired. All your equipment, parts and discoveries are safe. The rescue cost at most 1 scrap.</p><button class="primary" data-action="home">Back to the workshop ⌂</button></div>`);}
-function showReturnComplete(){
-  const next=REGIONS[unlockedRegion(game.save)];
-  openPanel('trail',`${head(next.name,'A new trail is open.','TRAIL RESTORED')}<div class="panel-body"><canvas class="celebration" id="rewardBot" width="700" height="280"></canvas><div class="pause-actions"><button class="primary pictorial-action" data-action="next" aria-label="Explore ${next.name}"><span>➜</span><small>Explore</small></button><button class="secondary pictorial-action" data-action="home" aria-label="Build at the nearest workshop"><span>⚙</span><small>Build</small></button></div></div>`);
+function showReturnComplete(id){
+  const next=id==='copper-twins'?PANTHEON:REGIONS[unlockedRegion(game.save)];
+  openPanel('trail',`${head(next.name,id==='copper-twins'?'The king, queen and four sentinels await your return.':'A new trail is open.',id==='copper-twins'?'THE ROYAL REMATCH':'TRAIL RESTORED')}<div class="panel-body"><canvas class="celebration" id="rewardBot" width="700" height="280"></canvas><div class="pause-actions"><button class="primary pictorial-action" data-action="next" aria-label="Explore ${next.name}"><span>➜</span><small>Explore</small></button><button class="secondary pictorial-action" data-action="home" aria-label="Build at the nearest workshop"><span>⚙</span><small>Build</small></button></div></div>`);
 }
 function showGuardian(r){
   const pair=Object.entries(EQUIPMENT).flatMap(([type,parts])=>parts.filter(p=>p.unlock===r).map(p=>({type,p}))).find(({p})=>p.id===REGIONS[r].reward)||Object.entries(EQUIPMENT).flatMap(([type,parts])=>parts.filter(p=>p.unlock===r).map(p=>({type,p})))[0];

@@ -1,10 +1,10 @@
-import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world85';
-import { bossProfile } from './content.js?v=world85';
-import { ReturningPatrols } from './patrols.js?v=world85';
-import {inRoyalChamber} from './pantheon.js?v=world85';
-import {RoyalCourt} from './royal-court.js?v=world85';
-import {nearestWalkable} from './data.js?v=world85';
-import {Boats} from './boats.js?v=world85';
+import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world86';
+import { bossProfile } from './content.js?v=world86';
+import { ReturningPatrols } from './patrols.js?v=world86';
+import {inRoyalChamber} from './pantheon.js?v=world86';
+import {RoyalCourt} from './royal-court.js?v=world86';
+import {nearestWalkable} from './data.js?v=world86';
+import {Boats} from './boats.js?v=world86';
 
 export const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
 export const TAP_COOLDOWN=1.5;
@@ -92,7 +92,15 @@ export class Adventure {
   }
   enemyStep(e,to,step){
     const d=distance(e,to);if(!d||step<=0)return false;
-    const next={x:e.x+(to.x-e.x)*Math.min(1,step/d),y:e.y+(to.y-e.y)*Math.min(1,step/d)};
+    let next={x:e.x+(to.x-e.x)*Math.min(1,step/d),y:e.y+(to.y-e.y)*Math.min(1,step/d)};
+    if(e.returnId==='copper-twins'&&e.type==='boss'){
+      const twin=this.enemies.find(n=>n!==e&&n.returnId===e.returnId&&n.type==='boss'&&n.hp>0);
+      if(twin&&distance(next,twin)<1.85&&distance(next,twin)<distance(e,twin)){
+        const a=Math.atan2(to.y-e.y,to.x-e.x);
+        next=[.8,-.8,1.3,-1.3].map(turn=>({x:e.x+Math.cos(a+turn)*step,y:e.y+Math.sin(a+turn)*step})).find(p=>distance(p,twin)>=distance(e,twin)&&canWalk(this.world,this.save,Math.floor(p.x),Math.floor(p.y))&&this.clearShot(e,p));
+        if(!next)return false;
+      }
+    }
     const home={x:e.homeX,y:e.homeY},before=distance(e,home),after=distance(next,home);
     if(after>7&&after>=before||!canWalk(this.world,this.save,Math.floor(next.x),Math.floor(next.y))||!this.clearShot(e,next)||this.safeAt(next)||e.patrolSite&&this.patrols.protectedAt(next))return false;
     Object.assign(e,next);return true;
@@ -191,7 +199,7 @@ export class Adventure {
         return;
       }
       if(e.type==='boss'&&!this.enemies.some(b=>b.type==='boss'&&!b.encounterId&&b.r===e.r&&b.returnId===e.returnId&&b.hp>0)){
-        if(e.returnId){this.save.returns.push(e.returnId);this.save.gears+=6;this.save.scrap+=120;this.emit('return-complete',{id:e.returnId});return;}
+        if(e.returnId){this.save.returns.push(e.returnId);this.save.gears+=6;this.save.scrap+=120;this.royals.prepareRematch();this.emit('return-complete',{id:e.returnId});return;}
         this.save.bosses.push(e.r);this.save.gears+=4+e.r;this.save.scrap+=30+e.r*15;this.shake=5;this.projectiles=[];this.telegraphs=[];
         if(e.r===REGIONS.length-1)this.save.completed=true;
         this.emit('guardian',{r:e.r});
@@ -372,7 +380,7 @@ export class Adventure {
       e.active=(d<(boss?6.5:3.4)||e.aggroUntil>this.time)&&!this.safeAt(p)&&distance(e,{x:e.homeX,y:e.homeY})<=7;
       if(!e.active){const home={x:e.homeX,y:e.homeY};if(distance(e,home)>.12)this.enemyStep(e,home,dt);continue;}
       const windup=boss&&this.telegraphs.find(a=>a.bossSource===e.id);
-      e.angle=windup?(windup.bodyAngle??windup.angle):Math.atan2(p.y-e.y,p.x-e.x);const ranged=['ranged','sentry'].includes(e.type),profile=boss&&bossProfile(e),range=ranged?3.2:boss?(['bumper','hammer'].includes(profile.weapon)?1.6:5):.9;
+      e.angle=windup?(windup.bodyAngle??windup.angle):Math.atan2(p.y-e.y,p.x-e.x);const ranged=['ranged','sentry'].includes(e.type),profile=boss&&bossProfile(e),range=ranged?3.2:boss?(['bumper','hammer','saw'].includes(profile.weapon)?1.6:5):.9;
       if(e.type==='burrow'){
         // The marked point stays fixed throughout the windup, so walking away avoids the hit.
         if(e.cd<=0&&!e.frozen&&distance(p,{x:e.homeX,y:e.homeY})<=7){e.cd=4.6;this.telegraphs.push({x:p.x,y:p.y,radius:.85,damage:e.damage,duration:1.6,life:1.6,burrowSource:e.id});e.swing=.4;this.emit('warning');}
@@ -436,9 +444,10 @@ export class Adventure {
     this.patrols.tick(dt);
   }
   nearestSite(){const r=unlockedRegion(this.save);return this.world.sites.filter(s=>!s.returnId&&s.r===r&&!this.save.cleared.includes(s.id)).sort((a,b)=>distance(a,this.player)-distance(b,this.player))[0];}
-  nextObjective(){if(pantheonUnlocked(this.save))return PANTHEON.viewpoint;const m=RETURNS.find(m=>returnActive(this.save,m));if(m)return this.world.sites.find(s=>s.returnId===m.id&&!this.save.cleared.includes(s.id))||m;const r=unlockedRegion(this.save);return this.nearestSite()||relayFor(r);}
+  nextObjective(){const m=RETURNS.find(m=>returnActive(this.save,m));if(m)return this.world.sites.find(s=>s.returnId===m.id&&!this.save.cleared.includes(s.id))||m;if(pantheonUnlocked(this.save))return PANTHEON.viewpoint;const r=unlockedRegion(this.save);return this.nearestSite()||relayFor(r);}
   guideRoute(){
-    const route=this.route.length?this.route:this.save.completed&&(!pantheonUnlocked(this.save)||this.save.visited.includes(PANTHEON.r))?[]:this.boats.riding?this.boats.routeToLand(this.nextObjective())||[]:pathfind(this.world,this.save,this.player,this.nextObjective());
+    const postgame=RETURNS.some(m=>m.postRoyal&&returnActive(this.save,m))||this.save.royalRematchStarted&&this.royals.phase!=='victory';
+    const route=this.route.length?this.route:!postgame&&this.save.completed&&(!pantheonUnlocked(this.save)||this.save.visited.includes(PANTHEON.r))?[]:this.boats.riding?this.boats.routeToLand(this.nextObjective())||[]:pathfind(this.world,this.save,this.player,this.nextObjective());
     return route.length?[this.player,...route]:[];
   }
   goNext(){return this.moveTo(this.nextObjective());}

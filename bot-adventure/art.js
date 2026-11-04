@@ -1,11 +1,11 @@
-import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world85';
-import {atlasProgress,regionEdges} from './atlas-progress.js?v=world85';
-import {atlasSiteVisible} from './quiet-ui.js?v=world85';
-import {boatArt,dockArt} from './boat-art.js?v=world85';
-import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world85';
-import {COURT} from './pantheon.js?v=world85';
-import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world85';
-import * as worldData from './data.js?v=world85';
+import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world86';
+import {atlasProgress,regionEdges} from './atlas-progress.js?v=world86';
+import {atlasSiteVisible} from './quiet-ui.js?v=world86';
+import {boatArt,dockArt} from './boat-art.js?v=world86';
+import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world86';
+import {COURT} from './pantheon.js?v=world86';
+import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world86';
+import * as worldData from './data.js?v=world86';
 
 export function rounded(c,x,y,w,h,r,fill,stroke,line=2) {
   c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=line;c.stroke();}
@@ -66,7 +66,7 @@ function enemyEquipment(enemy){
   if(enemy.returnId){
     if(boss&&enemy.returnId==='copper-return')Object.assign(look,{gun:'tractor',armor:'bastion',wheels:'rover',color:'#ce7258',gadget:'aegis'});
     else if(boss&&enemy.returnId==='crystal-return')Object.assign(look,{gun:'frost',armor:'polar',wheels:'hover',color:'#82cddd'});
-    else if(!boss){const variant=Array.from(enemy.id||'').reduce((sum,char)=>sum+char.charCodeAt(0),0)%4;Object.assign(look,{color:['#9b73b8','#ae7962','#84649f','#bd8e73'][variant],armor:'steel',wheels:enemy.returnId==='crystal-return'?'hover':'rover'});}
+    else if(!boss){const variant=Array.from(enemy.id||'').reduce((sum,char)=>sum+char.charCodeAt(0),0)%4;Object.assign(look,{color:enemy.returnId==='copper-twins'?['#d7894f','#e6b667','#bd7956','#d79860'][variant]:['#9b73b8','#ae7962','#84649f','#bd8e73'][variant],armor:enemy.returnId==='copper-twins'&&enemy.type==='tank'?'bastion':'steel',wheels:enemy.returnId==='crystal-return'?'hover':'rover'});}
   }
   if(boss&&worldData.bossProfile)Object.assign(look,bossEquipment(enemy));
   return look;
@@ -874,7 +874,13 @@ export class Painter {
       const p=relayFor(r),x=ox+p.x*s,y=oy+p.y*s;c.save();c.translate(x,y);c.scale(markerScale,markerScale);rounded(c,-5,-7,10,14,2,g.save.bosses.includes(r)?'#a7f4cd':'#ee9578','#34534b',1);text(c,g.save.bosses.includes(r)?'✓':'!',0,3,10,'#1b3c38');c.restore();
     }
     for(const st of g.world.stations)if(visible.has(st.r)&&g.save.discovered.includes(st.id)){c.save();c.translate(ox+st.x*s,oy+st.y*s);c.scale(markerScale,markerScale);rounded(c,-5,-5,10,10,2,'#edffe3','#326f59',1);text(c,'+',0,4,12,'#327859');c.restore();}
-    for(const mission of worldData.RETURNS||[]){if(!returnVisible(g.save,{returnId:mission.id}))continue;c.save();c.translate(ox+mission.x*s,oy+mission.y*s);c.scale(markerScale,markerScale);ring(c,0,0,13,'#e4c7ff',3);line(c,0,8,0,-14,'#fff0dd',2);polygon(c,[[0,-14],[14,-10],[0,-5]],'#9e6ace','#f3dfff',1.5);c.restore();}
+    for(const mission of worldData.RETURNS||[]){
+      if(!returnVisible(g.save,{returnId:mission.id}))continue;
+      c.save();c.translate(ox+mission.x*s,oy+mission.y*s);c.scale(markerScale,markerScale);
+      if(mission.postRoyal){ellipse(c,0,0,24,19,'#173d48');ring(c,0,0,24,'#ffe17b',3);for(let twin=0;twin<2;twin++)bot(c,twin*22-11,1,25,{...bossEquipment({r:mission.r,returnId:mission.id,twin}),reducedMotion:true},0);}
+      else{ring(c,0,0,13,'#e4c7ff',3);line(c,0,8,0,-14,'#fff0dd',2);polygon(c,[[0,-14],[14,-10],[0,-5]],'#9e6ace','#f3dfff',1.5);}
+      c.restore();
+    }
     for(const shop of workshops())if(shop.r<=unlockedRegion(g.save)){c.save();c.translate(ox+shop.x*s,oy+shop.y*s);c.scale(markerScale,markerScale);workshopMarker(c,0,0);c.restore();}
     if(visible.has(PANTHEON.r))pantheonMarker(c,ox+PANTHEON.viewpoint.x*s,oy+PANTHEON.viewpoint.y*s,markerScale,true);
     const playerX=ox+g.player.x*s,playerY=oy+g.player.y*s;

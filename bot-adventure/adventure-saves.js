@@ -1,4 +1,4 @@
-import {BUILD,freshSave,REGIONS,EQUIPMENT,areaInfo,regionAt} from './data.js?v=world85';
+import {BUILD,freshSave,REGIONS,EQUIPMENT,areaInfo,regionAt} from './data.js?v=world86';
 
 export function validAdventure(s){
   if(!s||s.schema!==1||!s.build||!s.position||!Number.isFinite(s.position.x)||!Number.isFinite(s.position.y))return false;
@@ -10,7 +10,7 @@ export function validAdventure(s){
 }
 
 export function adventureSummary(save){
-  const king=save.royalCourt?.phase==='victory';
+  const king=save.royalCourt?.phase==='victory'||save.royalRematchStarted===true;
   return {title:king?'Royal Champion':'Saved adventure',region:areaInfo(regionAt(save.position.x,save.position.y))?.name||'The valley',
     relays:new Set(save.bosses).size,totalRelays:REGIONS.length,equipment:new Set(save.owned).size,king};
 }
