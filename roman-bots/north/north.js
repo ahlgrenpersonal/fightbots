@@ -1,18 +1,18 @@
-import {Campaign,UPGRADE_PRICES,WEST_GATE,SOUTH_DOCK,EAST_DOCK} from './campaign.js?v=roman32';
-import * as NORTH from './world.js?v=roman32';
-import * as northArt from './scenery.js?v=roman32';
-import * as westArt from './west-scenery.js?v=roman32';
-import * as southArt from './south-scenery.js?v=roman32';
-import * as eastArt from './east-scenery.js?v=roman32';
-import {drawBot,drawGear} from '../art.js?v=roman32';
-import {BUILD,WEAPONS,SHIELDS} from '../data.js?v=roman32';
-import {guardsAgainst,distance,MELEE_TOLERANCE} from '../engine.js?v=roman32';
-import {botSize} from '../geometry.js?v=roman32';
-import {icon} from '../icons.js?v=roman32';
-import {drawCity,drawHeroWelcome,ATLAS_SIGN,drawWorldBoard} from './city.js?v=roman32';
-import {RouteGesture,previewRoute,nextDestination,hintPoint,drawSignposts} from './navigation.js?v=roman32';
-import {drawQuestSites,drawQuestBadge,drawQuestWarning} from './quest-art.js?v=roman32';
-import {HARBOR_FRONT} from './return-quests.js?v=roman32';
+import {Campaign,UPGRADE_PRICES,WEST_GATE,SOUTH_DOCK,EAST_DOCK} from './campaign.js?v=roman33';
+import * as NORTH from './world.js?v=roman33';
+import * as northArt from './scenery.js?v=roman33';
+import * as westArt from './west-scenery.js?v=roman33';
+import * as southArt from './south-scenery.js?v=roman33';
+import * as eastArt from './east-scenery.js?v=roman33';
+import {drawBot,drawGear} from '../art.js?v=roman33';
+import {BUILD,WEAPONS,SHIELDS} from '../data.js?v=roman33';
+import {guardsAgainst,distance,MELEE_TOLERANCE} from '../engine.js?v=roman33';
+import {botSize} from '../geometry.js?v=roman33';
+import {icon} from '../icons.js?v=roman33';
+import {drawCity,drawHeroWelcome,ATLAS_SIGN,drawWorldBoard} from './city.js?v=roman33';
+import {RouteGesture,previewRoute,nextDestination,hintPoint,drawSignposts} from './navigation.js?v=roman33';
+import {drawQuestSites,drawQuestBadge,drawQuestWarning} from './quest-art.js?v=roman33';
+import {HARBOR_FRONT} from './return-quests.js?v=roman33';
 
 const $=id=>document.getElementById(id),KEY='roman-bots-north-v1',PREFS='roman-bots-north-preferences-v1',SAVE_WARNING='Save unavailable. Keep this window open.';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -125,7 +125,7 @@ function render(t){
     if(preview.length){c.save();c.strokeStyle='#214c50bb';c.lineWidth=.16;c.beginPath();preview.forEach((p,i)=>i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y));c.stroke();c.setLineDash([.08,.27]);c.strokeStyle='#ffeb9a';c.lineWidth=.09;c.stroke();c.setLineDash([]);const end=preview.at(-1);c.fillStyle='#ffe59b';c.strokeStyle='#244e52';c.lineWidth=.06;c.beginPath();c.arc(end.x,end.y,.22,0,Math.PI*2);c.fill();c.stroke();c.restore();}
     if(leader&&hintTarget&&t<hintUntil){if(t>=hintNext){hintWaypoint=hintPoint(game,hintTarget);hintNext=t+.5;}const p=hintWaypoint||hintTarget,a=Math.atan2(p.y-leader.y,p.x-leader.x);c.save();c.translate(leader.x+Math.cos(a)*1.3,leader.y+Math.sin(a)*1.3);c.rotate(a);c.fillStyle='#ffdf77';c.strokeStyle='#244e52';c.lineWidth=.06;c.beginPath();c.moveTo(.38,0);c.lineTo(-.22,-.28);c.lineTo(-.09,0);c.lineTo(-.22,.28);c.closePath();c.fill();c.stroke();c.restore();}
     if(game.goal){c.strokeStyle='#ffe28c';c.lineWidth=.07;c.beginPath();c.arc(game.goal.x,game.goal.y,.25,0,Math.PI*2);c.stroke();}
-    for(const u of [...game.units].sort((a,b)=>a.y-b.y)){
+    for(const u of [...game.sceneUnits].sort((a,b)=>a.y-b.y)){
       if(Math.abs(u.x-camera.x)>halfW+3||Math.abs(u.y-camera.y)>halfH+3)continue;
       if(u.hp<=0&&u.team===1)continue;
       const active=u===leader,target=u.action&&game.units.find(v=>v.id===u.action.target),strikeTarget=u.action?.contact||(target&&distance(u,target)<=WEAPONS[u.weapon].range+MELEE_TOLERANCE?{...target,guarding:guardsAgainst(target,u)}:null);
@@ -139,6 +139,7 @@ function render(t){
       if(u.team===0&&u.hp>0&&game.chargeTime>0){c.strokeStyle='#ffdf8588';c.lineWidth=.08;c.beginPath();c.ellipse(u.x,u.y+.22,.68,.28,0,t*2,t*2+Math.PI*1.5);c.stroke();for(let i=0;i<3;i++){const a=t*3+i*Math.PI*2/3;c.fillStyle='#fff2b4';c.fillRect(u.x+Math.cos(a)*.5-.035,u.y-.4+Math.sin(a)*.25,.07,.13);}}
       drawBot(c,{...u,strikeTarget,faction:u.faction||(u.team===1&&!game.trial?(game.eastern?'greek':game.southern?'punic':game.western?'highland':'forest'):undefined),weaponTier:u.team===0?game.state.weaponTier:0,armorTier:u.team===0?game.state.armorTier:0},reduced?0:t,{size:botSize(u),promoted:active});
       if(u.hp>0){const ratio=u.hp/u.maxHp,bw=u.boss?1.2:.75,by=u.y-(u.boss?1.48:1.04);c.fillStyle='#183d3c';c.fillRect(u.x-bw/2,by,bw,.095);c.fillStyle=u.team===1?'#f3836e':ratio<.2?'#fa8b63':ratio<.5?'#ffd36a':'#8fe0a5';c.fillRect(u.x-bw/2,by,bw*ratio,.095);}
+      if(u.team===1&&u.boss&&!game.canEngage(game.encounters.find(e=>e.id===u.encounterId))){c.strokeStyle='#c9f8ec';c.lineWidth=.09;c.beginPath();c.ellipse(u.x,u.y-.55,botSize(u)*.55,botSize(u)*.7,0,0,Math.PI*2);c.stroke();}
     }
     for(const shot of game.projectiles){const target=game.units.find(u=>u.id===shot.target),owner=game.units.find(u=>u.id===shot.owner);if(!target)continue;const a=Math.atan2(target.y-shot.y,target.x-shot.x),fire=owner?.team===0&&game.state.weaponTier>=3;c.save();c.translate(shot.x,shot.y);c.rotate(a);if(fire){c.strokeStyle='#ff9a4366';c.lineWidth=.18;c.beginPath();c.moveTo(-.65,0);c.lineTo(0,0);c.stroke();for(let i=0;i<3;i++){c.fillStyle=i%2?'#ffe68c':'#ffb94c';c.fillRect(-.18-i*.18,-.04+Math.sin(t*20+i)*.05,.09,.06);}}c.strokeStyle=fire?'#ffd973':shot.power?'#fff3ad':'#e6bb72';c.lineWidth=shot.power||fire?.085:.055;c.beginPath();c.moveTo(-.5,0);c.lineTo(0,0);c.stroke();c.fillStyle='#fff4d0';c.beginPath();c.moveTo(.1,0);c.lineTo(-.1,-.08);c.lineTo(-.1,.08);c.fill();c.restore();}
     for(const e of game.effects){const p=1-e.life/e.max;if(!Number.isFinite(p))continue;c.save();c.globalAlpha=1-p;if(e.type==='coin'){c.fillStyle='#ffdb68';c.strokeStyle='#87662f';c.lineWidth=.035;c.beginPath();c.ellipse(e.x,e.y-p*1.5,.12,.17,0,0,Math.PI*2);c.fill();c.stroke();c.fillStyle='#fff3bb';c.fillRect(e.x-.035,e.y-p*1.5-.1,.035,.12);c.restore();continue;}c.strokeStyle=e.type==='repair'?'#cbffd1':e.type==='block'?'#c2f7ef':e.type==='power'?'#fff0a4':'#ffd178';c.lineWidth=.07*(1-p);c.beginPath();c.ellipse(e.x,e.y,.15+p*.85,.08+p*.4,0,0,Math.PI*2);c.stroke();if(e.type==='repair'){const y=e.y-.8-p;c.lineWidth=.09;c.beginPath();c.moveTo(e.x-.16,y);c.lineTo(e.x+.16,y);c.moveTo(e.x,y-.16);c.lineTo(e.x,y+.16);c.stroke();}else for(let i=0;i<5;i++){const a=i*Math.PI*2/5;c.beginPath();c.moveTo(e.x+Math.cos(a)*p*.5,e.y+Math.sin(a)*p*.5);c.lineTo(e.x+Math.cos(a)*p*.9,e.y+Math.sin(a)*p*.9);c.stroke();}c.restore();}
@@ -225,7 +226,7 @@ function atlas(showOverview=false){
 }
 function hasBackup(){try{return !!localStorage.getItem(KEY+'-backup');}catch{return false;}}
 function recoveryPanel(){openPanel('Saved adventure needs attention','saveRecovery','<p>The saved adventure could not be read. It has been left untouched. Try loading it again, restore the recovery save, or deliberately start again.</p><button class="wide" data-action="reloadLatest">Try loading again</button>'+(hasBackup()?'<button class="wide quiet" data-action="restore">Restore previous adventure</button>':'')+'<button class="wide quiet" data-action="restart">Start again</button>');}
-function settings(){const atHome=game.nearbyCamp()?.id==='home';openPanel('Adventure settings','settings',`<label class="setting">Squad size<select id="squadSize" ${atHome?'':'disabled'}><option value="3" ${game.state.squadSize===3?'selected':''}>Captain + 2 companions</option><option value="5" ${game.state.squadSize===5?'selected':''}>Captain + 4 companions</option></select></label><p>Change the squad at the home workshop. All regions are open from the start.</p><button class="wide quiet" data-action="restart">${icon('replay')} <span class="red">Start this adventure again</span></button>${hasBackup()?'<button class="wide quiet" data-action="restore">Restore previous adventure</button>':''}<p class="build">roman32 · Roman adventure</p>`);}
+function settings(){const atHome=game.nearbyCamp()?.id==='home';openPanel('Adventure settings','settings',`<label class="setting">Squad size<select id="squadSize" ${atHome?'':'disabled'}><option value="3" ${game.state.squadSize===3?'selected':''}>Captain + 2 companions</option><option value="5" ${game.state.squadSize===5?'selected':''}>Captain + 4 companions</option></select></label><p>Change the squad at the home workshop. All regions are open from the start.</p><button class="wide quiet" data-action="restart">${icon('replay')} <span class="red">Start this adventure again</span></button>${hasBackup()?'<button class="wide quiet" data-action="restore">Restore previous adventure</button>':''}<p class="build">roman33 · Roman adventure</p>`);}
 function pause(){openPanel('Take a breather','pause',`<button class="wide" data-action="close" aria-label="Keep playing">${icon('play')}</button><button class="wide quiet" data-action="settings" aria-label="Advanced settings">${icon('edit')}</button>`);}
 function cancelRestartHold(){
   const hold=restartHold;restartHold=null;if(!hold)return;

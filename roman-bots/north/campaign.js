@@ -1,17 +1,18 @@
-import {Battle,distance,BODY_SPACING} from '../engine.js?v=roman32';
-import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman32';
-import * as NORTH from './world.js?v=roman32';
-import * as WEST from './west-world.js?v=roman32';
-import * as SOUTH from './south-world.js?v=roman32';
-import * as EAST from './east-world.js?v=roman32';
-import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman32';
-import {RETURN_QUESTS,INVASION,activeReturnQuest,questFinished,inHarbor,HARBOR_FRONT} from './return-quests.js?v=roman32';
+import {Battle,distance,BODY_SPACING} from '../engine.js?v=roman33';
+import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman33';
+import * as NORTH from './world.js?v=roman33';
+import * as WEST from './west-world.js?v=roman33';
+import * as SOUTH from './south-world.js?v=roman33';
+import * as EAST from './east-world.js?v=roman33';
+import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman33';
+import {RETURN_QUESTS,INVASION,activeReturnQuest,questFinished,inHarbor,HARBOR_FRONT} from './return-quests.js?v=roman33';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const number=(n,a,b,f=a)=>Number.isFinite(n)?clamp(n,a,b):f;
 const integer=(n,a,b,f=a)=>Math.floor(number(n,a,b,f));
 const point=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y);
 const worlds={north:NORTH,west:WEST,south:SOUTH,east:EAST};
+const patrolLayouts=new Map();
 const allCamps=()=>Object.values(worlds).flatMap(w=>w.CAMPS);
 const allEncounters=()=>[...Object.values(worlds).flatMap(w=>w.ENCOUNTERS),...RETURN_QUESTS.flatMap(q=>q.encounters)];
 export const WEST_GATE=Object.freeze({x:6,y:138});
@@ -25,6 +26,14 @@ const GREEK_SQUADS={
   breakers:[{weapon:'sword',shield:'round'},{weapon:'hammer',shield:'none'},{weapon:'sword',shield:'round'},{weapon:'hammer',shield:'none'},{weapon:'bow',shield:'none'}]
 };
 export const UPGRADE_PRICES=Object.freeze({weapon:[100,240,420],armor:[80,200,360],utility:[120,260]});
+function cleanPatrols(raw){
+  const result={};
+  if(!raw||typeof raw!=='object')return result;
+  for(const e of allEncounters())if(Object.hasOwn(raw,e.id)&&Array.isArray(raw[e.id])){
+    result[e.id]=raw[e.id].slice(0,8).map(p=>({hp:number(p?.hp,0,1,1),...(point(p)&&distance(p,e)<14?{x:p.x,y:p.y}:{})}));
+  }
+  return result;
+}
 function cleanSave(saved){
   const s=saved&&typeof saved==='object'?saved:{};
   const world=Object.hasOwn(worlds,s.region)?worlds[s.region]:NORTH;
@@ -39,6 +48,7 @@ function cleanSave(saved){
   return {version:4,region:leavingTutorial?'north':region,voyage:leavingTutorial?null:voyage,prologueRound,needsLoadout:!saved||leavingTutorial||s.needsLoadout===true,squad:defaults().map((slot,i)=>normalizeSlot(Array.isArray(s.squad)?s.squad[i]||slot:slot)),squadSize:s.squadSize===3?3:5,
     weaponTier:integer(s.weaponTier,0,3),armorTier:integer(s.armorTier,0,3),utility:s.utility==='charge'?'charge':'repair',utilityTier:integer(s.utilityTier,0,2),
     coins:integer(s.coins,0,100000),camps,refuges:[...new Set([...camps,...(Array.isArray(s.refuges)?s.refuges.filter(id=>allCamps().some(c=>c.id===id)):[])])],completed,conquered:NORTH.CAMPS.every(c=>camps.includes(c.id))&&completed.includes('north-king'),westConquered:WEST.CAMPS.every(c=>camps.includes(c.id))&&completed.includes(WEST.ENCOUNTERS.find(e=>e.kind==='boss')?.id),southConquered:SOUTH.CAMPS.every(c=>camps.includes(c.id))&&completed.includes(SOUTH.ENCOUNTERS.find(e=>e.kind==='boss')?.id),eastConquered:EAST.CAMPS.every(c=>camps.includes(c.id))&&completed.includes('east-king'),
+    patrols:cleanPatrols(s.patrols),populationInitialized:s.populationInitialized===true,fieldQuest:RETURN_QUESTS.some(q=>q.id===s.fieldQuest&&q.region===region)?s.fieldQuest:null,
     position:leavingTutorial?{...NORTH.HOME}:point(s.position)?{x:number(s.position.x,.5,world.WIDTH-.5),y:number(s.position.y,.5,world.HEIGHT-.5)}:{...world.HOME},
     health:Array.from({length:5},(_,i)=>number(Array.isArray(s.health)?s.health[i]:undefined,0,1,1)),utilityLeft:integer(s.utilityLeft,0,1+integer(s.utilityTier,0,2),1+integer(s.utilityTier,0,2)),utilityCd:number(s.utilityCd,0,45),chargeTime:number(s.chargeTime,0,20),recoveries:integer(s.recoveries,0,100000)};
 }
@@ -58,7 +68,8 @@ export class Campaign extends Battle {
     this.state.position={x:start.x,y:start.y};this.placeSquad(start);
     if(!this.alive(0).length)this.recover();
     this.activeId=this.leader()?.id;this.refreshPartners();
-    // Reloading an unfinished fight retries it; no wave rewards are retained.
+    if(!state.populationInitialized){state.fieldQuest=this.activeQuest?.region===state.region?this.activeQuest.id:null;state.populationInitialized=true;}
+    this.preparePatrols();
   }
   checkFinished(){}
   get world(){return worlds[this.state?.region]||NORTH;}
@@ -70,13 +81,14 @@ export class Campaign extends Battle {
   get frontier(){return this.state.region==='north'?(this.state.conquered?(!this.state.westConquered?WEST_GATE:!this.state.southConquered?SOUTH_DOCK:!this.state.eastConquered?EAST_DOCK:this.world.HOME):this.world.HOME):RETURN_POINTS[this.state.region];}
   get sealsReady(){return this.world.CAMPS.every(c=>this.state.camps.includes(c.id));}
   get activeQuest(){return this.state?activeReturnQuest(this.state):null;}
-  get localQuest(){const q=this.activeQuest;return q?.region===this.state.region?q:null;}
+  get localQuest(){const q=this.activeQuest;return q?.region===this.state.region&&this.state.fieldQuest===q.id?q:null;}
   get encounters(){return this.localQuest?.encounters||this.world.ENCOUNTERS;}
   get harborBattle(){return this.state?.region==='north'&&this.localQuest?.id===INVASION.id;}
   get earlyGreece(){return this.prologueComplete&&!this.state.eastConquered&&!(this.state.conquered&&this.state.westConquered&&this.state.southConquered);}
   questTarget(){
     const q=this.activeQuest;if(!q)return null;
     if(q.region!==this.state.region)return this.state.region==='north'?q.region==='west'?WEST_GATE:SOUTH_DOCK:RETURN_POINTS[this.state.region];
+    if(!this.localQuest)return this.world.HOME;
     const pending=q.encounters.filter(e=>!this.state.completed.includes(e.id));
     if(q===INVASION||pending.length<2)return pending[0]||null;
     const leader=this.leader()||this.world.HOME;
@@ -119,6 +131,7 @@ export class Campaign extends Battle {
     this.enterRegion(region,region==='west'?WEST.HOME:WEST_GATE);return true;
   }
   enterRegion(region,arrival){
+    this.rememberPatrols();
     this.arrivalIntent=null;
     this.state.region=region;
     this.bounds={minX:.5,maxX:this.world.WIDTH-.5,minY:.5,maxY:this.world.HEIGHT-.5};
@@ -126,6 +139,8 @@ export class Campaign extends Battle {
     this.units=this.units.filter(u=>u.team===0);this.projectiles=[];this.effects=[];this.paths.clear();
     this.placeSquad(arrival);
     this.state.position={x:this.leader().x,y:this.leader().y};
+    this.state.fieldQuest=this.activeQuest?.region===region?this.activeQuest.id:null;
+    this.preparePatrols();
     this.emit('region',{region:this.state.region});
   }
   boardShip(){
@@ -362,6 +377,7 @@ export class Campaign extends Battle {
   }
   tapEnemy(enemy){
     if(this.voyage)return false;
+    if(!this.paused&&enemy?.encounterId&&!this.units.includes(enemy))this.beginEncounter(this.encounters.find(e=>e.id===enemy.encounterId));
     this.arrivalIntent=null;
     if(this.trial){if(this.paused||!this.trial.units.includes(enemy))return false;const result=this.trial.tapEnemy(enemy);this.syncTrial();return result;}
     if(!enemy||!this.units.includes(enemy)||enemy.hp<=0||enemy.team!==1||this.safe(enemy.x,enemy.y))return false;
@@ -378,58 +394,96 @@ export class Campaign extends Battle {
     if(this.voyage||this.trial||!this.prologueComplete)return false;
     e=[...this.world.ENCOUNTERS,...(this.localQuest?.encounters||[])].find(candidate=>candidate.id===e?.id);if(!e)return false;
     if(this.activeEncounter||this.state.completed.includes(e.id))return false;
-    if(e.quest){const q=this.localQuest,earlier=q.encounters.slice(0,q.encounters.indexOf(e));if((e.ordered||e.kind==='boss')&&earlier.some(p=>!this.state.completed.includes(p.id)))return false;}
-    else if(e.kind==='boss'&&!this.sealsReady)return false;
+    if(!this.canEngage(e))return false;
+    const approach=this.travelGoal&&distance(this.travelGoal,e)<2?{...this.travelGoal}:null;
     // An ambush interrupts a long journey once. Subsequent ground orders are
     // deliberate squad retreats and remain in force throughout this encounter.
     this.travelGoal=null;this.goal=null;this.focus=null;this.pendingPower=null;this.focusOwner=null;this.pendingOwner=null;this.paths.clear();
     for(const u of this.alive(0)){u.retreat=null;u.target=null;}
-    this.activeEncounter=e;this.wave=0;this.waveAt=null;this.spawnWave();return true;
+    this.activeEncounter=e;this.wave=0;this.waveAt=null;this.spawnWave();
+    if(approach)this.moveTo(approach);
+    return true;
   }
   spawnWave(){
-    const e=this.activeEncounter;if(!e)return;
-    this.units=this.units.filter(u=>u.team===0);this.projectiles=[];this.wave++;this.paths.clear();this.lastCombatAt=this.time;
-    const kingWave=e.kind==='boss'&&this.wave===integer(e.waves,2,e.quest?6:3,3);
-    const count=kingWave?3:integer(e.count,5,6,5),stage=integer(e.stage,0,4);
+    const e=this.activeEncounter;if(!e||this.wave!==0)return false;
+    const patrol=this.patrolGroups?.get(e.id);if(!patrol)return false;
+    this.units=this.units.filter(u=>u.team===0).concat(patrol);this.projectiles=[];this.wave=1;this.waveAt=null;this.paths.clear();this.lastCombatAt=this.time;
+    this.refreshPartners();return true;
+  }
+  canEngage(e){
+    if(!e||this.state.completed.includes(e.id))return false;
+    if(e.quest){const q=this.localQuest;if(!q||q.id!==e.quest)return false;const earlier=q.encounters.slice(0,q.encounters.indexOf(e));return !(e.ordered||e.kind==='boss')||earlier.every(p=>this.state.completed.includes(p.id));}
+    return e.kind!=='boss'||this.sealsReady;
+  }
+  get sceneUnits(){
+    const standing=[...(this.patrolGroups?.values()||[])].flat().filter(u=>u.hp>0&&!this.units.includes(u));
+    return this.units.concat(standing);
+  }
+  enemyAt(p,tile=40){
+    const units=this.units;this.units=this.sceneUnits;
+    try{return super.enemyAt(p,tile);}finally{this.units=units;}
+  }
+  preparePatrols(){
+    this.patrolGroups=new Map();
+    // Reserve the same layout even when loading a partly completed region.
+    for(const e of this.encounters)this.patrolGroups.set(e.id,this.createPatrol(e));
+    for(const id of this.state.completed)this.patrolGroups.delete(id);
+  }
+  rememberPatrols(){
+    if(!this.patrolGroups)return;
+    for(const [id,group]of this.patrolGroups)this.state.patrols[id]=group.map(u=>({hp:clamp(u.hp/u.maxHp,0,1),x:u.x,y:u.y}));
+  }
+  createPatrol(e){
+    const group=[],kingWave=e.kind==='boss';
+    const layoutKey=`${this.state.region}:${e.id}`,layout=patrolLayouts.get(layoutKey),positions=[];
+    const count=integer(e.count,5,6,5),stage=integer(e.stage,0,4);
     const roster=e.quest||this.eastern?(GREEK_SQUADS[e.roster]||GREEK_SQUADS.phalanx):Array.from({length:5},(_,i)=>this.southern?{weapon:i===0?'bow':i===2?'spear':i===4?'hammer':'sword',shield:i===1?'round':i===3&&e.kind==='elite'?'tower':'none'}:this.western?{weapon:i===0?'bow':i===2?'spear':i===4?'hammer':'sword',shield:i===1?'round':'none'}:{weapon:i%3===0?'bow':'sword',shield:'none'});
-    const factory=new Battle(this.state.squad,roster,{seed:this.seed,healthBonus:0,bounds:this.bounds});
-    const templates=factory.units.filter(u=>u.team===1);
+    this.patrolTemplates??=new Map();const rosterKey=JSON.stringify(roster);
+    if(!this.patrolTemplates.has(rosterKey))this.patrolTemplates.set(rosterKey,new Battle(this.state.squad,roster,{seed:this.seed,healthBonus:0,bounds:this.bounds}).units.filter(u=>u.team===1));
+    const templates=this.patrolTemplates.get(rosterKey);
     for(let i=0;i<count;i++){
-      const u={...templates[i%5],id:`forest-${++this.serial}`,index:i,captain:i===0,boss:kingWave&&i<(e.pairBosses?2:1),buddy:null,action:null,target:null};
-      if(e.quest)u.faction=this.localQuest.kind==='pirates'?'pirate':this.localQuest.kind==='revolt'?'highland':this.localQuest.kind==='invasion'?'greek':'forest';
-      u.champion=(this.southern||this.eastern)&&!kingWave&&this.wave===e.waves&&i<(e.champions||0);
+      const u={...templates[i%5],id:`patrol-${e.id}-${i}`,encounterId:e.id,index:i,captain:i===0,boss:kingWave&&i<(e.pairBosses?2:1),buddy:null,action:null,target:null};
+      if(e.quest){const q=RETURN_QUESTS.find(q=>q.id===e.quest);u.faction=q.kind==='pirates'?'pirate':q.kind==='revolt'?'highland':q.kind==='invasion'?'greek':'forest';}
+      u.champion=(this.southern||this.eastern)&&!kingWave&&i<(e.champions||0);
       if(u.champion)Object.assign(u,normalizeSlot(i===0?{weapon:'hammer',shield:'none'}:{weapon:'bow',shield:'none'}));
       if(kingWave)Object.assign(u,normalizeSlot(i===0?{weapon:this.eastern?'spear':'hammer',shield:'none'}:i===1?{weapon:'sword',shield:this.western||this.southern||this.eastern?'tower':'none'}:{weapon:'bow',shield:'none'}));
       if(kingWave&&e.pairBosses)Object.assign(u,normalizeSlot(i===0?{weapon:'hammer',shield:'none'}:i===1?{weapon:'bow',shield:'none'}:{weapon:'sword',shield:'tower'}));
-      const a=i/count*Math.PI*2;let p=this.world.nearestWalkable({x:this.boundX(e.x+Math.cos(a)*2.3),y:this.boundY(e.y+Math.sin(a)*2.3)})||e;
-      if(this.harborBattle){
-        const places=[];for(let y=Math.ceil(HARBOR_FRONT.top);y<HARBOR_FRONT.bottom;y++)for(let x=Math.ceil(HARBOR_FRONT.left);x<HARBOR_FRONT.right;x++){const spot={x:x+.5,y:y+.5};if(this.validPosition(spot,1))places.push(spot);}
+      const a=i/count*Math.PI*2;let p=layout?.[i]||this.world.nearestWalkable({x:this.boundX(e.x+Math.cos(a)*2.3),y:this.boundY(e.y+Math.sin(a)*2.3)})||e;
+      if(this.harborBattle&&!layout){
+        const places=[];for(let y=HARBOR_FRONT.top+.75;y<HARBOR_FRONT.bottom-.5;y+=1.5)for(let x=HARBOR_FRONT.left+.75;x<HARBOR_FRONT.right-.5;x+=1.5){const spot={x,y};if(this.validPosition(spot,1))places.push(spot);}
         places.sort((a,b)=>distance(a,p)-distance(b,p));
-        p=places.find(spot=>this.alive(0).concat(this.alive(1)).every(v=>distance(v,spot)>=BODY_SPACING+.04))||places[0];
+        const neighbors=[...this.patrolGroups.values()].flat().concat(group).map(v=>v.post||v);
+        p=places.find(spot=>neighbors.every(v=>distance(v,spot)>=BODY_SPACING+.04));
         if(!p)continue;
       }
       if(!this.validPosition(p,1))continue;
+      positions[i]={x:p.x,y:p.y};u.post=positions[i];
       Object.assign(u,{x:p.x,y:p.y});
       u.maxHp=u.boss?WEAPONS[u.weapon].hp*(1+stage*.18)*10:WEAPONS[u.weapon].hp*.58*(1+stage*.22)*(e.kind==='boss'&&!kingWave?1.8:1);if(this.western||this.southern)u.maxHp*=1.15;if(this.eastern)u.maxHp*=1.25;u.hp=u.maxHp;
       if(u.champion){u.maxHp*=3.2;u.hp=u.maxHp;}
       if(e.quest){u.maxHp*=e.hpScale*(u.boss&&e.pairBosses ? .65 : 1);u.hp=u.maxHp;}
-      u.damageScale=e.quest?(u.boss?.38:.20+stage*.02):u.boss?.60:.24+stage*.035;u.forestWeapon=u.weapon;this.units.push(u);
+      const saved=this.state.patrols[e.id]?.[i];
+      if(saved){u.hp=u.maxHp*saved.hp;if(point(saved)&&this.validPosition(saved,1))Object.assign(u,{x:saved.x,y:saved.y});}
+      u.damageScale=e.quest?(u.boss?.38:.20+stage*.02):u.boss?.60:.24+stage*.035;u.forestWeapon=u.weapon;group.push(u);
     }
-    this.refreshPartners();this.separateBodies();
+    if(!layout)patrolLayouts.set(layoutKey,positions);
+    return group;
   }
   finishEncounter(){
-    const e=this.activeEncounter;if(!e)return;
+    const e=this.activeEncounter;if(!e||this.alive(1).length)return;
     if(!this.state.completed.includes(e.id)){
       this.state.completed.push(e.id);const reward=integer(e.reward,0,500,35+integer(e.stage,0,3)*15);this.state.coins=Math.min(100000,this.state.coins+reward);
       this.emit('cleared',{id:e.id,reward});
       if(e.quest){if(questFinished(this.state,RETURN_QUESTS.find(q=>q.id===e.quest)))this.emit('questComplete',{id:e.quest});}
       else if(e.kind==='boss'){this.state[this.eastern?'eastConquered':this.southern?'southConquered':this.western?'westConquered':'conquered']=true;this.emit('complete',{id:e.id,region:this.state.region});}
     }
+    this.rememberPatrols();this.patrolGroups?.delete(e.id);
     this.activeEncounter=null;this.waveAt=null;this.units=this.units.filter(u=>u.team===0);this.projectiles=[];
   }
   abandonEncounter(){
     if(!this.activeEncounter)return;
-    // Preserve the player's retreat and persistent health, never partial rewards.
+    this.rememberPatrols();
+    for(const u of this.alive(1)){u.action=null;u.target=null;u.retreat=null;u.buddy=null;}
     this.activeEncounter=null;this.wave=0;this.waveAt=null;this.units=this.units.filter(u=>u.team===0);this.projectiles=[];this.paths.clear();
     this.focus=null;this.pendingPower=null;this.focusOwner=null;this.pendingOwner=null;
     for(const u of this.units){u.action=null;u.target=null;u.retreat=null;u.buddy=null;}
@@ -441,6 +495,7 @@ export class Campaign extends Battle {
   }
   recover(){
     this.arrivalIntent=null;
+    this.abandonEncounter();
     const camp=this.nearestCamp();this.units=this.units.filter(u=>u.team===0);this.activeEncounter=null;this.waveAt=null;this.travelGoal=null;this.goal=null;this.focus=null;this.pendingPower=null;this.focusOwner=null;this.pendingOwner=null;this.projectiles=[];this.effects=[];this.chargeTime=0;this.paths?.clear();
     for(const u of this.units){u.hp=u.maxHp;u.action=null;u.stun=0;u.guardBroken=0;}
     this.state.utilityLeft=1+this.state.utilityTier;this.utilityCd=0;
@@ -573,18 +628,18 @@ export class Campaign extends Battle {
     if(this.activeEncounter&&(distance(leader,this.activeEncounter)>12||this.safe(leader.x,leader.y))){this.abandonEncounter();return;}
     if(this.arriveAtPlace())return;
     for(const camp of this.world.CAMPS)if(distance(leader,camp)<1)this.visitCamp(camp);
+    if(this.state.region==='north'&&this.safe(leader.x,leader.y)&&distance(leader,NORTH.HOME)<8&&this.activeQuest?.region==='north'&&this.state.fieldQuest!==this.activeQuest.id){
+      this.rememberPatrols();this.state.fieldQuest=this.activeQuest.id;this.preparePatrols();
+    }
     if(this.activeEncounter){
-      if(!this.alive(1).length){
-        if(this.wave>=integer(this.activeEncounter.waves,2,this.activeEncounter.quest?6:3,2))this.finishEncounter();
-        else if(this.waveAt===null)this.waveAt=this.time+2.5;
-        else if(this.time>=this.waveAt&&(this.harborBattle?inHarbor(leader):distance(leader,this.activeEncounter)<=12)&&!this.safe(leader.x,leader.y)){this.waveAt=null;this.spawnWave();}
-      }
+      if(!this.alive(1).length)this.finishEncounter();
     }else{
-      const e=this.encounters.find(e=>!this.state.completed.includes(e.id)&&distance(leader,e)<5.5&&(e.quest?(e.kind!=='boss'&&!e.ordered||this.localQuest.encounters.slice(0,this.localQuest.encounters.indexOf(e)).every(p=>this.state.completed.includes(p.id))):e.kind!=='boss'||this.sealsReady));
+      const e=this.encounters.find(e=>{const group=this.patrolGroups.get(e.id)||[];return this.canEngage(e)&&(group.length&&group.every(u=>u.hp<=0)||distance(leader,e)<5.5&&group.some(u=>u.hp>0&&distance(leader,u)<6&&this.clearLine(leader,u)));});
       if(e&&!this.safe(leader.x,leader.y)&&(!this.harborBattle||inHarbor(leader)))this.beginEncounter(e);
     }
   }
   serialize(){
+    this.rememberPatrols();
     if(this.trial)return {...cleanSave({...this.state,position:ARENA_ENTRANCE,health:[1,1,1,1,1],utilityLeft:1+this.state.utilityTier,utilityCd:0,chargeTime:0}),squad:this.state.squad.map(s=>({...s})),health:[1,1,1,1,1]};
     const leader=this.leader();if(leader)this.state.position={x:leader.x,y:leader.y};
     for(const u of this.units.filter(u=>u.team===0))this.state.health[u.index]=u.hp/u.maxHp;

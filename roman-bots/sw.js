@@ -1,10 +1,10 @@
-const CACHE='roman-bots-roman32',ASSETS=['./','./index.html','./styles.css?v=roman32','./app.js?v=roman32','./data.js?v=roman32','./engine.js?v=roman32','./art.js?v=roman32','./geometry.js?v=roman32','./icons.js?v=roman32','./manifest.webmanifest','./version.json','./refresh.html','./assets/icon-192.png','./assets/icon-512.png','./assets/courtyard-theme.mp3','./north/index.html','./north/north.css?v=roman32','./north/north.js?v=roman32','./north/campaign.js?v=roman32','./north/world.js?v=roman32','./north/scenery.js?v=roman32'];
-ASSETS.push('./north/prologue.js?v=roman32','./north/city.js?v=roman32');
-ASSETS.push('./north/west-world.js?v=roman32','./north/west-scenery.js?v=roman32');
-ASSETS.push('./north/navigation.js?v=roman32');
-ASSETS.push('./north/south-world.js?v=roman32','./north/south-scenery.js?v=roman32');
-ASSETS.push('./north/east-world.js?v=roman32','./north/east-scenery.js?v=roman32');
-ASSETS.push('./north/return-quests.js?v=roman32','./north/quest-art.js?v=roman32');
+const CACHE='roman-bots-roman33',ASSETS=['./','./index.html','./styles.css?v=roman33','./app.js?v=roman33','./data.js?v=roman33','./engine.js?v=roman33','./art.js?v=roman33','./geometry.js?v=roman33','./icons.js?v=roman33','./manifest.webmanifest','./version.json','./refresh.html','./assets/icon-192.png','./assets/icon-512.png','./assets/courtyard-theme.mp3','./north/index.html','./north/north.css?v=roman33','./north/north.js?v=roman33','./north/campaign.js?v=roman33','./north/world.js?v=roman33','./north/scenery.js?v=roman33'];
+ASSETS.push('./north/prologue.js?v=roman33','./north/city.js?v=roman33');
+ASSETS.push('./north/west-world.js?v=roman33','./north/west-scenery.js?v=roman33');
+ASSETS.push('./north/navigation.js?v=roman33');
+ASSETS.push('./north/south-world.js?v=roman33','./north/south-scenery.js?v=roman33');
+ASSETS.push('./north/east-world.js?v=roman33','./north/east-scenery.js?v=roman33');
+ASSETS.push('./north/return-quests.js?v=roman33','./north/quest-art.js?v=roman33');
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('roman-bots-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{
