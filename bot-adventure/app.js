@@ -1,16 +1,16 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, visibleEquipment, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world88';
-import { Adventure, distance } from './engine.js?v=world88';
-import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon,atlasBot } from './art.js?v=world88';
-import { mountAtlas } from './atlas.js?v=world88';
-import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world88';
-import {AdventureSaves} from './adventure-saves.js?v=world88';
-import {bindHoldConfirmation} from './hold-confirm.js?v=world88';
-import {bindPowerControl,updatePowerControl} from './power-control.js?v=world88';
-import {atlasProgress} from './atlas-progress.js?v=world88';
-import {localProgress} from './quiet-ui.js?v=world88';
-import {replayTitle} from './replay-variants.js?v=world88';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, visibleEquipment, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world89';
+import { Adventure, distance } from './engine.js?v=world89';
+import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon,atlasBot } from './art.js?v=world89';
+import { mountAtlas } from './atlas.js?v=world89';
+import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world89';
+import {AdventureSaves} from './adventure-saves.js?v=world89';
+import {bindHoldConfirmation} from './hold-confirm.js?v=world89';
+import {bindPowerControl,updatePowerControl} from './power-control.js?v=world89';
+import {atlasProgress} from './atlas-progress.js?v=world89';
+import {localProgress} from './quiet-ui.js?v=world89';
+import {replayTitle} from './replay-variants.js?v=world89';
 
-const buildVersion = 'world88';
+const buildVersion = 'world89';
 const SAVE_KEY='bot-adventure-save-v1';
 const adventureSaves=new AdventureSaves({storage:()=>localStorage,key:SAVE_KEY});
 const $=id=>document.getElementById(id);

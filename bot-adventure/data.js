@@ -1,11 +1,12 @@
-import { MORE_REGIONS, NEW_EQUIPMENT, WORKSHOPS, RETURNS as STORY_RETURNS, ENCOUNTERS, LEGACY_WORKSHOPS, LEGACY_RETURNS, LEGACY_ENCOUNTERS } from './content.js?v=world88';
-import {LEGACY_TILES,WORLD_TILES,relocatePoint,relocateEntity,legacyPoint,worldGates} from './topology.js?v=world88';
-import {PANTHEON,inPantheon,buildPantheon} from './pantheon.js?v=world88';
-import {applyReplayVariants} from './replay-variants.js?v=world88';
+import { MORE_REGIONS, NEW_EQUIPMENT, WORKSHOPS, RETURNS as STORY_RETURNS, ENCOUNTERS, LEGACY_WORKSHOPS, LEGACY_RETURNS, LEGACY_ENCOUNTERS } from './content.js?v=world89';
+import {LEGACY_TILES,WORLD_TILES,relocatePoint,relocateEntity,legacyPoint,worldGates} from './topology.js?v=world89';
+import {PANTHEON,inPantheon,buildPantheon} from './pantheon.js?v=world89';
+import {applyReplayVariants} from './replay-variants.js?v=world89';
+import {applyReplayColors} from './replay-colors.js?v=world89';
 export {PANTHEON};
 export { WORKSHOPS, ENCOUNTERS };
-export { bossProfile } from './content.js?v=world88';
-export const BUILD = 'world88';
+export { bossProfile } from './content.js?v=world89';
+export const BUILD = 'world89';
 export const REGION_W = 36;
 export const REGION_H = 44;
 export const WORLD_W = REGION_W * 5;
@@ -256,7 +257,7 @@ export function makeWorld(save) {
   for(const landmark of props.filter(p=>p.type==='landmark'))for(let i=props.length-1;i>=0;i--){
     const p=props[i];if(p.r===landmark.r&&p.type!=='landmark'&&Math.abs(p.x-landmark.x)<1.7&&p.y<landmark.y+1.2&&p.y>landmark.y-2.8){blocks.delete(`${Math.floor(p.x)},${Math.floor(p.y)}`);props.splice(i,1);}
   }
-  return applyReplayVariants(addReplayWorld(buildPantheon(relocateWorld({ sites, enemies, chests, stations, props, blocks, water, arenas }))),save);
+  return applyReplayColors(applyReplayVariants(addReplayWorld(buildPantheon(relocateWorld({ sites, enemies, chests, stations, props, blocks, water, arenas }))),save),save);
 }
 function addReplayWorld(world){
   for(const mission of RETURNS.filter(m=>m.replay)){

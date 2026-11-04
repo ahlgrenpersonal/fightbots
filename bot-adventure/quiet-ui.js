@@ -1,4 +1,4 @@
-import {REGIONS,RETURNS,returnActive,requiredCells,cellsIn} from './data.js?v=world88';
+import {REGIONS,RETURNS,returnActive,requiredCells,cellsIn} from './data.js?v=world89';
 
 export function localProgress(save,r){
   if(r<0||r>=REGIONS.length)return null;

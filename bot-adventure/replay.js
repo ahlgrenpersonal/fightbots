@@ -1,5 +1,6 @@
-import {RETURNS,makeWorld} from './data.js?v=world88';
-import {variantForRound} from './replay-variants.js?v=world88';
+import {RETURNS,makeWorld} from './data.js?v=world89';
+import {variantForRound} from './replay-variants.js?v=world89';
+import {chooseReplayPalette,ensureReplayPalette} from './replay-colors.js?v=world89';
 
 const missions=RETURNS.filter(m=>m.postRoyal);
 const ids=missions.map(m=>m.id);
@@ -19,6 +20,7 @@ function select(save,first=false,reset=true){
   save.replay={mission,phase:'region',round:(previous?.round||0)+1,remaining:remaining.filter(id=>id!==mission)};
   save.replay.variantStartBatch=previous?.variantStartBatch||2;
   save.replay.variant=variantForRound(mission,save.replay.round,ids.length,save.replay.variantStartBatch);
+  chooseReplayPalette(save,missions.find(m=>m.id===mission));
   if(!reset)return;
   // These bounded IDs belong only to replay content, never campaign progress.
   const prefixes=missions.map(m=>`${m.sitePrefix}-`);
@@ -30,6 +32,7 @@ export function initializeReplay(save){
   if(save.replay&&ids.includes(save.replay.mission)&&['region','court'].includes(save.replay.phase)){
     // Older champions keep their current encounter and reveal only one new kind next batch.
     if(!save.replay.variantStartBatch)save.replay.variantStartBatch=Math.max(2,Math.floor((Math.max(1,save.replay.round||1)-1)/ids.length)+2);
+    ensureReplayPalette(save,missions.find(m=>m.id===save.replay.mission));
     return;
   }
   delete save.replay;
@@ -37,6 +40,7 @@ export function initializeReplay(save){
   if(!won&&!save.royalRematchStarted)return;
   if(!twins&&!save.royalRematchStarted){select(save,true,false);return;}
   save.replay={mission:'copper-twins',phase:'court',round:1,remaining:shuffled(ids.filter(id=>id!=='copper-twins'))};
+  chooseReplayPalette(save,missions.find(m=>m.id==='copper-twins'));
   // An existing rematch keeps its exact stage and casualties.
   if(won&&save.royalRematchStarted)select(save);
 }

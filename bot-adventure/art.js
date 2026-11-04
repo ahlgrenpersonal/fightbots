@@ -1,11 +1,12 @@
-import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world88';
-import {atlasProgress,regionEdges} from './atlas-progress.js?v=world88';
-import {atlasSiteVisible} from './quiet-ui.js?v=world88';
-import {boatArt,dockArt} from './boat-art.js?v=world88';
-import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world88';
-import {COURT} from './pantheon.js?v=world88';
-import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world88';
-import * as worldData from './data.js?v=world88';
+import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world89';
+import {atlasProgress,regionEdges} from './atlas-progress.js?v=world89';
+import {atlasSiteVisible} from './quiet-ui.js?v=world89';
+import {boatArt,dockArt} from './boat-art.js?v=world89';
+import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world89';
+import {COURT} from './pantheon.js?v=world89';
+import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world89';
+import * as worldData from './data.js?v=world89';
+import {replayPalette} from './replay-colors.js?v=world89';
 
 export function rounded(c,x,y,w,h,r,fill,stroke,line=2) {
   c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=line;c.stroke();}
@@ -20,9 +21,9 @@ function ring(c,x,y,r,color,width=2){c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.st
 function novaStar(c,x,y,r,fill,stroke='#20363a',width=2){const points=[];for(let i=0;i<10;i++){const a=i*Math.PI/5-Math.PI/2,d=i%2?r*.44:r;points.push([x+Math.cos(a)*d,y+Math.sin(a)*d]);}polygon(c,points,fill,stroke,width);}
 function blade(c,t=0,enemy=false){c.save();c.rotate(t);polygon(c,[[-17,-12],[2,-5],[18,-14],[10,1],[17,12],[-2,6],[-18,14],[-10,-1]],enemy?'#ffd8c9':'#e6f6ef');line(c,-12,-8,12,8,enemy?'#c25c76':'#63b9ad',3);ellipse(c,0,0,4,4,'#ffc85c');c.restore();}
 function drone(c,t=0,enemy=false){rounded(c,-12,-7,24,16,4,enemy?'#ed9b85':'#f5cd68','#20363a',2);rounded(c,-8,-4,16,7,2,'#294c60');ellipse(c,-4,-1,2,2,enemy?'#ffe0b8':'#caffed');ellipse(c,4,-1,2,2,enemy?'#ffe0b8':'#caffed');for(const side of [-1,1]){line(c,side*10,-5,side*19,-10,'#385666',3);ellipse(c,side*19,-11,9,2,enemy?'#f2abc2':'#b8e9e8');line(c,side*19-7,-11,side*19+7,-11,'#fff8cc',1.5);}line(c,-5,11,5,11,'#f4fff9',2);}
-function armorArt(c,id){
+function armorArt(c,id,livery){
   const colors={light:'#80c29a',steel:'#a5b8bd',heavy:'#e4bb67',reflect:'#b5f5f5',bastion:'#547d9a',polar:'#d9f8ff',star:'#f1d479'};
-  polygon(c,[[-22,-24],[0,-29],[22,-24],[21,9],[13,23],[0,30],[-13,23],[-21,9]],colors[id]||colors.light);
+  polygon(c,[[-22,-24],[0,-29],[22,-24],[21,9],[13,23],[0,30],[-13,23],[-21,9]],livery?.armor||colors[id]||colors.light);
   polygon(c,[[-15,-18],[0,-22],[15,-18],[14,7],[0,21],[-14,7]],'#ffffff30',null);
   if(id==='bastion'){for(const x of [-17,0,17])rounded(c,x-4,-30,8,13,1,'#c9dce3','#20363a',2);line(c,-13,0,13,0,'#f4d27d',5);}
   else if(id==='polar'){for(let i=0;i<3;i++){c.save();c.rotate(i*Math.PI/3);line(c,0,-15,0,15,'#398aa8',3);for(const s of [-1,1]){line(c,0,s*9,-4,s*5,'#398aa8',2);line(c,0,s*9,4,s*5,'#398aa8',2);}c.restore();}}
@@ -59,7 +60,7 @@ function bossEquipment(enemy){
   const guns={coast:'boomerang',scrapyard:'tractor',jungle:'flame',storm:'rail',fortress:'gravity',aurora:'frost',lunar:'meteor',garden:'drone',orbital:'rail',ancient:'gravity'};
   return {gun:r<5?['bumper','hammer','lightning','rocket','rocket'][r]:guns[theme]||'rail',armor:r===2?'reflect':r<5?'heavy':['aurora','lunar'].includes(theme)?'polar':['orbital','ancient'].includes(theme)?'star':'bastion',wheels:r>=5&&['lunar','orbital','storm'].includes(theme)?'hover':r>=5?'rover':'basic'};
 }
-function enemyEquipment(enemy){
+export function enemyEquipment(enemy){
   const boss=enemy.type==='boss',reg=REGIONS[enemy.r]||REGIONS[0],colors=['#b4a17b','#a97d6a','#728fb4','#be884d','#947daa'];
   const look={color:colors[enemy.r]||reg.accent||'#83b8ad',...bossEquipment(enemy)};
   if(!boss){look.armor=enemy.type==='tank'||enemy.type==='shield'?'steel':'light';look.gun=enemy.type==='ranged'?'blaster':enemy.type==='sentry'?'rail':enemy.type==='medic'?'drone':'bumper';}
@@ -70,6 +71,8 @@ function enemyEquipment(enemy){
   }
   if(boss&&worldData.bossProfile)Object.assign(look,bossEquipment(enemy));
   if(enemy.replayLook)Object.assign(look,enemy.replayLook);
+  const livery=!enemy.royal&&replayPalette(enemy.replayPalette);
+  if(livery)Object.assign(look,{color:livery.color,livery});
   return look;
 }
 function encounterRole(enemy){
@@ -384,7 +387,7 @@ export function weapon(c,id,t=0,action=0) {
 }
 
 export function bot(c,x,y,size,options={},t=0) {
-  const { color='#ee6954',armor='light',wheels='basic',gun='bumper',gadget='none',type='',region=0,theme='',encounterRole='',angle=0,hit=0,swing=0,moving=false,boss=false,shield=false,health=1,reducedMotion=false }=options;
+  const { color='#ee6954',livery,armor='light',wheels='basic',gun='bumper',gadget='none',type='',region=0,theme='',encounterRole='',angle=0,hit=0,swing=0,moving=false,boss=false,shield=false,health=1,reducedMotion=false }=options;
   if(reducedMotion){t=0;}
   const damaged=health<=.5,critical=health<=.18;
   c.save();c.translate(x,y);c.scale(size/80,size/80);
@@ -405,7 +408,7 @@ export function bot(c,x,y,size,options={},t=0) {
   const heavyBoss=boss&&(!encounterRole||encounterRole==='bruiser'||encounterRole==='splitter');
   if(armor==='steel'||armor==='heavy'||heavyBoss) {
     const thick=armor==='heavy'||heavyBoss?6:3;
-    for(const side of [-1,1]){rounded(c,side<0?-29:23,-23,thick+2,48,3,'#587075','#243b40',2);for(const y of [-18,18])ellipse(c,side*26,y,2,2,'#e9c969');}
+    for(const side of [-1,1]){rounded(c,side<0?-29:23,-23,thick+2,48,3,livery?.armor||'#587075','#243b40',2);for(const y of [-18,18])ellipse(c,side*26,y,2,2,'#e9c969');}
     if(armor==='heavy'||heavyBoss){rounded(c,-26,-30,52,9,3,'#f4d16a','#23393d',2);for(let i=0;i<5;i++)line(c,-20+i*10,-29,-23+i*10,-23,'#35494c',4);}
   }
   if(armor==='reflect') {
@@ -413,8 +416,8 @@ export function bot(c,x,y,size,options={},t=0) {
     c.beginPath();c.moveTo(-21,-17);c.lineTo(-4,-24);c.lineTo(19,17);c.lineTo(8,21);c.closePath();c.fillStyle='#eaffffa0';c.fill();c.restore();
   }
   if(['bastion','polar','star'].includes(armor)){
-    for(const side of [-1,1]){rounded(c,side<0?-32:23,-25,9,50,3,armor==='polar'?'#d9f8ff':armor==='star'?'#e8d18c':'#668ba3','#20363a',2);}
-    c.save();c.translate(0,19);c.scale(.28,.28);armorArt(c,armor);c.restore();
+    for(const side of [-1,1]){rounded(c,side<0?-32:23,-25,9,50,3,livery?(armor==='polar'?livery.highlight:livery.armor):armor==='polar'?'#d9f8ff':armor==='star'?'#e8d18c':'#668ba3','#20363a',2);}
+    c.save();c.translate(0,19);c.scale(.28,.28);armorArt(c,armor,livery);c.restore();
     if(armor==='bastion')for(const x of [-20,0,20])rounded(c,x-5,-34,10,13,2,'#bfd6df','#20363a',2);
     if(armor==='polar')for(const side of [-1,1])polygon(c,[[side*24,-26],[side*31,-39],[side*33,-20]],'#c4f5ff');
     if(armor==='star')for(const side of [-1,1])ellipse(c,side*27,-20,3,3,'#fff6c0');
@@ -439,19 +442,19 @@ export function bot(c,x,y,size,options={},t=0) {
   if(type==='hopper')for(const side of [-1,1]){const lift=moving?Math.sin(t*10)*3:0;line(c,side*20,24,side*31,32+lift,'#d1dfbb',5);line(c,side*31,32+lift,side*22,39,'#3f5d6e',5);rounded(c,side*22-8,36,16,6,2,'#f4d683','#20363a',2);}
   if(type==='medic'){rounded(c,-12,-35,24,13,3,'#e7ffda','#2a6554',2);line(c,-6,-29,6,-29,'#3c9b68',4);line(c,0,-34,0,-24,'#3c9b68',4);}
   if(!boss&&type==='tank')for(const side of [-1,1]){
-    rounded(c,side<0?-40:26,-8,14,37,3,'#587075','#20363a',3);
+    rounded(c,side<0?-40:26,-8,14,37,3,livery?.armor||'#587075','#20363a',3);
     for(const y of [0,10,20])line(c,side<0?-37:29,y,side<0?-29:37,y,'#b8cfca',2);
   }
   if(!boss&&type==='ranged'){
     line(c,-17,-31,17,-31,'#20363a',6);
     for(const side of [-1,1]){rounded(c,side*17-5,-37,10,12,2,'#779ba7','#20363a',2);ellipse(c,side*17,-32,2.5,2.5,'#fff0b4');}
   }
-  if(type==='carrier'){rounded(c,-35,-22,12,43,4,'#e9bd6b','#20363a',2);rounded(c,23,-22,12,43,4,'#e9bd6b','#20363a',2);rounded(c,-22,-37,44,11,3,'#819a8d','#20363a',2);for(const x of [-14,0,14])ellipse(c,x,-32,3,3,'#fff0b4');}
+  if(type==='carrier'){rounded(c,-35,-22,12,43,4,livery?.armor||'#e9bd6b','#20363a',2);rounded(c,23,-22,12,43,4,livery?.armor||'#e9bd6b','#20363a',2);rounded(c,-22,-37,44,11,3,livery?.highlight||'#819a8d','#20363a',2);for(const x of [-14,0,14])ellipse(c,x,-32,3,3,'#fff0b4');}
   if(type==='burrow'){c.save();c.translate(0,-28);polygon(c,[[-16,0],[0,-23],[16,0]],'#d8e3dc');for(let i=0;i<3;i++)line(c,-4-i*4,-17+i*6,5+i*4,-13+i*6,'#667f88',2);c.restore();}
   if(type==='sentry'){rounded(c,-32,25,64,9,3,'#738d99','#20363a',2);line(c,-22,27,-38,35,'#345264',5);line(c,22,27,38,35,'#345264',5);}
   if(gadget!=='none'){c.save();c.translate(-33,-2);c.scale(.35,.35);gadgetArt(c,gadget,t);c.restore();}
   c.save();c.translate(Math.cos(angle)<0?-24:24,10);c.rotate(angle);weapon(c,gun,t,reducedMotion?(swing>0?.45:0):swing);c.restore();
-  if(type==='shield'){c.save();c.rotate(angle);rounded(c,28,-24,13,48,5,'#b4dfd5','#20363a',3);line(c,33,-16,33,16,'#fff0ae',4);c.restore();}
+  if(type==='shield'){c.save();c.rotate(angle);rounded(c,28,-24,13,48,5,livery?.highlight||'#b4dfd5','#20363a',3);line(c,33,-16,33,16,'#fff0ae',4);c.restore();}
   if(shield){ellipse(c,0,-1,40,43,'#90eaff17');c.beginPath();c.ellipse(0,-1,40,43,0,0,Math.PI*2);c.strokeStyle='#b9f5ed90';c.lineWidth=2;c.stroke();}
   c.restore();
 }
@@ -889,7 +892,7 @@ export class Painter {
       if(mission.postRoyal){
         ellipse(c,0,0,24,19,'#173d48');ring(c,0,0,24,'#ffe17b',3);
         const bosses=g.world.enemies.filter(e=>e.returnId===mission.id&&e.type==='boss'&&!e.spawnParent),count=bosses.length;
-        bosses.forEach((e,i)=>bot(c,count===2?i*22-11:0,1,count===2?(e.encounterRole==='skirmisher'?21:27):36,{...bossEquipment(e),encounterRole:encounterRole(e),reducedMotion:true},0));
+        bosses.forEach((e,i)=>bot(c,count===2?i*22-11:0,1,count===2?(e.encounterRole==='skirmisher'?21:27):36,{...enemyEquipment(e),encounterRole:encounterRole(e),reducedMotion:true},0));
       }
       else{ring(c,0,0,13,'#e4c7ff',3);line(c,0,8,0,-14,'#fff0dd',2);polygon(c,[[0,-14],[14,-10],[0,-5]],'#9e6ace','#f3dfff',1.5);}
       c.restore();
