@@ -1,15 +1,15 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, visibleEquipment, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world86';
-import { Adventure, distance } from './engine.js?v=world86';
-import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon,atlasBot } from './art.js?v=world86';
-import { mountAtlas } from './atlas.js?v=world86';
-import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world86';
-import {AdventureSaves} from './adventure-saves.js?v=world86';
-import {bindHoldConfirmation} from './hold-confirm.js?v=world86';
-import {bindPowerControl,updatePowerControl} from './power-control.js?v=world86';
-import {atlasProgress} from './atlas-progress.js?v=world86';
-import {localProgress} from './quiet-ui.js?v=world86';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, visibleEquipment, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world87';
+import { Adventure, distance } from './engine.js?v=world87';
+import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon,atlasBot } from './art.js?v=world87';
+import { mountAtlas } from './atlas.js?v=world87';
+import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world87';
+import {AdventureSaves} from './adventure-saves.js?v=world87';
+import {bindHoldConfirmation} from './hold-confirm.js?v=world87';
+import {bindPowerControl,updatePowerControl} from './power-control.js?v=world87';
+import {atlasProgress} from './atlas-progress.js?v=world87';
+import {localProgress} from './quiet-ui.js?v=world87';
 
-const buildVersion = 'world86';
+const buildVersion = 'world87';
 const SAVE_KEY='bot-adventure-save-v1';
 const adventureSaves=new AdventureSaves({storage:()=>localStorage,key:SAVE_KEY});
 const $=id=>document.getElementById(id);
@@ -192,8 +192,8 @@ function displayDetails(){
 }
 function showRescue(){openPanel('rescue',`${head('A little rescue','Every good explorer gets a helping hand.','BACK HOME')}<div class="panel-body"><canvas class="celebration" id="rewardBot" width="700" height="280"></canvas><p class="dialog-copy">Your bot is fully repaired. All your equipment, parts and discoveries are safe. The rescue cost at most 1 scrap.</p><button class="primary" data-action="home">Back to the workshop ⌂</button></div>`);}
 function showReturnComplete(id){
-  const next=id==='copper-twins'?PANTHEON:REGIONS[unlockedRegion(game.save)];
-  openPanel('trail',`${head(next.name,id==='copper-twins'?'The king, queen and four sentinels await your return.':'A new trail is open.',id==='copper-twins'?'THE ROYAL REMATCH':'TRAIL RESTORED')}<div class="panel-body"><canvas class="celebration" id="rewardBot" width="700" height="280"></canvas><div class="pause-actions"><button class="primary pictorial-action" data-action="next" aria-label="Explore ${next.name}"><span>➜</span><small>Explore</small></button><button class="secondary pictorial-action" data-action="home" aria-label="Build at the nearest workshop"><span>⚙</span><small>Build</small></button></div></div>`);
+  const royal=RETURNS.find(m=>m.id===id)?.postRoyal,next=royal?PANTHEON:REGIONS[unlockedRegion(game.save)];
+  openPanel('trail',`${head(next.name,royal?'The king, queen and four sentinels await your return.':'A new trail is open.',royal?'THE ROYAL REMATCH':'TRAIL RESTORED')}<div class="panel-body"><canvas class="celebration" id="rewardBot" width="700" height="280"></canvas><div class="pause-actions"><button class="primary pictorial-action" data-action="next" aria-label="Explore ${next.name}"><span>➜</span><small>Explore</small></button><button class="secondary pictorial-action" data-action="home" aria-label="Build at the nearest workshop"><span>⚙</span><small>Build</small></button></div></div>`);
 }
 function showGuardian(r){
   const pair=Object.entries(EQUIPMENT).flatMap(([type,parts])=>parts.filter(p=>p.unlock===r).map(p=>({type,p}))).find(({p})=>p.id===REGIONS[r].reward)||Object.entries(EQUIPMENT).flatMap(([type,parts])=>parts.filter(p=>p.unlock===r).map(p=>({type,p})))[0];

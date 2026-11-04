@@ -1,10 +1,10 @@
-import { MORE_REGIONS, NEW_EQUIPMENT, WORKSHOPS, RETURNS, ENCOUNTERS, LEGACY_WORKSHOPS, LEGACY_RETURNS, LEGACY_ENCOUNTERS } from './content.js?v=world86';
-import {LEGACY_TILES,WORLD_TILES,relocatePoint,relocateEntity,legacyPoint,worldGates} from './topology.js?v=world86';
-import {PANTHEON,inPantheon,buildPantheon} from './pantheon.js?v=world86';
+import { MORE_REGIONS, NEW_EQUIPMENT, WORKSHOPS, RETURNS as STORY_RETURNS, ENCOUNTERS, LEGACY_WORKSHOPS, LEGACY_RETURNS, LEGACY_ENCOUNTERS } from './content.js?v=world87';
+import {LEGACY_TILES,WORLD_TILES,relocatePoint,relocateEntity,legacyPoint,worldGates} from './topology.js?v=world87';
+import {PANTHEON,inPantheon,buildPantheon} from './pantheon.js?v=world87';
 export {PANTHEON};
-export { WORKSHOPS, RETURNS, ENCOUNTERS };
-export { bossProfile } from './content.js?v=world86';
-export const BUILD = 'world86';
+export { WORKSHOPS, ENCOUNTERS };
+export { bossProfile } from './content.js?v=world87';
+export const BUILD = 'world87';
 export const REGION_W = 36;
 export const REGION_H = 44;
 export const WORLD_W = REGION_W * 5;
@@ -37,8 +37,17 @@ export const REGIONS = [
   ...MORE_REGIONS
 ];
 export const TOTAL_CELLS=REGIONS.reduce((sum,_,r)=>sum+requiredCells(r),0);
+// Replays reuse five widely spaced, already-connected campaign clearings.
+// Clover Fields stays a peaceful home region.
+export const RETURNS=[...STORY_RETURNS,...REGIONS.flatMap((region,r)=>{
+  if(r<2)return [];
+  const tiles=LEGACY_TILES[r],a=tiles[0],b=tiles[1];
+  const points=[[6.5,6.5],[29.5,17.5],[7.5,38.5],...(r===2?[[42.5,7.5],[43.5,38.5]]:b?[[6.5+(b[0]-a[0])*36,7.5+(b[1]-a[1])*44],[9.5+(b[0]-a[0])*36,37.5+(b[1]-a[1])*44]]:[[27.5,29.5],[16.5,40.5]])];
+  const sites=points.map(([x,y])=>relocatePoint({x:a[0]*36+x,y:a[1]*44+y})).map(p=>[p.x,p.y]);
+  return [{id:`replay-${r}`,r,postRoyal:true,replay:true,boss:region.boss,...relayFor(r),sitePrefix:`replay-site-${r}`,sites,sourceSites:(b?[1,2,3,5,7]:[1,2,3,6,7]).map(i=>`site-${r}-${i}`)}];
+})];
 export const TOTAL_TREASURES=REGIONS.length*7;
-export const returnActive=(save,m)=>!!m&&(m.postRoyal?save.royalCourt?.phase==='victory':save.bosses.includes(m.unlock-1))&&!(save.returns||[]).includes(m.id);
+export const returnActive=(save,m)=>!!m&&(m.postRoyal?(save.replay?save.replay.phase==='region'&&save.replay.mission===m.id:m.id==='copper-twins'&&save.royalCourt?.phase==='victory'):save.bosses.includes(m.unlock-1))&&!(save.returns||[]).includes(m.id);
 // The original FightBots' square chassis, eyes, colors and armor motifs are retained.
 // Adventure equipment has its own progression and continuous-time combat rules.
 export const EQUIPMENT = {
@@ -246,7 +255,24 @@ export function makeWorld() {
   for(const landmark of props.filter(p=>p.type==='landmark'))for(let i=props.length-1;i>=0;i--){
     const p=props[i];if(p.r===landmark.r&&p.type!=='landmark'&&Math.abs(p.x-landmark.x)<1.7&&p.y<landmark.y+1.2&&p.y>landmark.y-2.8){blocks.delete(`${Math.floor(p.x)},${Math.floor(p.y)}`);props.splice(i,1);}
   }
-  return buildPantheon(relocateWorld({ sites, enemies, chests, stations, props, blocks, water, arenas }));
+  return addReplayWorld(buildPantheon(relocateWorld({ sites, enemies, chests, stations, props, blocks, water, arenas })));
+}
+function addReplayWorld(world){
+  for(const mission of RETURNS.filter(m=>m.replay)){
+    mission.sourceSites.forEach((source,i)=>{
+      const original=world.sites.find(s=>s.id===source),id=`${mission.sitePrefix}-${i}`;
+      world.sites.push({...original,id,index:i,returnId:mission.id});
+      for(const e of world.enemies.filter(e=>e.site===source&&e.wave===0&&!e.spawnParent)){
+        const hp=Math.max(e.maxHp,e.type==='tank'||e.type==='carrier'?2400:e.type==='shield'?1900:1600);
+        world.enemies.push({...e,id:`${id}-${e.id}`,site:id,returnId:mission.id,dormant:false,hp,maxHp:hp,damage:Math.min(12,Math.max(8,e.damage))});
+      }
+    });
+    for(const e of world.enemies.filter(e=>e.r===mission.r&&e.type==='boss'&&!e.returnId&&!e.encounterId)){
+      const hp=Math.max(9000,e.maxHp);
+      world.enemies.push({...e,id:`${mission.id}-${e.id}`,returnId:mission.id,hp,maxHp:hp});
+    }
+  }
+  return world;
 }
 function relocateWorld(world){
   const points=list=>list.map(relocateEntity).filter(Boolean);

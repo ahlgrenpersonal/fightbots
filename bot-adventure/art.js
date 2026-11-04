@@ -1,11 +1,11 @@
-import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world86';
-import {atlasProgress,regionEdges} from './atlas-progress.js?v=world86';
-import {atlasSiteVisible} from './quiet-ui.js?v=world86';
-import {boatArt,dockArt} from './boat-art.js?v=world86';
-import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world86';
-import {COURT} from './pantheon.js?v=world86';
-import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world86';
-import * as worldData from './data.js?v=world86';
+import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world87';
+import {atlasProgress,regionEdges} from './atlas-progress.js?v=world87';
+import {atlasSiteVisible} from './quiet-ui.js?v=world87';
+import {boatArt,dockArt} from './boat-art.js?v=world87';
+import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world87';
+import {COURT} from './pantheon.js?v=world87';
+import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world87';
+import * as worldData from './data.js?v=world87';
 
 export function rounded(c,x,y,w,h,r,fill,stroke,line=2) {
   c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=line;c.stroke();}
@@ -63,7 +63,7 @@ function enemyEquipment(enemy){
   const boss=enemy.type==='boss',reg=REGIONS[enemy.r]||REGIONS[0],colors=['#b4a17b','#a97d6a','#728fb4','#be884d','#947daa'];
   const look={color:colors[enemy.r]||reg.accent||'#83b8ad',...bossEquipment(enemy)};
   if(!boss){look.armor=enemy.type==='tank'||enemy.type==='shield'?'steel':'light';look.gun=enemy.type==='ranged'?'blaster':enemy.type==='sentry'?'rail':enemy.type==='medic'?'drone':'bumper';}
-  if(enemy.returnId){
+  if(enemy.returnId&&!enemy.returnId.startsWith('replay-')){
     if(boss&&enemy.returnId==='copper-return')Object.assign(look,{gun:'tractor',armor:'bastion',wheels:'rover',color:'#ce7258',gadget:'aegis'});
     else if(boss&&enemy.returnId==='crystal-return')Object.assign(look,{gun:'frost',armor:'polar',wheels:'hover',color:'#82cddd'});
     else if(!boss){const variant=Array.from(enemy.id||'').reduce((sum,char)=>sum+char.charCodeAt(0),0)%4;Object.assign(look,{color:enemy.returnId==='copper-twins'?['#d7894f','#e6b667','#bd7956','#d79860'][variant]:['#9b73b8','#ae7962','#84649f','#bd8e73'][variant],armor:enemy.returnId==='copper-twins'&&enemy.type==='tank'?'bastion':'steel',wheels:enemy.returnId==='crystal-return'?'hover':'rover'});}
@@ -877,7 +877,7 @@ export class Painter {
     for(const mission of worldData.RETURNS||[]){
       if(!returnVisible(g.save,{returnId:mission.id}))continue;
       c.save();c.translate(ox+mission.x*s,oy+mission.y*s);c.scale(markerScale,markerScale);
-      if(mission.postRoyal){ellipse(c,0,0,24,19,'#173d48');ring(c,0,0,24,'#ffe17b',3);for(let twin=0;twin<2;twin++)bot(c,twin*22-11,1,25,{...bossEquipment({r:mission.r,returnId:mission.id,twin}),reducedMotion:true},0);}
+      if(mission.postRoyal){ellipse(c,0,0,24,19,'#173d48');ring(c,0,0,24,'#ffe17b',3);const count=mission.id==='copper-twins'?2:1;for(let twin=0;twin<count;twin++)bot(c,count===2?twin*22-11:0,1,count===2?25:36,{...bossEquipment({r:mission.r,returnId:mission.id,twin}),reducedMotion:true},0);}
       else{ring(c,0,0,13,'#e4c7ff',3);line(c,0,8,0,-14,'#fff0dd',2);polygon(c,[[0,-14],[14,-10],[0,-5]],'#9e6ace','#f3dfff',1.5);}
       c.restore();
     }

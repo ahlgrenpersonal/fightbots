@@ -1,10 +1,11 @@
-import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world86';
-import { bossProfile } from './content.js?v=world86';
-import { ReturningPatrols } from './patrols.js?v=world86';
-import {inRoyalChamber} from './pantheon.js?v=world86';
-import {RoyalCourt} from './royal-court.js?v=world86';
-import {nearestWalkable} from './data.js?v=world86';
-import {Boats} from './boats.js?v=world86';
+import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world87';
+import { bossProfile } from './content.js?v=world87';
+import { ReturningPatrols } from './patrols.js?v=world87';
+import {inRoyalChamber} from './pantheon.js?v=world87';
+import {RoyalCourt} from './royal-court.js?v=world87';
+import {nearestWalkable} from './data.js?v=world87';
+import {Boats} from './boats.js?v=world87';
+import {initializeReplay,beginReplay,completeReplay} from './replay.js?v=world87';
 
 export const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
 export const TAP_COOLDOWN=1.5;
@@ -23,9 +24,9 @@ function weaponMuzzle(p,id,size=1.17){
 }
 export class Adventure {
   constructor(save=freshSave(),onEvent=()=>{}) {
-    this.save=migrateSiteProgress(migrateWorldLayout(save));this.onEvent=onEvent;this.world=makeWorld();
+    this.save=migrateSiteProgress(migrateWorldLayout(save));initializeReplay(save);this.onEvent=onEvent;this.world=makeWorld();
     this.player={...save.position,hp:Math.max(1,Math.min(save.hp,stats(save).hp)),angle:0,cd:0,hit:0,swing:0,invincible:2};
-    this.enemies=this.world.enemies.filter(e=>!save.kills.includes(e.id)&&!save.cleared.includes(e.site)&&!(e.returnId?save.returns.includes(e.returnId):!e.encounterId&&e.type==='boss'&&save.bosses.includes(e.r)));
+    this.enemies=structuredClone(this.world.enemies.filter(e=>!save.kills.includes(e.id)&&!save.cleared.includes(e.site)&&!(e.returnId?save.returns.includes(e.returnId):!e.encounterId&&e.type==='boss'&&save.bosses.includes(e.r))));
     for(const e of this.enemies)if(e.dormant&&(e.spawnParent?save.kills.includes(e.spawnParent):!this.enemies.some(n=>n.site===e.site&&n.wave===0&&n.hp>0)))e.dormant=false;
     this.route=[];this.loot=[];this.projectiles=[];this.effects=[];this.telegraphs=[];this.target=null;this.waypoint=null;
     this.time=0;this.boostTime=0;this.boostCd=0;this.shieldCd=0;this.buddyCd=0;this.shake=0;this.paused=false;this.reducedMotion=false;this.routeTimer=0;this.charging=null;this.headingHome=false;
@@ -37,6 +38,7 @@ export class Adventure {
     this.discover();
   }
   emit(type,data={}){this.onEvent({type,...data});}
+  beginReplay(){beginReplay(this);}
   snapshot(){this.patrols.snapshot();this.royals.snapshot();this.boats.snapshot();this.save.position={x:this.player.x,y:this.player.y};this.save.hp=this.player.hp;return this.save;}
   maxHp(){return stats(this.save).hp;}
   bossAwake(r){return !this.save.bosses.includes(r)&&cellsIn(this.save,r)>=requiredCells(r)&&r<=unlockedRegion(this.save);}
@@ -199,7 +201,7 @@ export class Adventure {
         return;
       }
       if(e.type==='boss'&&!this.enemies.some(b=>b.type==='boss'&&!b.encounterId&&b.r===e.r&&b.returnId===e.returnId&&b.hp>0)){
-        if(e.returnId){this.save.returns.push(e.returnId);this.save.gears+=6;this.save.scrap+=120;this.royals.prepareRematch();this.emit('return-complete',{id:e.returnId});return;}
+        if(e.returnId){this.save.returns.push(e.returnId);this.save.gears+=6;this.save.scrap+=120;completeReplay(this.save,e.returnId);this.royals.prepareRematch();this.emit('return-complete',{id:e.returnId});return;}
         this.save.bosses.push(e.r);this.save.gears+=4+e.r;this.save.scrap+=30+e.r*15;this.shake=5;this.projectiles=[];this.telegraphs=[];
         if(e.r===REGIONS.length-1)this.save.completed=true;
         this.emit('guardian',{r:e.r});

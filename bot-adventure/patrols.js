@@ -1,4 +1,4 @@
-import { WORKSHOPS, RETURNS, returnActive, regionAt, canWalk, enemyHealth } from './data.js?v=world86';
+import { WORKSHOPS, RETURNS, returnActive, regionAt, canWalk, enemyHealth } from './data.js?v=world87';
 
 export const PATROL_DELAY=300;
 export const WORKSHOP_REFUGE=12;
@@ -29,7 +29,7 @@ export class ReturningPatrols {
     }
   }
   protectedAt(point){return regionAt(point.x,point.y)===0||WORKSHOPS.some(h=>distance(point,h)<WORKSHOP_REFUGE);}
-  eligible(site){const g=this.game;return g.save.bosses.includes(site.r)&&g.save.cleared.includes(site.id)&&!RETURNS.some(m=>m.r===site.r&&returnActive(g.save,m));}
+  eligible(site){const g=this.game;return !g.save.replay&&g.save.bosses.includes(site.r)&&g.save.cleared.includes(site.id)&&!RETURNS.some(m=>m.r===site.r&&returnActive(g.save,m));}
   awake(enemy){const site=this.byId.get(enemy.patrolSite);return !!site&&this.eligible(site)&&!this.protectedAt(this.game.player);}
   enemy(site,round,index){
     const base=this.templates.get(site.id)[index];

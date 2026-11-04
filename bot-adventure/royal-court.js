@@ -1,5 +1,5 @@
-import {PANTHEON,COURT,ROYAL_SPECS,inRoyalChamber} from './pantheon.js?v=world86';
-import {pantheonUnlocked,canWalk,pathfind,regionAt} from './data.js?v=world86';
+import {PANTHEON,COURT,ROYAL_SPECS,inRoyalChamber} from './pantheon.js?v=world87';
+import {pantheonUnlocked,canWalk,pathfind,regionAt} from './data.js?v=world87';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const inside=p=>regionAt(p.x,p.y)===PANTHEON.r&&p.y>=229&&p.y<259;
 const finite=(v,fallback)=>Number.isFinite(v)?v:fallback;
@@ -31,7 +31,7 @@ export class RoyalCourt {
   }
   prepareRematch(){
     const g=this.game;
-    if(this.phase!=='victory'||!g.save.returns.includes('copper-twins')||g.save.royalRematchStarted)return false;
+    if(this.phase!=='victory'||g.save.replay?.phase!=='court')return false;
     g.save.royalRematchStarted=true;
     this.phase='sleeping';this.inspect=0;this.transition=0;this.healClock=0;this.rallying=false;this.openedAt=-10;
     g.enemies=g.enemies.filter(e=>!e.royal);g.projectiles=g.projectiles.filter(e=>!e.royal);g.telegraphs=g.telegraphs.filter(e=>!e.royal);
@@ -67,6 +67,7 @@ export class RoyalCourt {
     if(this.phase==='regents'&&this.units.filter(e=>e.role!=='guard').every(e=>e.hp<=0)){
       this.phase='victory';this.game.save.scrap+=250;this.game.save.gears+=12;
       this.game.projectiles=this.game.projectiles.filter(p=>!p.royal);this.game.telegraphs=this.game.telegraphs.filter(a=>!a.royal);
+      this.snapshot();this.game.beginReplay();
       this.game.effects.push({type:'nova',x:162.5,y:251.5,radius:5,life:2,max:2});this.game.emit('royal-victory');
     }
   }
