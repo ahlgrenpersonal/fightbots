@@ -1,11 +1,12 @@
-import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world87';
-import { bossProfile } from './content.js?v=world87';
-import { ReturningPatrols } from './patrols.js?v=world87';
-import {inRoyalChamber} from './pantheon.js?v=world87';
-import {RoyalCourt} from './royal-court.js?v=world87';
-import {nearestWalkable} from './data.js?v=world87';
-import {Boats} from './boats.js?v=world87';
-import {initializeReplay,beginReplay,completeReplay} from './replay.js?v=world87';
+import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world88';
+import { bossProfile } from './content.js?v=world88';
+import {replayTitle} from './replay-variants.js?v=world88';
+import { ReturningPatrols } from './patrols.js?v=world88';
+import {inRoyalChamber} from './pantheon.js?v=world88';
+import {RoyalCourt} from './royal-court.js?v=world88';
+import {nearestWalkable} from './data.js?v=world88';
+import {Boats} from './boats.js?v=world88';
+import {initializeReplay,beginReplay,completeReplay} from './replay.js?v=world88';
 
 export const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
 export const TAP_COOLDOWN=1.5;
@@ -24,7 +25,7 @@ function weaponMuzzle(p,id,size=1.17){
 }
 export class Adventure {
   constructor(save=freshSave(),onEvent=()=>{}) {
-    this.save=migrateSiteProgress(migrateWorldLayout(save));initializeReplay(save);this.onEvent=onEvent;this.world=makeWorld();
+    this.save=migrateSiteProgress(migrateWorldLayout(save));initializeReplay(save);this.onEvent=onEvent;this.world=makeWorld(save);
     this.player={...save.position,hp:Math.max(1,Math.min(save.hp,stats(save).hp)),angle:0,cd:0,hit:0,swing:0,invincible:2};
     this.enemies=structuredClone(this.world.enemies.filter(e=>!save.kills.includes(e.id)&&!save.cleared.includes(e.site)&&!(e.returnId?save.returns.includes(e.returnId):!e.encounterId&&e.type==='boss'&&save.bosses.includes(e.r))));
     for(const e of this.enemies)if(e.dormant&&(e.spawnParent?save.kills.includes(e.spawnParent):!this.enemies.some(n=>n.site===e.site&&n.wave===0&&n.hp>0)))e.dormant=false;
@@ -49,7 +50,7 @@ export class Adventure {
     const first=nearby[0];if(!first)return null;
     const group=key(first),members=this.enemies.filter(e=>e.type==='boss'&&key(e)===group);
     const maxHp=this.world.enemies.filter(e=>e.type==='boss'&&key(e)===group).reduce((sum,e)=>sum+e.maxHp,0);
-    return {name:ENCOUNTERS.find(e=>e.id===first.encounterId)?.name||RETURNS.find(m=>m.id===first.returnId)?.boss||REGIONS[r].boss,health:members.reduce((sum,e)=>sum+Math.max(0,e.hp),0)/maxHp};
+    return {name:ENCOUNTERS.find(e=>e.id===first.encounterId)?.name||replayTitle(this.save,RETURNS.find(m=>m.id===first.returnId))||REGIONS[r].boss,health:members.reduce((sum,e)=>sum+Math.max(0,e.hp),0)/maxHp};
   }
   homes(){return WORKSHOPS.filter(h=>h.r<=unlockedRegion(this.save));}
   homeNear(){return this.homes().find(h=>distance(this.player,h)<2.6);}
@@ -95,8 +96,8 @@ export class Adventure {
   enemyStep(e,to,step){
     const d=distance(e,to);if(!d||step<=0)return false;
     let next={x:e.x+(to.x-e.x)*Math.min(1,step/d),y:e.y+(to.y-e.y)*Math.min(1,step/d)};
-    if(e.returnId==='copper-twins'&&e.type==='boss'){
-      const twin=this.enemies.find(n=>n!==e&&n.returnId===e.returnId&&n.type==='boss'&&n.hp>0);
+    if((e.returnId==='copper-twins'||e.replayVariant)&&e.type==='boss'){
+      const twin=this.enemies.find(n=>n!==e&&n.returnId===e.returnId&&n.type==='boss'&&n.hp>0&&!n.dormant);
       if(twin&&distance(next,twin)<1.85&&distance(next,twin)<distance(e,twin)){
         const a=Math.atan2(to.y-e.y,to.x-e.x);
         next=[.8,-.8,1.3,-1.3].map(turn=>({x:e.x+Math.cos(a+turn)*step,y:e.y+Math.sin(a+turn)*step})).find(p=>distance(p,twin)>=distance(e,twin)&&canWalk(this.world,this.save,Math.floor(p.x),Math.floor(p.y))&&this.clearShot(e,p));
@@ -182,10 +183,10 @@ export class Adventure {
       if(e.patrolSite){this.patrols.defeated(e);this.emit('defeat',{boss:false});return;}
       this.save.kills.push(e.id);this.save.totalBots++;
       const reward=e.encounterId?8:e.type==='boss'?35*(e.r+1):2+e.r;this.save.scrap+=reward;this.number(e.x,e.y,`+${reward} ◆`,'#ffe28c');this.emit('defeat',{boss:e.type==='boss'});
-      if(e.encounterId){
+      if(e.encounterId||e.replayVariant){
         const children=this.enemies.filter(n=>n.spawnParent===e.id&&n.hp>0);
         for(const child of children){
-          const side=child.x<child.homeX?-1:1;
+          const side=child.splitSide??(child.x<e.homeX?-1:1);
           const desired={x:e.x+side*.85,y:e.y};
           const candidates=[desired,{x:e.x,y:e.y+side*.85},{x:e.x,y:e.y}];
           const spot=candidates.find(p=>canWalk(this.world,this.save,Math.floor(p.x),Math.floor(p.y))&&!this.safeAt(p)&&distance(p,{x:child.homeX,y:child.homeY})<7);
@@ -193,12 +194,12 @@ export class Adventure {
           child.dormant=false;child.cd=2.8;child.spawnUntil=this.time+1;child.aggroUntil=this.time+6;
         }
         if(children.length){this.effects.push({type:'split',x:e.x,y:e.y,radius:1.5,life:1,max:1});this.emit('toast',{text:'It split into two little bots!'});}
-        if(!this.enemies.some(n=>n.encounterId===e.encounterId&&n.hp>0)){
+        if(e.encounterId&&!this.enemies.some(n=>n.encounterId===e.encounterId&&n.hp>0)){
           const encounter=ENCOUNTERS.find(n=>n.id===e.encounterId);
           this.save.scrap+=encounter.reward;this.save.gears+=2;this.burst(e.x,e.y,1.5);
           this.emit('toast',{text:`${encounter.name} defeated! +${encounter.reward} scrap`});
         }
-        return;
+        if(e.encounterId)return;
       }
       if(e.type==='boss'&&!this.enemies.some(b=>b.type==='boss'&&!b.encounterId&&b.r===e.r&&b.returnId===e.returnId&&b.hp>0)){
         if(e.returnId){this.save.returns.push(e.returnId);this.save.gears+=6;this.save.scrap+=120;completeReplay(this.save,e.returnId);this.royals.prepareRematch();this.emit('return-complete',{id:e.returnId});return;}

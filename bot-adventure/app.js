@@ -1,15 +1,16 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, visibleEquipment, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world87';
-import { Adventure, distance } from './engine.js?v=world87';
-import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon,atlasBot } from './art.js?v=world87';
-import { mountAtlas } from './atlas.js?v=world87';
-import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world87';
-import {AdventureSaves} from './adventure-saves.js?v=world87';
-import {bindHoldConfirmation} from './hold-confirm.js?v=world87';
-import {bindPowerControl,updatePowerControl} from './power-control.js?v=world87';
-import {atlasProgress} from './atlas-progress.js?v=world87';
-import {localProgress} from './quiet-ui.js?v=world87';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, visibleEquipment, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world88';
+import { Adventure, distance } from './engine.js?v=world88';
+import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon,atlasBot } from './art.js?v=world88';
+import { mountAtlas } from './atlas.js?v=world88';
+import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world88';
+import {AdventureSaves} from './adventure-saves.js?v=world88';
+import {bindHoldConfirmation} from './hold-confirm.js?v=world88';
+import {bindPowerControl,updatePowerControl} from './power-control.js?v=world88';
+import {atlasProgress} from './atlas-progress.js?v=world88';
+import {localProgress} from './quiet-ui.js?v=world88';
+import {replayTitle} from './replay-variants.js?v=world88';
 
-const buildVersion = 'world87';
+const buildVersion = 'world88';
 const SAVE_KEY='bot-adventure-save-v1';
 const adventureSaves=new AdventureSaves({storage:()=>localStorage,key:SAVE_KEY});
 const $=id=>document.getElementById(id);
@@ -116,7 +117,7 @@ function adventureMap(){
   bot($('mapPlayerKey').getContext('2d'),40,43,64,{color:s.color,armor:s.build.armor,wheels:s.build.wheels,gun:s.build.weapon,gadget:s.build.gadget,reducedMotion:true});
   const stations=game.world.stations.filter(st=>progress.visible.has(st.r)&&s.discovered.includes(st.id));
   panel.querySelector('.region-list').insertAdjacentHTML('afterbegin',stations.map(st=>`<button class="region-row station-row" data-station="${st.id}"><span>＋</span><div><b>Charging station</b><small>${REGIONS[st.r].name} · 2 scrap · safe zone</small></div><em>Go ↗</em></button>`).join(''));
-  panel.querySelector('.region-list').insertAdjacentHTML('afterbegin',game.homes().map(h=>`<button class="region-row workshop-row" data-home="${h.id}"><span>⌂</span><div><b>${h.name}</b><small>Free repairs · walk home</small></div><em>Go ↗</em></button>`).join('')+RETURNS.filter(m=>returnActive(s,m)).map(m=>`<button class="region-row return-row" data-return="${m.id}"><span>⚑</span><div><b>${m.boss}</b><small>${REGIONS[m.r].name} · ${m.sites.filter((_,i)=>s.cleared.includes(`${m.sitePrefix}-${i}`)).length} / ${m.sites.length} camps</small></div><em>Go ↗</em></button>`).join(''));
+  panel.querySelector('.region-list').insertAdjacentHTML('afterbegin',game.homes().map(h=>`<button class="region-row workshop-row" data-home="${h.id}"><span>⌂</span><div><b>${h.name}</b><small>Free repairs · walk home</small></div><em>Go ↗</em></button>`).join('')+RETURNS.filter(m=>returnActive(s,m)).map(m=>`<button class="region-row return-row" data-return="${m.id}"><span>⚑</span><div><b>${replayTitle(s,m)}</b><small>${REGIONS[m.r].name} · ${m.sites.filter((_,i)=>s.cleared.includes(`${m.sitePrefix}-${i}`)).length} / ${m.sites.length} camps</small></div><em>Go ↗</em></button>`).join(''));
   const map=$('atlas'),stage=document.createElement('div');stage.className='atlas-stage';map.before(stage);stage.append(map);
   stage.insertAdjacentHTML('afterbegin',`<div class="atlas-tools" role="group" aria-label="Map zoom"><output id="mapZoom" class="atlas-zoom" aria-label="Map zoom level">100%</output><button id="mapZoomOut" aria-label="Zoom out" title="Zoom out">−</button><button id="mapZoomIn" aria-label="Zoom in" title="Zoom in">+</button><button id="mapFit" aria-label="Show whole map" title="Show whole map">⛶</button>${s.completed?'':'<button id="mapGo" class="atlas-go" aria-label="Follow highlighted trail" title="Follow highlighted trail">➜</button>'}</div>`);
   const status=document.createElement('p');status.className='atlas-status';status.setAttribute('role','status');stage.after(status);
@@ -199,7 +200,7 @@ function showGuardian(r){
   const pair=Object.entries(EQUIPMENT).flatMap(([type,parts])=>parts.filter(p=>p.unlock===r).map(p=>({type,p}))).find(({p})=>p.id===REGIONS[r].reward)||Object.entries(EQUIPMENT).flatMap(([type,parts])=>parts.filter(p=>p.unlock===r).map(p=>({type,p})))[0];
   const discovery=pair?`<canvas id="rewardWeapon" class="celebration" width="700" height="280" data-reward="${pair.p.id}" data-type="${pair.type}"></canvas><h2 style="font-size:21px;margin:8px 0">${pair.p.name} blueprint</h2><p class="dialog-copy">${pair.p.desc} Your new blueprint is waiting at the workshop.</p>`:'<canvas class="celebration" id="rewardBot" width="700" height="280"></canvas>';
   if(r===REGIONS.length-1){openPanel('victory',`${head('All fifteen relays restored!','One final royal challenge awaits.','THE ANCIENT PATH OPENS')}<div class="panel-body">${discovery}<div class="completed-stats"><div><b>${game.save.totalBots}</b><span>bots defeated</span></div><div><b>${game.save.cleared.length}</b><span>cells discovered</span></div><div><b>${game.save.owned.length}</b><span>parts built</span></div></div><p class="dialog-copy">Beyond Starfall, the Crown Pantheon waits. Watch the sleeping court at the seal, then choose when to open it. Four sentinels defend the royal pair. Bring your strongest equipment; the king and queen slowly repair themselves.</p><div class="pause-actions"><button class="primary pictorial-action" data-action="pantheon" aria-label="Visit the royal court"><span>♛</span><small>Discover</small></button><button class="secondary pictorial-action" data-action="home" aria-label="Build at the nearest workshop"><span>⚙</span><small>Build</small></button></div></div>`);return;}
-  const mission=RETURNS.find(m=>returnActive(game.save,m)),next=mission?`${mission.boss} has appeared in ${REGIONS[mission.r].name}`:`${REGIONS[r+1].name} is now open`;
+  const mission=RETURNS.find(m=>returnActive(game.save,m)),next=mission?`${replayTitle(game.save,mission)} has appeared in ${REGIONS[mission.r].name}`:`${REGIONS[r+1].name} is now open`;
   openPanel('guardian',`${head('A relay comes to life!',next,'BIG DISCOVERY')}<div class="panel-body">${discovery}<div class="pause-actions"><button class="primary pictorial-action" data-action="home" aria-label="Build at the nearest workshop"><span>⚙</span><small>Build</small></button><button class="secondary pictorial-action" data-action="next" aria-label="Explore the next trail"><span>${mission?'⚑':'▶'}</span><small>Explore</small></button></div></div>`);
   tone(500,.5,'triangle',.04,1500);
 }

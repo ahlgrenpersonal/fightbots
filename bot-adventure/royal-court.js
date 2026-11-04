@@ -1,5 +1,5 @@
-import {PANTHEON,COURT,ROYAL_SPECS,inRoyalChamber} from './pantheon.js?v=world87';
-import {pantheonUnlocked,canWalk,pathfind,regionAt} from './data.js?v=world87';
+import {PANTHEON,COURT,ROYAL_SPECS,inRoyalChamber} from './pantheon.js?v=world88';
+import {pantheonUnlocked,canWalk,pathfind,regionAt} from './data.js?v=world88';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const inside=p=>regionAt(p.x,p.y)===PANTHEON.r&&p.y>=229&&p.y<259;
 const finite=(v,fallback)=>Number.isFinite(v)?v:fallback;

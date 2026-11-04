@@ -1,4 +1,4 @@
-import {relocateEntity,relocateMission} from './topology.js?v=world87';
+import {relocateEntity,relocateMission} from './topology.js?v=world88';
 const REGION_GUIDES={
   coast:['Salt air and bright harbor trails','Watch the blade fly out and come back. Keep rolling.'],
   scrapyard:['Giant magnets and mountains of spare parts','Move out of the glowing magnetic circle before the blast.'],
@@ -39,6 +39,7 @@ export function bossProfile(enemyOrRegion){
     fragment:{weapon:'bumper',armor:'steel',wheels:'speed',color:'#c6a1e5'}
   }[encounterRole];
   if(surprise)Object.assign(profile,surprise);
+  if(typeof enemyOrRegion==='object'&&enemyOrRegion.replayLook)Object.assign(profile,enemyOrRegion.replayLook);
   profile.pattern={bumper:'stomp',hammer:'slam',saw:'slam',blaster:'salvo',lightning:'arc',rocket:'salvo',boomerang:'return',tractor:'vortex',flame:'cone',rail:'beam',gravity:'slam',frost:'ice',meteor:'impact',drone:'drone'}[profile.weapon];
   return profile;
 }

@@ -1,11 +1,11 @@
-import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world87';
-import {atlasProgress,regionEdges} from './atlas-progress.js?v=world87';
-import {atlasSiteVisible} from './quiet-ui.js?v=world87';
-import {boatArt,dockArt} from './boat-art.js?v=world87';
-import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world87';
-import {COURT} from './pantheon.js?v=world87';
-import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world87';
-import * as worldData from './data.js?v=world87';
+import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world88';
+import {atlasProgress,regionEdges} from './atlas-progress.js?v=world88';
+import {atlasSiteVisible} from './quiet-ui.js?v=world88';
+import {boatArt,dockArt} from './boat-art.js?v=world88';
+import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world88';
+import {COURT} from './pantheon.js?v=world88';
+import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world88';
+import * as worldData from './data.js?v=world88';
 
 export function rounded(c,x,y,w,h,r,fill,stroke,line=2) {
   c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=line;c.stroke();}
@@ -69,14 +69,23 @@ function enemyEquipment(enemy){
     else if(!boss){const variant=Array.from(enemy.id||'').reduce((sum,char)=>sum+char.charCodeAt(0),0)%4;Object.assign(look,{color:enemy.returnId==='copper-twins'?['#d7894f','#e6b667','#bd7956','#d79860'][variant]:['#9b73b8','#ae7962','#84649f','#bd8e73'][variant],armor:enemy.returnId==='copper-twins'&&enemy.type==='tank'?'bastion':'steel',wheels:enemy.returnId==='crystal-return'?'hover':'rover'});}
   }
   if(boss&&worldData.bossProfile)Object.assign(look,bossEquipment(enemy));
+  if(enemy.replayLook)Object.assign(look,enemy.replayLook);
   return look;
 }
 function encounterRole(enemy){
-  return enemy.encounterId==='harbor-duo'||enemy.encounterId==='scrap-split'?enemy.encounterRole||'':'';
+  return enemy.replayVariant||enemy.encounterId==='harbor-duo'||enemy.encounterId==='scrap-split'?enemy.encounterRole||'':'';
 }
 function encounterShell(c,role,color){
   const ink='#20363a';
-  if(role==='bruiser'){
+  if(role==='vanguard'){
+    for(const side of [-1,1]){
+      polygon(c,[[side*21,-24],[side*33,-16],[side*30,7],[side*24,16],[side*21,-2]],color,ink,2.5);
+      line(c,side*25,-17,side*27,5,'#ffe7a0',3);
+    }
+    polygon(c,[[-13,-27],[-9,-37],[0,-31],[9,-37],[13,-27]],'#f1cf6e',ink,2);
+    polygon(c,[[0,15],[7,21],[0,28],[-7,21]],'#ffe7a0',ink,2);
+    ellipse(c,0,21,2,3,'#287c68');
+  }else if(role==='bruiser'){
     for(const side of [-1,1]){
       rounded(c,side<0?-35:23,-25,12,43,4,color,ink,3);
       for(const y of [-17,9])rounded(c,side*29-4,y,8,5,1,'#ffe2a2',ink,1.5);
@@ -877,7 +886,11 @@ export class Painter {
     for(const mission of worldData.RETURNS||[]){
       if(!returnVisible(g.save,{returnId:mission.id}))continue;
       c.save();c.translate(ox+mission.x*s,oy+mission.y*s);c.scale(markerScale,markerScale);
-      if(mission.postRoyal){ellipse(c,0,0,24,19,'#173d48');ring(c,0,0,24,'#ffe17b',3);const count=mission.id==='copper-twins'?2:1;for(let twin=0;twin<count;twin++)bot(c,count===2?twin*22-11:0,1,count===2?25:36,{...bossEquipment({r:mission.r,returnId:mission.id,twin}),reducedMotion:true},0);}
+      if(mission.postRoyal){
+        ellipse(c,0,0,24,19,'#173d48');ring(c,0,0,24,'#ffe17b',3);
+        const bosses=g.world.enemies.filter(e=>e.returnId===mission.id&&e.type==='boss'&&!e.spawnParent),count=bosses.length;
+        bosses.forEach((e,i)=>bot(c,count===2?i*22-11:0,1,count===2?(e.encounterRole==='skirmisher'?21:27):36,{...bossEquipment(e),encounterRole:encounterRole(e),reducedMotion:true},0));
+      }
       else{ring(c,0,0,13,'#e4c7ff',3);line(c,0,8,0,-14,'#fff0dd',2);polygon(c,[[0,-14],[14,-10],[0,-5]],'#9e6ace','#f3dfff',1.5);}
       c.restore();
     }
