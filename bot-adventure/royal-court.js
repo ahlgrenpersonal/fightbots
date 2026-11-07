@@ -1,5 +1,5 @@
-import {PANTHEON,COURT,ROYAL_SPECS,inRoyalChamber} from './pantheon.js?v=world89';
-import {pantheonUnlocked,canWalk,pathfind,regionAt} from './data.js?v=world89';
+import {PANTHEON,COURT,ROYAL_SPECS,inRoyalChamber} from './pantheon.js?v=world90';
+import {pantheonUnlocked,canWalk,pathfind,regionAt,EQUIPMENT} from './data.js?v=world90';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const inside=p=>regionAt(p.x,p.y)===PANTHEON.r&&p.y>=229&&p.y<259;
 const finite=(v,fallback)=>Number.isFinite(v)?v:fallback;
@@ -66,9 +66,11 @@ export class RoyalCourt {
     }
     if(this.phase==='regents'&&this.units.filter(e=>e.role!=='guard').every(e=>e.hp<=0)){
       this.phase='victory';this.game.save.scrap+=250;this.game.save.gears+=12;
+      const rewards=EQUIPMENT.weapon.filter(p=>p.royalReward&&!this.game.save.owned.includes(p.id));
+      for(const part of rewards)this.game.save.owned.push(part.id);
       this.game.projectiles=this.game.projectiles.filter(p=>!p.royal);this.game.telegraphs=this.game.telegraphs.filter(a=>!a.royal);
       this.snapshot();this.game.beginReplay();
-      this.game.effects.push({type:'nova',x:162.5,y:251.5,radius:5,life:2,max:2});this.game.emit('royal-victory');
+      this.game.effects.push({type:'nova',x:162.5,y:251.5,radius:5,life:2,max:2});this.game.emit('royal-victory',{rewards:rewards.map(p=>p.id)});
     }
   }
   defeated(e){

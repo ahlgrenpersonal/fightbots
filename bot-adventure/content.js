@@ -1,4 +1,4 @@
-import {relocateEntity,relocateMission} from './topology.js?v=world89';
+import {relocateEntity,relocateMission} from './topology.js?v=world90';
 const REGION_GUIDES={
   coast:['Salt air and bright harbor trails','Watch the blade fly out and come back. Keep rolling.'],
   scrapyard:['Giant magnets and mountains of spare parts','Move out of the glowing magnetic circle before the blast.'],
@@ -73,7 +73,9 @@ export const NEW_EQUIPMENT={
     {id:'gravity',name:'Gravity Hammer',desc:'Pulls bots inward, then launches a mighty slam.',damage:270,range:2.6,rate:.65,cost:580,gears:16,unlock:11,power:14},
     {id:'sunbeam',name:'Sunbeam Cannon',desc:'A brilliant golden beam pierces a whole line of bots.',damage:340,range:3.25,rate:.7,cost:650,gears:18,unlock:12,power:15},
     {id:'swarm',name:'Swarm Launcher',desc:'Three tiny flying bots chase enemies together.',damage:150,range:3.2,rate:.75,cost:720,gears:20,unlock:13,power:16},
-    {id:'supernova',name:'Supernova Launcher',desc:'Three star rockets burst into mighty golden shockwaves.',damage:280,range:3.2,rate:1.2,cost:850,gears:22,unlock:14,power:17}
+    {id:'supernova',name:'Supernova Launcher',desc:'Three star rockets burst into mighty golden shockwaves.',damage:280,range:3.2,rate:1.2,cost:850,gears:22,unlock:14,power:17},
+    {id:'crystalbeam',name:'Crystal Beam',desc:'The queen\u2019s brilliant beam. Pierces a whole line of bots and their shields.',damage:1100,range:3.6,rate:.8,cost:0,gears:0,unlock:15,power:18,royalReward:true},
+    {id:'twinrockets',name:'Royal Twin Rockets',desc:'The king\u2019s twin launchers. Two homing rockets deliver the mightiest explosive burst.',damage:1900,range:3.4,rate:1.25,cost:0,gears:0,unlock:15,power:19,royalReward:true}
   ],
   armor:[
     {id:'bastion',name:'Bastion Armor',desc:'Thick harbor plates. Ready for a bigger adventure.',hp:300,defense:3,cost:210,gears:8,unlock:5},

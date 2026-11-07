@@ -1,12 +1,12 @@
-import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world89';
-import {atlasProgress,regionEdges} from './atlas-progress.js?v=world89';
-import {atlasSiteVisible} from './quiet-ui.js?v=world89';
-import {boatArt,dockArt} from './boat-art.js?v=world89';
-import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world89';
-import {COURT} from './pantheon.js?v=world89';
-import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world89';
-import * as worldData from './data.js?v=world89';
-import {replayPalette} from './replay-colors.js?v=world89';
+import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world90';
+import {atlasProgress,regionEdges} from './atlas-progress.js?v=world90';
+import {atlasSiteVisible} from './quiet-ui.js?v=world90';
+import {boatArt,dockArt} from './boat-art.js?v=world90';
+import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world90';
+import {COURT} from './pantheon.js?v=world90';
+import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world90';
+import * as worldData from './data.js?v=world90';
+import {replayPalette} from './replay-colors.js?v=world90';
 
 export function rounded(c,x,y,w,h,r,fill,stroke,line=2) {
   c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=line;c.stroke();}
@@ -350,6 +350,20 @@ export function weapon(c,id,t=0,action=0) {
     c.save();c.rotate(-.5-action*.25);rounded(c,5,-12,27,24,5,'#c78762',ink,3);rounded(c,26,-16,25,32,5,'#627a87',ink,3);ellipse(c,51,0,5,13,'#263f50');ellipse(c,51,0,3,8,'#ffc56a');for(const y of [-10,10])line(c,30,y,44,y,'#efdb9d',3);c.restore();
   } else if(id==='gravity') {
     c.save();c.rotate(-.3+Math.sin(action*Math.PI)*1.5);rounded(c,5,-4,34,8,3,'#90b7ad',ink,2);rounded(c,33,-23,25,46,5,'#456778',ink,3);for(const y of [-19,19])rounded(c,30,y-4,31,8,2,'#b8ead7',ink,2);ellipse(c,46,0,8,12,'#263c60');ring(c,46,0,6,'#b5f9df',2);if(action>0)ring(c,46,0,15,'#93dbc9',2);c.restore();
+  } else if(id==='crystalbeam') {
+    rounded(c,6,-12,28,24,4,'#9283c5',ink,3);rounded(c,10,-9,18,5,2,'#e5dcff');
+    for(const y of [-8,8]){rounded(c,29,y-3,30,6,2,'#efe7bf',ink,2);line(c,32,y,56,y,'#c7a6ff',2);}
+    polygon(c,[[28,0],[43,-8],[60,0],[43,8]],'#d4c1ff',ink,2);ellipse(c,60,0,3,6,'#efffff');
+    polygon(c,[[12,-13],[10,-21],[18,-17],[23,-24],[27,-13]],'#f0d889',ink,1.5);
+    if(action>0)line(c,60,0,70,0,'#e4d4ff',4);
+  } else if(id==='twinrockets') {
+    rounded(c,6,-17,28,34,4,'#b94e46',ink,3);rounded(c,10,-13,17,6,2,'#f28a64');
+    for(const y of [-11,11]){
+      rounded(c,28,y-7,25,14,3,'#e6bd68',ink,2);rounded(c,39,y-4,14,8,2,'#3c454f',ink,1.5);
+      polygon(c,[[45,y-4],[53,y],[45,y+4]],'#ff9a63',ink,1);
+      if(action>0)line(c,53,y,62,y,'#fff0b1',3);
+    }
+    polygon(c,[[11,-18],[9,-26],[17,-22],[22,-29],[27,-18]],'#ffe49a',ink,1.5);
   } else if(id==='sunbeam') {
     rounded(c,6,-11,28,22,4,'#e3bb55',ink,3);rounded(c,10,-8,17,5,2,'#fff2b2');
     rounded(c,28,-7,30,14,3,'#54777d',ink,2.5);
@@ -794,7 +808,7 @@ export class Painter {
       const tx=f.tx??f.x,ty=f.ty??f.y,a=Math.atan2(ty-f.y,tx-f.x),length=Math.hypot(tx-f.x,ty-f.y);
       c.globalAlpha=reducedMotion?.85:1-p;c.translate(f.x,f.y);c.rotate(a);
       const pulse=reducedMotion?1:1+Math.sin(p*Math.PI*5)*.12;
-      line(c,0,0,length,0,'#ffc94f40',.48*pulse);line(c,0,0,length,0,'#efbb49',.2*pulse);line(c,0,0,length,0,'#fff9d3',.08);
+      line(c,0,0,length,0,f.crystal?'#b88bff60':'#ffc94f40',.48*pulse);line(c,0,0,length,0,f.crystal?'#c2a2f5':'#efbb49',.2*pulse);line(c,0,0,length,0,f.crystal?'#efffff':'#fff9d3',.08);
       const flare=f.flareRadius||.28;
       ellipse(c,0,0,flare,flare,'#fff5bd80');ellipse(c,0,0,flare*.6,flare*.6,'#fff8d4');ring(c,0,0,Math.max(.38,flare)+p*.18,'#ffe6a6',.035);
       for(let i=1;i<=4;i++){

@@ -1,12 +1,12 @@
-import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world89';
-import { bossProfile } from './content.js?v=world89';
-import {replayTitle} from './replay-variants.js?v=world89';
-import { ReturningPatrols } from './patrols.js?v=world89';
-import {inRoyalChamber} from './pantheon.js?v=world89';
-import {RoyalCourt} from './royal-court.js?v=world89';
-import {nearestWalkable} from './data.js?v=world89';
-import {Boats} from './boats.js?v=world89';
-import {initializeReplay,beginReplay,completeReplay} from './replay.js?v=world89';
+import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world90';
+import { bossProfile } from './content.js?v=world90';
+import {replayTitle} from './replay-variants.js?v=world90';
+import { ReturningPatrols } from './patrols.js?v=world90';
+import {inRoyalChamber} from './pantheon.js?v=world90';
+import {RoyalCourt} from './royal-court.js?v=world90';
+import {nearestWalkable} from './data.js?v=world90';
+import {Boats} from './boats.js?v=world90';
+import {initializeReplay,beginReplay,completeReplay} from './replay.js?v=world90';
 
 export const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
 export const TAP_COOLDOWN=1.5;
@@ -18,7 +18,7 @@ function segmentDistance(p,a,b){
   const dx=b.x-a.x,dy=b.y-a.y,t=clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1),0,1);
   return distance(p,{x:a.x+dx*t,y:a.y+dy*t});
 }
-const MUZZLE_LENGTHS={rail:60,sunbeam:60,swarm:45,supernova:53,flame:49,drone:30,boomerang:40,lightning:49,rocket:50};
+const MUZZLE_LENGTHS={rail:60,sunbeam:60,crystalbeam:60,twinrockets:53,swarm:45,supernova:53,flame:49,drone:30,boomerang:40,lightning:49,rocket:50};
 function weaponMuzzle(p,id,size=1.17){
   const scale=size/80,c=Math.cos(p.angle),s=Math.sin(p.angle),length=MUZZLE_LENGTHS[id]??53;
   return {x:p.x+((c<0?-24:24)+length*c)*scale,y:p.y+(10+length*s)*scale};
@@ -176,7 +176,7 @@ export class Adventure {
   burst(x,y,radius=1,type='burst',limit){this.effects.push({type,x,y,radius,life:.6,max:.6,limit});}
   number(x,y,text,color){this.effects.push({type:'number',x,y,text,color,life:.9,max:.9});}
   hitEnemy(e,damage,kind=''){
-    if(e.hp<=0||e.dormant||e.spawnUntil>this.time||!this.enemyAwake(e))return;const amount=Math.max(1,Math.round(damage*(e.type==='shield'&&!e.frozen&&!['rail','sunbeam','gravity','tractor'].includes(kind)?.7:1)));e.hp=Math.max(0,e.hp-amount);e.aggroUntil=this.time+6;e.hit=.15;this.number(e.x,e.y-.5,`${amount}`,'#fff3b5');
+    if(e.hp<=0||e.dormant||e.spawnUntil>this.time||!this.enemyAwake(e))return;const amount=Math.max(1,Math.round(damage*(e.type==='shield'&&!e.frozen&&!['rail','sunbeam','crystalbeam','gravity','tractor'].includes(kind)?.7:1)));e.hp=Math.max(0,e.hp-amount);e.aggroUntil=this.time+6;e.hit=.15;this.number(e.x,e.y-.5,`${amount}`,'#fff3b5');
     if(e.hp<=0){
       if(e.royal){this.royals.defeated(e);return;}
       this.burst(e.x,e.y,e.type==='boss'?1.4:.45,e.type==='boss'?'explosion':'burst');
@@ -224,7 +224,7 @@ export class Adventure {
     this.emit('attack',{weapon:w.id,power});
     const splashDamage=damage*(power?AUTO_DAMAGE/TAP_DAMAGE:1),shotPower={power,powerTarget:e.id,splashDamage,playerRange:w.range,weaponId:w.id};
     const hit=(n,amount=damage)=>this.hitEnemy(n,amount*(power&&n!==e?AUTO_DAMAGE/TAP_DAMAGE:1),w.id);
-    if(power){this.effects.push({type:'power-launch',x:muzzle.x,y:muzzle.y,tx:e.x,ty:e.y,life:.35,max:.35});if(!['blaster','rocket','frost','boomerang','drone','meteor','swarm','supernova'].includes(w.id))this.effects.push({type:'power-hit',x:e.x,y:e.y,weapon:w.id,life:.5,max:.5});}
+    if(power){this.effects.push({type:'power-launch',x:muzzle.x,y:muzzle.y,tx:e.x,ty:e.y,life:.35,max:.35});if(!['blaster','rocket','twinrockets','frost','boomerang','drone','meteor','swarm','supernova'].includes(w.id))this.effects.push({type:'power-hit',x:e.x,y:e.y,weapon:w.id,life:.5,max:.5});}
     const foes=this.enemies.filter(n=>n.hp>0&&!n.dormant&&this.enemyAwake(n)&&this.playerCanAttack(n,w));
     if(w.id==='flame'){
       this.effects.push({type:'flame',power,x:muzzle.x,y:muzzle.y,angle:p.angle,radius:w.range,limit:this.attackLimit(w),life:.24,max:.24});for(const n of foes){const angle=Math.atan2(n.y-p.y,n.x-p.x);if(distance(n,p)<=w.range&&Math.cos(angle-p.angle)>.65&&this.clearShot(p,n))hit(n);}return;
@@ -234,15 +234,16 @@ export class Adventure {
       for(const n of foes.filter(n=>distance(n,e)<2.6)){const a=Math.atan2(e.y-n.y,e.x-n.x),step=Math.min(.8,distance(n,e)),x=n.x+Math.cos(a)*step,y=n.y+Math.sin(a)*step;if(n.type!=='boss'&&canWalk(this.world,this.save,Math.floor(x),Math.floor(y))){n.x=x;n.y=y;}hit(n);}
       if(w.id==='gravity'){this.effects.push({type:'slam',x:e.x,y:e.y,limit:this.attackLimit(w),life:.55,max:.55});this.shake=4;}return;
     }
-    if(w.id==='rail'||w.id==='sunbeam'){
+    if(['rail','sunbeam','crystalbeam'].includes(w.id)){
+      const radiant=w.id!=='rail';
       const targetForward=(e.x-muzzle.x)*Math.cos(p.angle)+(e.y-muzzle.y)*Math.sin(p.angle);
-      const closeDischarge=w.id==='sunbeam'&&targetForward<=.1;
-      const beamAngle=w.id==='sunbeam'&&!closeDischarge?Math.atan2(e.y-muzzle.y,e.x-muzzle.x):p.angle;
+      const closeDischarge=radiant&&targetForward<=.1;
+      const beamAngle=radiant&&!closeDischarge?Math.atan2(e.y-muzzle.y,e.x-muzzle.x):p.angle;
       const flareRadius=closeDischarge?Math.min(1.2,distance(e,muzzle)+.1):0;
       const tx=muzzle.x+Math.cos(beamAngle)*w.range,ty=muzzle.y+Math.sin(beamAngle)*w.range;
-      this.effects.push({type:w.id==='sunbeam'?'sunbeam':'rail',power,x:muzzle.x,y:muzzle.y,tx,ty,flareRadius,limit:this.attackLimit(w),life:.3,max:.3});
+      this.effects.push({type:radiant?'sunbeam':'rail',crystal:w.id==='crystalbeam',power,x:muzzle.x,y:muzzle.y,tx,ty,flareRadius,limit:this.attackLimit(w),life:.3,max:.3});
       for(const n of foes){
-        if(w.id==='sunbeam'){
+        if(radiant){
           // The beam halo plus a bot's body radius defines the same visible hit corridor.
           if(distance(n,p)<=w.range&&(segmentDistance(n,muzzle,{x:tx,y:ty})<.65||flareRadius&&distance(n,muzzle)<flareRadius+.35))hit(n);
         }else{
@@ -250,6 +251,15 @@ export class Adventure {
           if(along>=0&&along<=w.range&&across<.65)hit(n);
         }
       }return;
+    }
+    if(w.id==='twinrockets'){
+      for(const side of [-1,1]){
+        const offset=side*11*1.17/80;
+        this.projectiles.push({x:muzzle.x-Math.sin(p.angle)*offset,y:muzzle.y+Math.cos(p.angle)*offset,
+          tx:e.x,ty:e.y,target:e.id,angle:p.angle,speed:8,kind:'rocket',style:w.id,life:4,
+          ...shotPower,damage:damage/2,splashDamage:splashDamage/2});
+      }
+      return;
     }
     if(w.id==='swarm'||w.id==='supernova'){
       const targets=power?[e]:[e,...foes.filter(n=>n!==e&&distance(n,p)<=w.range).sort((a,b)=>distance(a,e)-distance(b,e))].slice(0,3);
@@ -342,10 +352,10 @@ export class Adventure {
         if(shot.kind==='ice')this.burst(shot.x,shot.y,radius,'frost');
         if(distance(p,shot)<radius)this.hurt(shot.damage);
       }else if(shot.kind==='rocket'||shot.kind==='meteor'){
-        const nova=shot.style==='supernova',radius=nova?2.4:shot.kind==='meteor'?2.8:2;
+        const nova=shot.style==='supernova',radius=shot.style==='twinrockets'?2.6:nova?2.4:shot.kind==='meteor'?2.8:2;
         const limit=this.attackLimit({range:shot.playerRange??stats(this.save).weapon.range});
         if(nova)this.effects.push({type:'nova',x:shot.x,y:shot.y,radius,limit,life:.65,max:.65});
-        else this.burst(shot.x,shot.y,shot.kind==='meteor'?2.3:1.4,'explosion',limit);this.shake=5;
+        else this.burst(shot.x,shot.y,shot.style==='twinrockets'?2.6:shot.kind==='meteor'?2.3:1.4,'explosion',limit);this.shake=5;
         for(const e of this.enemies)if(e.hp>0&&distance(e,shot)<radius&&this.enemyAwake(e)&&eligible(e))this.hitEnemy(e,shot.power&&e.id!==shot.powerTarget?shot.splashDamage:shot.damage);
         this.emit('explosion');
       }else if(shot.kind==='ice'){

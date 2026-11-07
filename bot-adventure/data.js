@@ -1,12 +1,12 @@
-import { MORE_REGIONS, NEW_EQUIPMENT, WORKSHOPS, RETURNS as STORY_RETURNS, ENCOUNTERS, LEGACY_WORKSHOPS, LEGACY_RETURNS, LEGACY_ENCOUNTERS } from './content.js?v=world89';
-import {LEGACY_TILES,WORLD_TILES,relocatePoint,relocateEntity,legacyPoint,worldGates} from './topology.js?v=world89';
-import {PANTHEON,inPantheon,buildPantheon} from './pantheon.js?v=world89';
-import {applyReplayVariants} from './replay-variants.js?v=world89';
-import {applyReplayColors} from './replay-colors.js?v=world89';
+import { MORE_REGIONS, NEW_EQUIPMENT, WORKSHOPS, RETURNS as STORY_RETURNS, ENCOUNTERS, LEGACY_WORKSHOPS, LEGACY_RETURNS, LEGACY_ENCOUNTERS } from './content.js?v=world90';
+import {LEGACY_TILES,WORLD_TILES,relocatePoint,relocateEntity,legacyPoint,worldGates} from './topology.js?v=world90';
+import {PANTHEON,inPantheon,buildPantheon} from './pantheon.js?v=world90';
+import {applyReplayVariants} from './replay-variants.js?v=world90';
+import {applyReplayColors} from './replay-colors.js?v=world90';
 export {PANTHEON};
 export { WORKSHOPS, ENCOUNTERS };
-export { bossProfile } from './content.js?v=world89';
-export const BUILD = 'world89';
+export { bossProfile } from './content.js?v=world90';
+export const BUILD = 'world90';
 export const REGION_W = 36;
 export const REGION_H = 44;
 export const WORLD_W = REGION_W * 5;
@@ -289,7 +289,7 @@ export const pantheonUnlocked=save=>REGIONS.every((_,r)=>save.bosses.includes(r)
 export const areaUnlocked=(save,r)=>r===PANTHEON.r?pantheonUnlocked(save):r>=0&&r<=unlockedRegion(save);
 export const areaInfo=r=>r===PANTHEON.r?PANTHEON:REGIONS[r];
 export function cellsIn(save,r) { return new Set(save.cleared.filter(id=>{const m=/^site-(\d+)-(\d+)$/.exec(id);return m&&Number(m[1])===r&&Number(m[2])<requiredCells(r);})).size; }
-export function available(save,part) { return part.unlock < 0 || save.bosses.includes(part.unlock); }
+export function available(save,part) { return part.royalReward ? save.owned.includes(part.id) : part.unlock < 0 || save.bosses.includes(part.unlock); }
 export function visibleEquipment(save,type) { return EQUIPMENT[type].filter(part=>save.owned.includes(part.id)||available(save,part)); }
 export function canWalk(world,save,x,y) {
   const r=regionAt(x,y);

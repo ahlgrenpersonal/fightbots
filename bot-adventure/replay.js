@@ -1,6 +1,6 @@
-import {RETURNS,makeWorld} from './data.js?v=world89';
-import {variantForRound} from './replay-variants.js?v=world89';
-import {chooseReplayPalette,ensureReplayPalette} from './replay-colors.js?v=world89';
+import {RETURNS,makeWorld} from './data.js?v=world90';
+import {variantForRound} from './replay-variants.js?v=world90';
+import {chooseReplayPalette,ensureReplayPalette} from './replay-colors.js?v=world90';
 
 const missions=RETURNS.filter(m=>m.postRoyal);
 const ids=missions.map(m=>m.id);

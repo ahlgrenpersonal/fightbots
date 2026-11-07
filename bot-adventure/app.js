@@ -1,16 +1,16 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, visibleEquipment, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world89';
-import { Adventure, distance } from './engine.js?v=world89';
-import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon,atlasBot } from './art.js?v=world89';
-import { mountAtlas } from './atlas.js?v=world89';
-import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world89';
-import {AdventureSaves} from './adventure-saves.js?v=world89';
-import {bindHoldConfirmation} from './hold-confirm.js?v=world89';
-import {bindPowerControl,updatePowerControl} from './power-control.js?v=world89';
-import {atlasProgress} from './atlas-progress.js?v=world89';
-import {localProgress} from './quiet-ui.js?v=world89';
-import {replayTitle} from './replay-variants.js?v=world89';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, visibleEquipment, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world90';
+import { Adventure, distance } from './engine.js?v=world90';
+import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon,atlasBot } from './art.js?v=world90';
+import { mountAtlas } from './atlas.js?v=world90';
+import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world90';
+import {AdventureSaves} from './adventure-saves.js?v=world90';
+import {bindHoldConfirmation} from './hold-confirm.js?v=world90';
+import {bindPowerControl,updatePowerControl} from './power-control.js?v=world90';
+import {atlasProgress} from './atlas-progress.js?v=world90';
+import {localProgress} from './quiet-ui.js?v=world90';
+import {replayTitle} from './replay-variants.js?v=world90';
 
-const buildVersion = 'world89';
+const buildVersion = 'world90';
 const SAVE_KEY='bot-adventure-save-v1';
 const adventureSaves=new AdventureSaves({storage:()=>localStorage,key:SAVE_KEY});
 const $=id=>document.getElementById(id);
@@ -72,7 +72,7 @@ function toast(message){$('toast').textContent=message;$('toast').classList.add(
 function banner(title,detail=''){const n=$('announcement');n.replaceChildren();const main=document.createElement('div');main.textContent=title;n.append(main);if(detail){const sub=document.createElement('small');sub.textContent=detail;n.append(sub);}n.hidden=false;clearTimeout(bannerTimer);bannerTimer=setTimeout(()=>n.hidden=true,3500);}
 function persist(){if(switchingSave)return;try{localStorage.setItem(SAVE_KEY,JSON.stringify(game.snapshot()));}catch{if(storageOK){storageOK=false;const note=document.createElement('div');note.className='storage-warning';note.textContent='Saving is unavailable in this browser. Keep this page open to keep your adventure.';$('game').append(note);}}}
 game.onEvent=e=>{
-  if(e.type==='attack'){const f={bumper:110,blaster:700,saw:170,hammer:80,lightning:900,rocket:150,flame:140,frost:850,boomerang:400,tractor:240,drone:650,rail:1000,meteor:120,gravity:60,sunbeam:1200,swarm:760,supernova:95}[e.weapon]||400;tone(f,e.power?.18:.07,e.weapon==='saw'||e.weapon==='flame'?'sawtooth':'triangle',e.power?.04:.018,f*.5);if(e.power)tone(f*2,.12,'triangle',.025,f);}
+  if(e.type==='attack'){const f={bumper:110,blaster:700,saw:170,hammer:80,lightning:900,rocket:150,flame:140,frost:850,boomerang:400,tractor:240,drone:650,rail:1000,meteor:120,gravity:60,sunbeam:1200,swarm:760,supernova:95,crystalbeam:1400,twinrockets:90}[e.weapon]||400;tone(f,e.power?.18:.07,e.weapon==='saw'||e.weapon==='flame'?'sawtooth':'triangle',e.power?.04:.018,f*.5);if(e.power)tone(f*2,.12,'triangle',.025,f);}
   if(e.type==='toast')toast(e.text);
   if(e.type==='defeat'){tone(e.boss?130:320,.12,'triangle',.03,75);}
   if(e.type==='explosion')tone(90,.35,'sawtooth',.035,30);
@@ -89,7 +89,7 @@ game.onEvent=e=>{
   if(e.type==='equip'){tone(350,.08,'triangle',.025,500);persist();}
   if(e.type==='boost'){tone(250,.4,'triangle',.04,900);toast('Power surge!');}
   if(e.type==='royal-stage'){persist();banner(e.phase==='guards'?'The four sentinels awaken!':e.phase==='awakening'?'The royal pair is awakening…':'The king and queen are coming!');tone(100,.6,'triangle',.035,350);}
-  if(e.type==='royal-victory'){persist();openPanel('royal-victory',`${head('Royal Champion!','The king, queen and all four sentinels are defeated.','THE ROYAL FINALE')}<div class="panel-body"><canvas id="rewardBot" class="celebration" width="700" height="280"></canvas><p class="dialog-copy">The ancient court is yours. All your progress and equipment are saved. +250 scrap · +12 parts</p><div class="pause-actions"><button class="primary pictorial-action" data-action="map" aria-label="Open adventure map"><span>⚑</span><small>Explore</small></button><button class="secondary pictorial-action" data-action="home"><span>⚙</span><small>Build</small></button></div></div>`);}
+  if(e.type==='royal-victory'){persist();const rewards=e.rewards||[];openPanel('royal-victory',`${head('Royal Champion!','The king, queen and all four sentinels are defeated.','THE ROYAL FINALE')}<div class="panel-body">${rewards.length?`<canvas id="royalWeapons" class="celebration" width="700" height="210" aria-label="Royal weapon rewards"></canvas><h2>${rewards.map(id=>item('weapon',id).name).join(' + ')}</h2><p class="dialog-copy">Yours forever! Equip your new royal weapons at any workshop.</p>`:'<canvas id="rewardBot" class="celebration" width="700" height="280"></canvas>'}<p class="dialog-copy">The ancient court is yours. All your progress and equipment are saved. +250 scrap · +12 parts</p><div class="pause-actions"><button class="primary pictorial-action" data-action="map" aria-label="Open adventure map"><span>⚑</span><small>Explore</small></button><button class="secondary pictorial-action" data-action="home"><span>⚙</span><small>Build</small></button></div></div>`);}
 };
 function closePanel(){holdCleanup?.();holdCleanup=null;atlasController?.destroy();atlasController=null;if(panelMode==='workshop')workshopDetails=false;if(panel.open)panel.close();panelMode=null;game.paused=false;last=performance.now();persist();}
 function openPanel(mode,html){holdCleanup?.();holdCleanup=null;atlasController?.destroy();atlasController=null;game.paused=true;panelMode=mode;panel.dataset.mode=mode;$('panelContent').innerHTML=html;if(!panel.open)panel.showModal();panel.scrollTop=0;drawPanels();}
@@ -101,7 +101,7 @@ function workshop(){
   const tabs=Object.keys(EQUIPMENT);const s=game.save;
   openPanel('workshop',`${head(game.homeNear().name,'Fully repaired. Ready for something new.','SAFE & SOUND')}${workbenchHTML()}<div class="inventory-line"><span>Scrap <b>◆ ${s.scrap}</b></span><span>Parts <b>⚙ ${s.gears}</b></span><span>${s.bosses.length} / ${REGIONS.length} relays</span></div><div class="tabs" role="tablist" aria-label="Equipment categories">${tabs.map(type=>`<button role="tab" aria-label="${type}" aria-selected="${type===workTab}" class="${type===workTab?'active':''}" data-tab="${type}"><canvas width="88" height="72" data-category="${type}" aria-hidden="true"></canvas><small>${{weapon:'Weapons',armor:'Armor',wheels:'Wheels',gadget:'Gear'}[type]}</small></button>`).join('')}</div><div class="items">${visibleEquipment(s,workTab).map(p=>{
     const owned=s.owned.includes(p.id),equipped=s.build[workTab]===p.id,can=owned||available(s,p),afford=s.scrap>=p.cost&&s.gears>=p.gears;
-    const lock=p.unlock>=0?`Blueprint: ${REGIONS[p.unlock].boss}`:'Find gears at salvage sites';
+    const lock=p.royalReward?'Defeat the king and queen together':p.unlock>=0?`Blueprint: ${REGIONS[p.unlock].boss}`:'Find gears at salvage sites';
     return `<article class="item ${equipped?'equipped':''} ${can?'':'locked'} ${!owned&&!afford?'unaffordable':''}"><canvas width="136" height="136" data-item="${p.id}" aria-label="${p.name}"></canvas><div><h3>${p.name}</h3><p>${p.desc}</p><small>${!can?lock:owned?equipped?'Equipped · yours forever':'Built · yours forever':`◆ ${p.cost} scrap + ⚙ ${p.gears} gears`}</small></div><button data-part="${p.id}" aria-label="${equipped?'Equipped':!can?'Locked':owned?'Equip':'Build'} ${p.name}" title="${equipped?'Equipped':!can?'Locked':owned?'Equip':'Build'}" ${!can||equipped||(!owned&&!afford)?'disabled':''}>${equipped?'✓':!can?'<span class="lock-icon" aria-hidden="true"></span>':owned?'↥':'+'}</button></article>`;
   }).join('')}</div><div class="panel-foot"><button class="primary pictorial-action" data-action="depart" aria-label="Go adventuring"><span>▶</span><small>Adventure</small></button></div>`);
   panel.dataset.details=String(workshopDetails);
@@ -238,6 +238,7 @@ function drawPanels(){
   document.querySelectorAll('canvas[data-category]').forEach(canvas=>{const c=canvas.getContext('2d');c.clearRect(0,0,88,72);c.save();c.scale(2,2);categoryIcon(c,canvas.dataset.category,t);c.restore();});
   const atlas=$('atlas');if(atlas&&!atlasController)painter.map(atlas,game);
   const reward=$('rewardWeapon');if(reward){const c=reward.getContext('2d');c.clearRect(0,0,700,280);c.save();if(reward.dataset.type==='weapon'){const scale=['sunbeam','swarm','supernova'].includes(reward.dataset.reward)?7:5;c.translate(350-30*scale,140);c.scale(scale,scale);weapon(c,reward.dataset.reward,t);}else{c.translate(214,4);c.scale(4,4);equipmentIcon(c,reward.dataset.type,reward.dataset.reward,t);}c.restore();}
+  const royal=$('royalWeapons');if(royal){const c=royal.getContext('2d');c.clearRect(0,0,700,210);for(const [i,id] of ['crystalbeam','twinrockets'].entries()){c.save();c.translate(55+i*350,115);c.scale(4.5,4.5);weapon(c,id,t);c.restore();}}
   const rb=$('rewardBot');if(rb){const c=rb.getContext('2d');c.clearRect(0,0,700,280);bot(c,350,140,170,{color:game.save.color,armor:game.save.build.armor,wheels:game.save.build.wheels,gun:game.save.build.weapon},t);}
 }
 $('pause').onclick=pauseMenu;$('map').onclick=adventureMap;
