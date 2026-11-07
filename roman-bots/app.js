@@ -1,10 +1,10 @@
-import {BUILD,WEAPONS,SHIELDS,freshSquad,normalizeSlot,normalizeSquad,OPPONENTS,HEALTH_ASSISTS,normalizeHealthBonus} from './data.js?v=roman33';
-import {Battle,distance,guardsAgainst,MELEE_TOLERANCE} from './engine.js?v=roman33';
-import {drawCourtyard,drawBot,drawGear} from './art.js?v=roman33';
-import {icon} from './icons.js?v=roman33';
-import {BOT_SIZE} from './geometry.js?v=roman33';
-import {drawLandscape as drawAdventureLandscape} from './north/scenery.js?v=roman33';
-import {drawCity} from './north/city.js?v=roman33';
+import {BUILD,WEAPONS,SHIELDS,freshSquad,normalizeSlot,normalizeSquad,OPPONENTS,HEALTH_ASSISTS,normalizeHealthBonus} from './data.js?v=roman34';
+import {Battle,distance,guardsAgainst,MELEE_TOLERANCE} from './engine.js?v=roman34';
+import {drawCourtyard,drawBot,drawGear} from './art.js?v=roman34';
+import {icon} from './icons.js?v=roman34';
+import {BOT_SIZE} from './geometry.js?v=roman34';
+import {drawLandscape as drawAdventureLandscape} from './north/scenery.js?v=roman34';
+import {drawCity} from './north/city.js?v=roman34';
 
 const $=id=>document.getElementById(id),SAVE_KEY='roman-bots-settings-v1';
 let config={squad:freshSquad(),sound:true,healthBonus:50,opponent:0};

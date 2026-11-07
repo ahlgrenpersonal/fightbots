@@ -1,11 +1,11 @@
-import {Battle,distance,BODY_SPACING} from '../engine.js?v=roman33';
-import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman33';
-import * as NORTH from './world.js?v=roman33';
-import * as WEST from './west-world.js?v=roman33';
-import * as SOUTH from './south-world.js?v=roman33';
-import * as EAST from './east-world.js?v=roman33';
-import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman33';
-import {RETURN_QUESTS,INVASION,activeReturnQuest,questFinished,inHarbor,HARBOR_FRONT} from './return-quests.js?v=roman33';
+import {Battle,distance,BODY_SPACING} from '../engine.js?v=roman34';
+import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman34';
+import * as NORTH from './world.js?v=roman34';
+import * as WEST from './west-world.js?v=roman34';
+import * as SOUTH from './south-world.js?v=roman34';
+import * as EAST from './east-world.js?v=roman34';
+import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman34';
+import {RETURN_QUESTS,INVASION,activeReturnQuest,questFinished,inHarbor,HARBOR_FRONT} from './return-quests.js?v=roman34';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const number=(n,a,b,f=a)=>Number.isFinite(n)?clamp(n,a,b):f;
@@ -68,7 +68,13 @@ export class Campaign extends Battle {
     this.state.position={x:start.x,y:start.y};this.placeSquad(start);
     if(!this.alive(0).length)this.recover();
     this.activeId=this.leader()?.id;this.refreshPartners();
-    if(!state.populationInitialized){state.fieldQuest=this.activeQuest?.region===state.region?this.activeQuest.id:null;state.populationInitialized=true;}
+    if(!state.populationInitialized){
+      // Migrate an existing return mission, never infer a new one merely from
+      // a defeated king while the player may still be standing in the forest.
+      const q=RETURN_QUESTS.find(q=>q.region===state.region&&q.id===state.fieldQuest)||this.activeQuest;
+      state.fieldQuest=q?.region===state.region&&(state.fieldQuest===q.id||q.encounters.some(e=>Object.hasOwn(state.patrols,e.id)||state.completed.includes(e.id)))?q.id:null;
+      state.populationInitialized=true;
+    }
     this.preparePatrols();
   }
   checkFinished(){}
@@ -81,14 +87,14 @@ export class Campaign extends Battle {
   get frontier(){return this.state.region==='north'?(this.state.conquered?(!this.state.westConquered?WEST_GATE:!this.state.southConquered?SOUTH_DOCK:!this.state.eastConquered?EAST_DOCK:this.world.HOME):this.world.HOME):RETURN_POINTS[this.state.region];}
   get sealsReady(){return this.world.CAMPS.every(c=>this.state.camps.includes(c.id));}
   get activeQuest(){return this.state?activeReturnQuest(this.state):null;}
-  get localQuest(){const q=this.activeQuest;return q?.region===this.state.region&&this.state.fieldQuest===q.id?q:null;}
+  get localQuest(){return RETURN_QUESTS.find(q=>q.region===this.state.region&&q.id===this.state.fieldQuest)||null;}
   get encounters(){return this.localQuest?.encounters||this.world.ENCOUNTERS;}
-  get harborBattle(){return this.state?.region==='north'&&this.localQuest?.id===INVASION.id;}
+  get harborBattle(){return this.state?.region==='north'&&this.localQuest?.id===INVASION.id&&!questFinished(this.state,this.localQuest);}
   get earlyGreece(){return this.prologueComplete&&!this.state.eastConquered&&!(this.state.conquered&&this.state.westConquered&&this.state.southConquered);}
   questTarget(){
-    const q=this.activeQuest;if(!q)return null;
+    const q=this.localQuest&&!questFinished(this.state,this.localQuest)?this.localQuest:this.activeQuest;if(!q)return null;
     if(q.region!==this.state.region)return this.state.region==='north'?q.region==='west'?WEST_GATE:SOUTH_DOCK:RETURN_POINTS[this.state.region];
-    if(!this.localQuest)return this.world.HOME;
+    if(this.localQuest?.id!==q.id)return this.state.region==='north'?WEST_GATE:RETURN_POINTS[this.state.region];
     const pending=q.encounters.filter(e=>!this.state.completed.includes(e.id));
     if(q===INVASION||pending.length<2)return pending[0]||null;
     const leader=this.leader()||this.world.HOME;
@@ -131,6 +137,8 @@ export class Campaign extends Battle {
     this.enterRegion(region,region==='west'?WEST.HOME:WEST_GATE);return true;
   }
   enterRegion(region,arrival){
+    if(!Object.hasOwn(worlds,region)||region===this.state.region)return false;
+    this.abandonEncounter();
     this.rememberPatrols();
     this.arrivalIntent=null;
     this.state.region=region;
@@ -142,6 +150,7 @@ export class Campaign extends Battle {
     this.state.fieldQuest=this.activeQuest?.region===region?this.activeQuest.id:null;
     this.preparePatrols();
     this.emit('region',{region:this.state.region});
+    return true;
   }
   boardShip(){
     const away=this.southern||this.eastern,greekDock=distance(this.leader()||this.world.HOME,EAST_DOCK)<=3;
@@ -424,10 +433,13 @@ export class Campaign extends Battle {
     try{return super.enemyAt(p,tile);}finally{this.units=units;}
   }
   preparePatrols(){
+    if(this.patrolRegion===this.state.region)return false;
+    this.patrolRegion=this.state.region;
     this.patrolGroups=new Map();
     // Reserve the same layout even when loading a partly completed region.
     for(const e of this.encounters)this.patrolGroups.set(e.id,this.createPatrol(e));
     for(const id of this.state.completed)this.patrolGroups.delete(id);
+    return true;
   }
   rememberPatrols(){
     if(!this.patrolGroups)return;
@@ -628,9 +640,6 @@ export class Campaign extends Battle {
     if(this.activeEncounter&&(distance(leader,this.activeEncounter)>12||this.safe(leader.x,leader.y))){this.abandonEncounter();return;}
     if(this.arriveAtPlace())return;
     for(const camp of this.world.CAMPS)if(distance(leader,camp)<1)this.visitCamp(camp);
-    if(this.state.region==='north'&&this.safe(leader.x,leader.y)&&distance(leader,NORTH.HOME)<8&&this.activeQuest?.region==='north'&&this.state.fieldQuest!==this.activeQuest.id){
-      this.rememberPatrols();this.state.fieldQuest=this.activeQuest.id;this.preparePatrols();
-    }
     if(this.activeEncounter){
       if(!this.alive(1).length)this.finishEncounter();
     }else{

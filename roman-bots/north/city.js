@@ -1,5 +1,5 @@
-import {citizen} from './scenery.js?v=roman33';
-import {ATLAS_SIGN} from './world.js?v=roman33';
+import {citizen} from './scenery.js?v=roman34';
+import {ATLAS_SIGN} from './world.js?v=roman34';
 export {ATLAS_SIGN};
 const TAU=Math.PI*2,INK='#314b50';
 // Import compatibility only; no arena or entrance artwork remains.
