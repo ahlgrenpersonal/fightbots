@@ -1,11 +1,11 @@
-import {Battle,distance,BODY_SPACING} from '../engine.js?v=roman35';
-import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman35';
-import * as NORTH from './world.js?v=roman35';
-import * as WEST from './west-world.js?v=roman35';
-import * as SOUTH from './south-world.js?v=roman35';
-import * as EAST from './east-world.js?v=roman35';
-import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman35';
-import {RETURN_QUESTS,INVASION,activeReturnQuest,questFinished,inHarbor,HARBOR_FRONT} from './return-quests.js?v=roman35';
+import {Battle,distance,BODY_SPACING} from '../engine.js?v=roman36';
+import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman36';
+import * as NORTH from './world.js?v=roman36';
+import * as WEST from './west-world.js?v=roman36';
+import * as SOUTH from './south-world.js?v=roman36';
+import * as EAST from './east-world.js?v=roman36';
+import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman36';
+import {RETURN_QUESTS,INVASION,questFinished,inHarbor,HARBOR_FRONT} from './return-quests.js?v=roman36';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const number=(n,a,b,f=a)=>Number.isFinite(n)?clamp(n,a,b):f;
@@ -71,7 +71,7 @@ export class Campaign extends Battle {
     if(!state.populationInitialized){
       // Migrate an existing return mission, never infer a new one merely from
       // a defeated king while the player may still be standing in the forest.
-      const q=RETURN_QUESTS.find(q=>q.region===state.region&&q.id===state.fieldQuest)||this.activeQuest;
+      const q=this.existingQuest(state.region);
       state.fieldQuest=q?.region===state.region&&(state.fieldQuest===q.id||q.encounters.some(e=>Object.hasOwn(state.patrols,e.id)||state.completed.includes(e.id)))?q.id:null;
       state.populationInitialized=true;
     }
@@ -86,7 +86,17 @@ export class Campaign extends Battle {
   get regionComplete(){return this.eastern?this.state.eastConquered:this.southern?this.state.southConquered:this.western?this.state.westConquered:this.state.conquered;}
   get frontier(){return this.state.region==='north'?(this.state.conquered?(!this.state.westConquered?WEST_GATE:!this.state.southConquered?SOUTH_DOCK:!this.state.eastConquered?EAST_DOCK:this.world.HOME):this.world.HOME):RETURN_POINTS[this.state.region];}
   get sealsReady(){return this.world.CAMPS.every(c=>this.state.camps.includes(c.id));}
-  get activeQuest(){return this.state?activeReturnQuest(this.state):null;}
+  existingQuest(region){
+    const quests=RETURN_QUESTS.filter(q=>q.region===region);
+    const existing=q=>q.encounters.some(e=>Object.hasOwn(this.state.patrols,e.id)||this.state.completed.includes(e.id));
+    return quests.find(q=>q.id===this.state.fieldQuest)||quests.find(q=>existing(q)&&!questFinished(this.state,q))||null;
+  }
+  get activeQuest(){
+    if(!this.state)return null;
+    const local=this.localQuest;
+    if(local&&!questFinished(this.state,local))return local;
+    return RETURN_QUESTS.find(q=>q.encounters.some(e=>Object.hasOwn(this.state.patrols,e.id)||this.state.completed.includes(e.id))&&!questFinished(this.state,q))||null;
+  }
   get localQuest(){return RETURN_QUESTS.find(q=>q.region===this.state.region&&q.id===this.state.fieldQuest)||null;}
   get encounters(){return this.localQuest?.encounters||this.world.ENCOUNTERS;}
   get harborBattle(){return this.state?.region==='north'&&this.localQuest?.id===INVASION.id&&!questFinished(this.state,this.localQuest);}
@@ -147,7 +157,9 @@ export class Campaign extends Battle {
     this.units=this.units.filter(u=>u.team===0);this.projectiles=[];this.effects=[];this.paths.clear();
     this.placeSquad(arrival);
     this.state.position={x:this.leader().x,y:this.leader().y};
-    this.state.fieldQuest=this.activeQuest?.region===region?this.activeQuest.id:null;
+    // A region's original enemies are finite. Only restore a return mission
+    // already present in the save; a victory or trip never creates a new army.
+    this.state.fieldQuest=this.existingQuest(region)?.id||null;
     this.preparePatrols();
     this.emit('region',{region:this.state.region});
     return true;
@@ -435,18 +447,29 @@ export class Campaign extends Battle {
   preparePatrols(){
     if(this.patrolRegion===this.state.region)return false;
     this.patrolRegion=this.state.region;
-    this.patrolGroups=new Map();
+    this.patrolGroups=new Map();this.bossGroups=[];
     // Reserve the same layout even when loading a partly completed region.
-    for(const e of this.encounters)this.patrolGroups.set(e.id,this.createPatrol(e));
+    for(const e of this.encounters){
+      const group=this.createPatrol(e);
+      if(this.state.completed.includes(e.id))for(const u of group)u.hp=0;
+      this.patrolGroups.set(e.id,group);this.bossGroups.push(...group.filter(u=>u.boss));
+    }
+    const historical=[...this.world.ENCOUNTERS,...RETURN_QUESTS.filter(q=>q.region===this.state.region).flatMap(q=>q.encounters)];
+    for(const e of historical)if(e.kind==='boss'&&!this.encounters.includes(e)&&(this.state.completed.includes(e.id)||this.state.patrols[e.id]?.slice(0,e.pairBosses?2:1).some(p=>p.hp===0))){
+      const group=this.createPatrol(e,{memorialOnly:true});if(this.state.completed.includes(e.id))for(const u of group)u.hp=0;
+      this.bossGroups.push(...group.filter(u=>u.boss&&u.hp<=0));
+    }
     for(const id of this.state.completed)this.patrolGroups.delete(id);
     return true;
   }
+  get bossWrecks(){return (this.bossGroups||[]).filter(u=>u.hp<=0);}
   rememberPatrols(){
     if(!this.patrolGroups)return;
     for(const [id,group]of this.patrolGroups)this.state.patrols[id]=group.map(u=>({hp:clamp(u.hp/u.maxHp,0,1),x:u.x,y:u.y}));
   }
-  createPatrol(e){
+  createPatrol(e,{memorialOnly=false}={}){
     const group=[],kingWave=e.kind==='boss';
+    const harbor=this.harborBattle&&!memorialOnly,allowed=p=>memorialOnly?point(p)&&this.world.passable(p.x,p.y):this.validPosition(p,1);
     const layoutKey=`${this.state.region}:${e.id}`,layout=patrolLayouts.get(layoutKey),positions=[];
     const count=integer(e.count,5,6,5),stage=integer(e.stage,0,4);
     const roster=e.quest||this.eastern?(GREEK_SQUADS[e.roster]||GREEK_SQUADS.phalanx):Array.from({length:5},(_,i)=>this.southern?{weapon:i===0?'bow':i===2?'spear':i===4?'hammer':'sword',shield:i===1?'round':i===3&&e.kind==='elite'?'tower':'none'}:this.western?{weapon:i===0?'bow':i===2?'spear':i===4?'hammer':'sword',shield:i===1?'round':'none'}:{weapon:i%3===0?'bow':'sword',shield:'none'});
@@ -461,24 +484,24 @@ export class Campaign extends Battle {
       if(kingWave)Object.assign(u,normalizeSlot(i===0?{weapon:this.eastern?'spear':'hammer',shield:'none'}:i===1?{weapon:'sword',shield:this.western||this.southern||this.eastern?'tower':'none'}:{weapon:'bow',shield:'none'}));
       if(kingWave&&e.pairBosses)Object.assign(u,normalizeSlot(i===0?{weapon:'hammer',shield:'none'}:i===1?{weapon:'bow',shield:'none'}:{weapon:'sword',shield:'tower'}));
       const a=i/count*Math.PI*2;let p=layout?.[i]||this.world.nearestWalkable({x:this.boundX(e.x+Math.cos(a)*2.3),y:this.boundY(e.y+Math.sin(a)*2.3)})||e;
-      if(this.harborBattle&&!layout){
+      if(harbor&&!layout){
         const places=[];for(let y=HARBOR_FRONT.top+.75;y<HARBOR_FRONT.bottom-.5;y+=1.5)for(let x=HARBOR_FRONT.left+.75;x<HARBOR_FRONT.right-.5;x+=1.5){const spot={x,y};if(this.validPosition(spot,1))places.push(spot);}
         places.sort((a,b)=>distance(a,p)-distance(b,p));
         const neighbors=[...this.patrolGroups.values()].flat().concat(group).map(v=>v.post||v);
         p=places.find(spot=>neighbors.every(v=>distance(v,spot)>=BODY_SPACING+.04));
         if(!p)continue;
       }
-      if(!this.validPosition(p,1))continue;
+      if(!allowed(p))continue;
       positions[i]={x:p.x,y:p.y};u.post=positions[i];
       Object.assign(u,{x:p.x,y:p.y});
       u.maxHp=u.boss?WEAPONS[u.weapon].hp*(1+stage*.18)*10:WEAPONS[u.weapon].hp*.58*(1+stage*.22)*(e.kind==='boss'&&!kingWave?1.8:1);if(this.western||this.southern)u.maxHp*=1.15;if(this.eastern)u.maxHp*=1.25;u.hp=u.maxHp;
       if(u.champion){u.maxHp*=3.2;u.hp=u.maxHp;}
       if(e.quest){u.maxHp*=e.hpScale*(u.boss&&e.pairBosses ? .65 : 1);u.hp=u.maxHp;}
       const saved=this.state.patrols[e.id]?.[i];
-      if(saved){u.hp=u.maxHp*saved.hp;if(point(saved)&&this.validPosition(saved,1))Object.assign(u,{x:saved.x,y:saved.y});}
+      if(saved){u.hp=u.maxHp*saved.hp;if(point(saved)&&allowed(saved))Object.assign(u,{x:saved.x,y:saved.y});}
       u.damageScale=e.quest?(u.boss?.38:.20+stage*.02):u.boss?.60:.24+stage*.035;u.forestWeapon=u.weapon;group.push(u);
     }
-    if(!layout)patrolLayouts.set(layoutKey,positions);
+    if(!layout&&!memorialOnly)patrolLayouts.set(layoutKey,positions);
     return group;
   }
   finishEncounter(){

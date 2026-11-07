@@ -9,16 +9,16 @@
   <link rel="manifest" href="../manifest.webmanifest">
   <link rel="icon" href="../assets/icon-192.png">
   <link rel="apple-touch-icon" href="../assets/icon-192.png">
-  <link rel="stylesheet" href="north.css?v=roman35">
+  <link rel="stylesheet" href="north.css?v=roman36">
 </head>
 <body>
   <main id="adventure">
-    <header><canvas id="crest" width="96" height="96" aria-hidden="true"></canvas><div class="brand"><b>ROMAN BOTS</b><span id="region">The Northern Wilds</span></div><span class="purse"><span aria-hidden="true">◆</span> <b id="coins">0</b></span><button id="pause" class="square" aria-label="Pause" title="Pause"></button></header>
+    <header><canvas id="crest" width="96" height="96" aria-hidden="true"></canvas><div class="brand"><b>ROMAN BOTS</b><span id="region">The Northern Wilds</span></div><span id="completion" role="img" aria-label="Region completed" hidden></span><span class="purse"><span aria-hidden="true">◆</span> <b id="coins">0</b></span><button id="pause" class="square" aria-label="Pause" title="Pause"></button></header>
     <section id="field" aria-label="Adventure"><canvas id="world" tabindex="0" aria-label="Tap the ground to travel, or an enemy for a power attack"></canvas><div id="toast" role="status" hidden></div><button id="context" hidden></button><div id="campSeals" aria-label="Camps secured"></div></section>
-    <footer><div id="health" aria-label="Squad health"></div><nav><button id="home" aria-label="Walk home" title="Walk home"></button><button id="atlas" aria-label="Map" title="Map" hidden></button><button id="utility" aria-label="Use repair pack" title="Use repair pack"></button><button id="workshop" aria-label="Workshop" title="Workshop"></button><button id="sound" aria-label="Sound on" title="Sound on"></button></nav></footer>
+    <footer><div id="health" aria-label="Squad health"></div><nav><button id="home" aria-label="Walk home" title="Walk home"></button><button id="atlas" aria-label="Map" title="Map"></button><button id="utility" aria-label="Use repair pack" title="Use repair pack"></button><button id="workshop" aria-label="Workshop" title="Workshop"></button><button id="sound" aria-label="Sound on" title="Sound on"></button></nav></footer>
   </main>
   <dialog id="panel" aria-labelledby="panelTitle"><div class="panel-head"><h1 id="panelTitle"></h1><button id="close" class="square" aria-label="Close" title="Close"></button><p id="panelMessage" role="alert" hidden></p></div><div id="panelBody"></div></dialog>
   <audio id="music" src="../assets/courtyard-theme.mp3" preload="none" loop hidden></audio>
-  <script type="module" src="north.js?v=roman35"></script>
+  <script type="module" src="north.js?v=roman36"></script>
 </body>
 </html>
