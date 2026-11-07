@@ -1,3 +1,4 @@
+import {shuffled,halloweenActive,regionHalloween} from './halloween.js?v=world91';
 // Each full shuffled batch introduces one new encounter; earlier ones remain.
 export const REPLAY_VARIANTS=[
   {id:'unequal-duo',mission:'replay-3',batch:2,name:'Bulwark & Flicker'},
@@ -8,13 +9,25 @@ export function variantForRound(mission,round,batchSize,startBatch=2){
   const batch=Math.floor((Math.max(1,round)-1)/batchSize)+1;
   return REPLAY_VARIANTS.find(v=>v.mission===mission&&v.batch+startBatch-2<=batch)?.id||'';
 }
+// Occasional special encounters draw without replacement, across the shuffled maps.
+export function chooseReplayBoss(save,round){
+  if(round%3!==0)return '';
+  const queue=save.replayBossQueue||{remaining:[],last:''};
+  let remaining=[...new Set(queue.remaining)].filter(id=>REPLAY_VARIANTS.some(v=>v.id===id));
+  if(!remaining.length){
+    remaining=shuffled(REPLAY_VARIANTS.map(v=>v.id));
+    if(remaining[0]===queue.last)[remaining[0],remaining[1]]=[remaining[1],remaining[0]];
+  }
+  const next=remaining.shift();save.replayBossQueue={remaining,last:next};return next;
+}
 export function replayTitle(save,mission){
-  return REPLAY_VARIANTS.find(v=>v.id===save.replay?.variant&&v.mission===mission?.id)?.name||mission?.boss;
+  if(mission?.halloween)return `${regionHalloween(save,mission.r)?.name||'Halloween Robots'} · ${mission.boss}`;
+  return REPLAY_VARIANTS.find(v=>v.id===save.replay?.variant)?.name||mission?.boss;
 }
 export function applyReplayVariants(world,save){
-  const variant=REPLAY_VARIANTS.find(v=>v.id===save?.replay?.variant&&v.mission===save.replay.mission);
+  const variant=REPLAY_VARIANTS.find(v=>v.id===save?.replay?.variant&&!halloweenActive(save));
   if(!variant)return world;
-  const original=world.enemies.find(e=>e.returnId===variant.mission&&e.type==='boss');
+  const original=world.enemies.find(e=>e.returnId===save.replay.mission&&e.type==='boss');
   if(!original)return world;
   const anchor={x:original.x,y:original.y};
   const place=(dx,dy)=>{
@@ -38,12 +51,12 @@ export function applyReplayVariants(world,save){
       {replayLook:{weapon:'lightning',armor:'bastion',wheels:'rover',color:'#4cbf8b'}})];
     const types=['shield','ranged','hopper','sentry','medic'];
     let index=0;
-    for(const e of world.enemies.filter(e=>e.returnId===variant.mission&&e.site)){
+    for(const e of world.enemies.filter(e=>e.returnId===save.replay.mission&&e.site)){
       const type=types[index++%types.length];
       Object.assign(e,{type,encounterRole:'vanguard',replayVariant:variant.id,
         replayLook:{color:type==='medic'?'#a4d6b5':'#4cbf8b',armor:type==='shield'?'bastion':'steel',wheels:'rover'}});
     }
   }
-  world.enemies=world.enemies.filter(e=>e.returnId!==variant.mission||e.type!=='boss').concat(bosses);
+  world.enemies=world.enemies.filter(e=>e.returnId!==save.replay.mission||e.type!=='boss').concat(bosses);
   return world;
 }

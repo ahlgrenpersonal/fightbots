@@ -1,12 +1,13 @@
-import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world90';
-import { bossProfile } from './content.js?v=world90';
-import {replayTitle} from './replay-variants.js?v=world90';
-import { ReturningPatrols } from './patrols.js?v=world90';
-import {inRoyalChamber} from './pantheon.js?v=world90';
-import {RoyalCourt} from './royal-court.js?v=world90';
-import {nearestWalkable} from './data.js?v=world90';
-import {Boats} from './boats.js?v=world90';
-import {initializeReplay,beginReplay,completeReplay} from './replay.js?v=world90';
+import {currentMission} from './data.js?v=world91';
+import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world91';
+import { bossProfile } from './content.js?v=world91';
+import {replayTitle} from './replay-variants.js?v=world91';
+import { ReturningPatrols } from './patrols.js?v=world91';
+import {inRoyalChamber} from './pantheon.js?v=world91';
+import {RoyalCourt} from './royal-court.js?v=world91';
+import {nearestWalkable} from './data.js?v=world91';
+import {Boats} from './boats.js?v=world91';
+import {initializeReplay,beginReplay,completeReplay} from './replay.js?v=world91';
 
 export const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
 export const TAP_COOLDOWN=1.5;
@@ -457,7 +458,7 @@ export class Adventure {
     this.patrols.tick(dt);
   }
   nearestSite(){const r=unlockedRegion(this.save);return this.world.sites.filter(s=>!s.returnId&&s.r===r&&!this.save.cleared.includes(s.id)).sort((a,b)=>distance(a,this.player)-distance(b,this.player))[0];}
-  nextObjective(){const m=RETURNS.find(m=>returnActive(this.save,m));if(m)return this.world.sites.find(s=>s.returnId===m.id&&!this.save.cleared.includes(s.id))||m;if(pantheonUnlocked(this.save))return PANTHEON.viewpoint;const r=unlockedRegion(this.save);return this.nearestSite()||relayFor(r);}
+  nextObjective(){const m=currentMission(this.save);if(m)return this.world.sites.find(s=>s.returnId===m.id&&!this.save.cleared.includes(s.id))||m;if(pantheonUnlocked(this.save))return PANTHEON.viewpoint;const r=unlockedRegion(this.save);return this.nearestSite()||relayFor(r);}
   guideRoute(){
     const postgame=RETURNS.some(m=>m.postRoyal&&returnActive(this.save,m))||this.save.royalRematchStarted&&this.royals.phase!=='victory';
     const route=this.route.length?this.route:!postgame&&this.save.completed&&(!pantheonUnlocked(this.save)||this.save.visited.includes(PANTHEON.r))?[]:this.boats.riding?this.boats.routeToLand(this.nextObjective())||[]:pathfind(this.world,this.save,this.player,this.nextObjective());

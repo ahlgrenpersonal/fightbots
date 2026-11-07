@@ -1,4 +1,6 @@
-import {PANTHEON,COURT,COLUMNS,STAIRWAY,TERRACE} from './pantheon.js?v=world90';
+import {robotCostume} from './halloween-art.js?v=world91';
+import {halloweenTheme} from './halloween.js?v=world91';
+import {PANTHEON,COURT,COLUMNS,STAIRWAY,TERRACE} from './pantheon.js?v=world91';
 const INK='#304955',GOLD='#e4bf67',LIGHT='#fff1bd';
 function shape(c,points,fill,stroke=INK,width=.045){c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fillStyle=fill;c.fill();if(stroke){c.strokeStyle=stroke;c.lineWidth=width;c.stroke();}}
 function oval(c,x,y,rx,ry,fill,stroke=null,width=.04){c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fillStyle=fill;c.fill();if(stroke){c.strokeStyle=stroke;c.lineWidth=width;c.stroke();}}
@@ -96,7 +98,7 @@ export function sleepingRoyal(c,p,t,options={}){
   const awake=!!p.awake,charging=!!p.charging;
   if(awake&&p.moving&&!charging)c.translate(0,Math.sin(t*10)*1.2);
   const queen=p.role==='queen',king=p.role==='king',guard=!king&&!queen;
-  const body=king?'#c65547':queen?'#9283c5':'#5c99a2',trim=queen?'#f0e5b4':GOLD;
+  const costume=halloweenTheme(p.halloween),body=costume?.color||(king?'#c65547':queen?'#9283c5':'#5c99a2'),trim=queen?'#f0e5b4':GOLD;
   const R=(x,y,w,h,fill,stroke=INK,lw=2)=>{c.beginPath();c.roundRect(x,y,w,h,Math.min(6,w/4));c.fillStyle=fill;c.fill();if(stroke){c.strokeStyle=stroke;c.lineWidth=lw;c.stroke();}};
   const L=(...args)=>line(c,...args);
   oval(c,0,29,42,12,'#223b4a45');
@@ -112,6 +114,7 @@ export function sleepingRoyal(c,p,t,options={}){
   // Closed curved eyelids, dim cool cores: unmistakably asleep, not hostile.
   for(const side of [-1,1]){R(side*11-8,-15,16,14,'#273d50',null);if(awake){oval(c,side*11,-8,6,6.5,'#fff6d8');oval(c,side*11+Math.cos(p.angle)*1.7,-8+Math.sin(p.angle)*1.7,2.7,3,'#284353');oval(c,side*11-1,-10,1.5,1.5,'#fff');}else{c.beginPath();c.arc(side*11,-11,5.5,0,Math.PI);c.strokeStyle='#c9efdf';c.lineWidth=2.7;c.stroke();}}
   R(-12,7,24,7,'#263f50',null);for(let i=0;i<3;i++)L(-7+i*7,9,-7+i*7,12,'#8fc1c5',1.5);
+  robotCostume(c,p.halloween);
   if(guard){
     R(-28,-34,56,11,trim);shape(c,[[-17,-34],[-15,-45],[13,-45],[18,-34]],'#a75155',INK,2);for(let x=-10;x<=10;x+=5)L(x,-44,x,-35,'#ea9c71',2);
     // A Roman tower shield and resting spear, not the player's weapon silhouettes.

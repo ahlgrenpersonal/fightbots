@@ -1,9 +1,10 @@
-import {REGIONS,REGION_TILES,REGION_W,REGION_H,RETURNS,PANTHEON,areaUnlocked,pantheonUnlocked,returnActive,unlockedRegion} from './data.js?v=world90';
+import {currentMission} from './data.js?v=world91';
+import {REGIONS,REGION_TILES,REGION_W,REGION_H,RETURNS,PANTHEON,areaUnlocked,pantheonUnlocked,returnActive,unlockedRegion} from './data.js?v=world91';
 
 export function atlasProgress(save){
   const visible=new Set(REGIONS.map((_,r)=>r).filter(r=>areaUnlocked(save,r)||save.bosses.includes(r)));
   if(pantheonUnlocked(save))visible.add(PANTHEON.r);
-  const mission=RETURNS.find(m=>returnActive(save,m));
+  const mission=currentMission(save);
   const active=mission?mission.r:pantheonUnlocked(save)?save.royalCourt?.phase==='victory'?null:PANTHEON.r:save.bosses.includes(unlockedRegion(save))?null:unlockedRegion(save);
   const tiles=[...visible].flatMap(r=>r===PANTHEON.r?[[PANTHEON.x/REGION_W,PANTHEON.y/REGION_H]]:REGION_TILES[r]);
   const left=Math.min(...tiles.map(p=>p[0]))*REGION_W,top=Math.min(...tiles.map(p=>p[1]))*REGION_H;

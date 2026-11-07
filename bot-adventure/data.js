@@ -1,12 +1,13 @@
-import { MORE_REGIONS, NEW_EQUIPMENT, WORKSHOPS, RETURNS as STORY_RETURNS, ENCOUNTERS, LEGACY_WORKSHOPS, LEGACY_RETURNS, LEGACY_ENCOUNTERS } from './content.js?v=world90';
-import {LEGACY_TILES,WORLD_TILES,relocatePoint,relocateEntity,legacyPoint,worldGates} from './topology.js?v=world90';
-import {PANTHEON,inPantheon,buildPantheon} from './pantheon.js?v=world90';
-import {applyReplayVariants} from './replay-variants.js?v=world90';
-import {applyReplayColors} from './replay-colors.js?v=world90';
+import {applyHalloween,halloweenActive} from './halloween.js?v=world91';
+import { MORE_REGIONS, NEW_EQUIPMENT, WORKSHOPS, RETURNS as STORY_RETURNS, ENCOUNTERS, LEGACY_WORKSHOPS, LEGACY_RETURNS, LEGACY_ENCOUNTERS } from './content.js?v=world91';
+import {LEGACY_TILES,WORLD_TILES,relocatePoint,relocateEntity,legacyPoint,worldGates} from './topology.js?v=world91';
+import {PANTHEON,inPantheon,buildPantheon} from './pantheon.js?v=world91';
+import {applyReplayVariants} from './replay-variants.js?v=world91';
+import {applyReplayColors} from './replay-colors.js?v=world91';
 export {PANTHEON};
 export { WORKSHOPS, ENCOUNTERS };
-export { bossProfile } from './content.js?v=world90';
-export const BUILD = 'world90';
+export { bossProfile } from './content.js?v=world91';
+export const BUILD = 'world91';
 export const REGION_W = 36;
 export const REGION_H = 44;
 export const WORLD_W = REGION_W * 5;
@@ -48,8 +49,19 @@ export const RETURNS=[...STORY_RETURNS,...REGIONS.flatMap((region,r)=>{
   const sites=points.map(([x,y])=>relocatePoint({x:a[0]*36+x,y:a[1]*44+y})).map(p=>[p.x,p.y]);
   return [{id:`replay-${r}`,r,postRoyal:true,replay:true,boss:region.boss,...relayFor(r),sitePrefix:`replay-site-${r}`,sites,sourceSites:(b?[1,2,3,5,7]:[1,2,3,6,7]).map(i=>`site-${r}-${i}`)}];
 })];
+// Each takeover repopulates five established camp clearings in every region.
+export const HALLOWEEN_MISSIONS=REGIONS.map((reg,r)=>{
+  const source=RETURNS.find(m=>m.replay&&m.r===r);
+  const [tx,ty]=LEGACY_TILES[r][0];
+  const points=r===0?[[6.5,6.5],[29.5,17.5],[7.5,38.5],[10.5,60.5],[28.5,70.5]]:[[6.5,6.5],[29.5,17.5],[7.5,38.5],[6.5,-36.5],[9.5,-6.5]];
+  const sites=source?.sites||points.map(([x,y])=>relocatePoint({x:tx*36+x,y:ty*44+y})).map(p=>[p.x,p.y]);
+  return {id:`haunt-${r}`,r,postRoyal:true,halloween:true,boss:reg.boss,...relayFor(r),sitePrefix:`haunt-site-${r}`,sites,
+    sourceSites:source?.sourceSites||[1,2,3,5,7].map(i=>`site-${r}-${r===0&&i===7?6:i}`)};
+});
+RETURNS.push(...HALLOWEEN_MISSIONS);
 export const TOTAL_TREASURES=REGIONS.length*7;
-export const returnActive=(save,m)=>!!m&&(m.postRoyal?(save.replay?save.replay.phase==='region'&&save.replay.mission===m.id:m.id==='copper-twins'&&save.royalCourt?.phase==='victory'):save.bosses.includes(m.unlock-1))&&!(save.returns||[]).includes(m.id);
+export const returnActive=(save,m)=>!!m&&(m.halloween?halloweenActive(save)&&save.replay.phase==='region'&&!(save.replay.conquered||[]).includes(m.id):m.postRoyal?(save.replay?!halloweenActive(save)&&save.replay.phase==='region'&&save.replay.mission===m.id:m.id==='copper-twins'&&save.royalCourt?.phase==='victory'):save.bosses.includes(m.unlock-1))&&!(save.returns||[]).includes(m.id);
+export const currentMission=save=>RETURNS.find(m=>m.id===save.replay?.mission&&returnActive(save,m))||RETURNS.find(m=>returnActive(save,m));
 // The original FightBots' square chassis, eyes, colors and armor motifs are retained.
 // Adventure equipment has its own progression and continuous-time combat rules.
 export const EQUIPMENT = {
@@ -257,10 +269,10 @@ export function makeWorld(save) {
   for(const landmark of props.filter(p=>p.type==='landmark'))for(let i=props.length-1;i>=0;i--){
     const p=props[i];if(p.r===landmark.r&&p.type!=='landmark'&&Math.abs(p.x-landmark.x)<1.7&&p.y<landmark.y+1.2&&p.y>landmark.y-2.8){blocks.delete(`${Math.floor(p.x)},${Math.floor(p.y)}`);props.splice(i,1);}
   }
-  return applyReplayColors(applyReplayVariants(addReplayWorld(buildPantheon(relocateWorld({ sites, enemies, chests, stations, props, blocks, water, arenas }))),save),save);
+  return applyHalloween(applyReplayColors(applyReplayVariants(addReplayWorld(buildPantheon(relocateWorld({ sites, enemies, chests, stations, props, blocks, water, arenas }))),save),save),save);
 }
 function addReplayWorld(world){
-  for(const mission of RETURNS.filter(m=>m.replay)){
+  for(const mission of RETURNS.filter(m=>m.replay||m.halloween)){
     mission.sourceSites.forEach((source,i)=>{
       const original=world.sites.find(s=>s.id===source),id=`${mission.sitePrefix}-${i}`;
       world.sites.push({...original,id,index:i,returnId:mission.id});
@@ -289,7 +301,7 @@ export const pantheonUnlocked=save=>REGIONS.every((_,r)=>save.bosses.includes(r)
 export const areaUnlocked=(save,r)=>r===PANTHEON.r?pantheonUnlocked(save):r>=0&&r<=unlockedRegion(save);
 export const areaInfo=r=>r===PANTHEON.r?PANTHEON:REGIONS[r];
 export function cellsIn(save,r) { return new Set(save.cleared.filter(id=>{const m=/^site-(\d+)-(\d+)$/.exec(id);return m&&Number(m[1])===r&&Number(m[2])<requiredCells(r);})).size; }
-export function available(save,part) { return part.royalReward ? save.owned.includes(part.id) : part.unlock < 0 || save.bosses.includes(part.unlock); }
+export function available(save,part) { return part.royalReward ? (save.owned||[]).includes(part.id) : part.unlock < 0 || save.bosses.includes(part.unlock); }
 export function visibleEquipment(save,type) { return EQUIPMENT[type].filter(part=>save.owned.includes(part.id)||available(save,part)); }
 export function canWalk(world,save,x,y) {
   const r=regionAt(x,y);

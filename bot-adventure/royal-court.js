@@ -1,8 +1,10 @@
-import {PANTHEON,COURT,ROYAL_SPECS,inRoyalChamber} from './pantheon.js?v=world90';
-import {pantheonUnlocked,canWalk,pathfind,regionAt,EQUIPMENT} from './data.js?v=world90';
+import {halloweenActive,halloweenHealth,royalHalloween} from './halloween.js?v=world91';
+import {PANTHEON,COURT,ROYAL_SPECS,inRoyalChamber} from './pantheon.js?v=world91';
+import {pantheonUnlocked,canWalk,pathfind,regionAt,EQUIPMENT} from './data.js?v=world91';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const inside=p=>regionAt(p.x,p.y)===PANTHEON.r&&p.y>=229&&p.y<259;
 const finite=(v,fallback)=>Number.isFinite(v)?v:fallback;
+function royalSpec(save,role){const spec=ROYAL_SPECS[role];return halloweenActive(save)?{...spec,hp:halloweenHealth(spec.hp,true),name:role==='king'?'The Zombie Robot King':role==='queen'?'The Mummy Robot Queen':'Skeleton Sentinel'}:spec;}
 export class RoyalCourt {
   constructor(game){
     this.game=game;this.inspect=0;this.transition=0;this.healClock=0;this.openedAt=-10;
@@ -10,8 +12,8 @@ export class RoyalCourt {
     this.phase=pantheonUnlocked(game.save)&&['guards','awakening','regents','victory'].includes(old?.phase)?old.phase:'sleeping';
     this.rallying=this.phase==='guards'&&old?.rallying!==false;
     this.units=COURT.map((p,i)=>{
-      const spec=ROYAL_SPECS[p.role],record=old?.mobs?.find(e=>e.id===p.id);
-      return {...p,r:PANTHEON.r,royal:true,type:'boss',name:spec.name,weapon:spec.weapon,pattern:spec.pattern,homeX:p.x,homeY:p.y,
+      const spec=royalSpec(game.save,p.role),record=old?.mobs?.find(e=>e.id===p.id);
+      return {...p,halloween:royalHalloween(game.save,p.role),r:PANTHEON.r,royal:true,type:'boss',name:spec.name,weapon:spec.weapon,pattern:spec.pattern,homeX:p.x,homeY:p.y,
         hp:Math.max(0,Math.min(spec.hp,record?finite(record.hp,spec.hp/(old.endurance===2?1:2))*(old.endurance===2?1:2):spec.hp)),maxHp:spec.hp,damage:spec.damage,cd:2+i*.45,hit:0,swing:0,angle:Math.PI/2,
         weapon:p.role==='guard'&&i%2?'saw':spec.weapon,enteredArena:record?.enteredArena===true||record?.y>=254,flanked:record?.flanked===true,
         x:finite(record?.x,p.x),y:finite(record?.y,p.y),active:false,frozen:0};
@@ -35,14 +37,14 @@ export class RoyalCourt {
     g.save.royalRematchStarted=true;
     this.phase='sleeping';this.inspect=0;this.transition=0;this.healClock=0;this.rallying=false;this.openedAt=-10;
     g.enemies=g.enemies.filter(e=>!e.royal);g.projectiles=g.projectiles.filter(e=>!e.royal);g.telegraphs=g.telegraphs.filter(e=>!e.royal);
-    for(const [i,e] of this.units.entries()){const p=COURT.find(p=>p.id===e.id);Object.assign(e,{x:p.x,y:p.y,hp:e.maxHp,angle:Math.PI/2,active:false,enteredArena:false,flanked:false,path:null,frozen:0,hit:0,swing:0,cd:2+i*.45});}
+    for(const [i,e] of this.units.entries()){const p=COURT.find(p=>p.id===e.id),spec=royalSpec(g.save,e.role);Object.assign(e,{halloween:royalHalloween(g.save,e.role),name:spec.name,maxHp:spec.hp,x:p.x,y:p.y,hp:spec.hp,angle:Math.PI/2,active:false,enteredArena:false,flanked:false,path:null,frozen:0,hit:0,swing:0,cd:2+i*.45});}
     for(const key of g.world.courtSeal)g.world.blocks.add(key);
     for(const keys of g.world.courtPlinths.values())for(const key of keys)g.world.blocks.add(key);
     this.snapshot();return true;
   }
   get sealed(){return this.phase==='sleeping';}
   get active(){return ['guards','awakening','regents'].includes(this.phase);}
-  get observing(){return this.sealed&&pantheonUnlocked(this.game.save)&&distance(this.game.player,PANTHEON.stairTop)<2.2;}
+  get observing(){return this.sealed&&(!halloweenActive(this.game.save)||this.game.save.replay.phase==='court')&&pantheonUnlocked(this.game.save)&&distance(this.game.player,PANTHEON.stairTop)<2.2;}
   get ready(){return this.observing&&this.inspect>=5;}
   awake(e){return e.royal&&e.hp>0&&(this.phase==='guards'?e.role==='guard':this.phase==='regents'&&e.role!=='guard');}
   safeAt(p){return !this.active||p.y<229;}
@@ -69,8 +71,9 @@ export class RoyalCourt {
       const rewards=EQUIPMENT.weapon.filter(p=>p.royalReward&&!this.game.save.owned.includes(p.id));
       for(const part of rewards)this.game.save.owned.push(part.id);
       this.game.projectiles=this.game.projectiles.filter(p=>!p.royal);this.game.telegraphs=this.game.telegraphs.filter(a=>!a.royal);
+      const completedHalloween=halloweenActive(this.game.save);
       this.snapshot();this.game.beginReplay();
-      this.game.effects.push({type:'nova',x:162.5,y:251.5,radius:5,life:2,max:2});this.game.emit('royal-victory',{rewards:rewards.map(p=>p.id)});
+      this.game.effects.push({type:'nova',x:162.5,y:251.5,radius:5,life:2,max:2});this.game.emit('royal-victory',{rewards:rewards.map(p=>p.id),completedHalloween,nextHalloween:halloweenActive(this.game.save)});
     }
   }
   defeated(e){
@@ -80,7 +83,7 @@ export class RoyalCourt {
   hud(){
     if(!this.active||regionAt(this.game.player.x,this.game.player.y)!==PANTHEON.r)return null;
     const units=this.units.filter(e=>this.phase==='guards'?e.role==='guard':e.role!=='guard');
-    return {name:this.phase==='guards'?`Royal Guardians · ${units.filter(e=>e.hp>0).length} / 4`:this.phase==='awakening'?'The king and queen are awakening…':'The Robot King & Crystal Queen',health:units.reduce((s,e)=>s+e.hp,0)/units.reduce((s,e)=>s+e.maxHp,0)};
+    return {name:this.phase==='guards'?`${halloweenActive(this.game.save)?'Skeleton Sentinels':'Royal Guardians'} · ${units.filter(e=>e.hp>0).length} / 4`:this.phase==='awakening'?'The king and queen are awakening…':halloweenActive(this.game.save)?'The Zombie King & Mummy Queen':'The Robot King & Crystal Queen',health:units.reduce((s,e)=>s+e.hp,0)/units.reduce((s,e)=>s+e.maxHp,0)};
   }
   snapshot(){
     if(this.phase==='sleeping'){delete this.game.save.royalCourt;return;}

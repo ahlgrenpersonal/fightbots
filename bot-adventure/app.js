@@ -1,16 +1,18 @@
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, visibleEquipment, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world90';
-import { Adventure, distance } from './engine.js?v=world90';
-import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon,atlasBot } from './art.js?v=world90';
-import { mountAtlas } from './atlas.js?v=world90';
-import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world90';
-import {AdventureSaves} from './adventure-saves.js?v=world90';
-import {bindHoldConfirmation} from './hold-confirm.js?v=world90';
-import {bindPowerControl,updatePowerControl} from './power-control.js?v=world90';
-import {atlasProgress} from './atlas-progress.js?v=world90';
-import {localProgress} from './quiet-ui.js?v=world90';
-import {replayTitle} from './replay-variants.js?v=world90';
+import {halloweenActive,regionHalloween} from './halloween.js?v=world91';
+import {currentMission} from './data.js?v=world91';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, visibleEquipment, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world91';
+import { Adventure, distance } from './engine.js?v=world91';
+import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon,atlasBot } from './art.js?v=world91';
+import { mountAtlas } from './atlas.js?v=world91';
+import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world91';
+import {AdventureSaves} from './adventure-saves.js?v=world91';
+import {bindHoldConfirmation} from './hold-confirm.js?v=world91';
+import {bindPowerControl,updatePowerControl} from './power-control.js?v=world91';
+import {atlasProgress} from './atlas-progress.js?v=world91';
+import {localProgress} from './quiet-ui.js?v=world91';
+import {replayTitle} from './replay-variants.js?v=world91';
 
-const buildVersion = 'world90';
+const buildVersion = 'world91';
 const SAVE_KEY='bot-adventure-save-v1';
 const adventureSaves=new AdventureSaves({storage:()=>localStorage,key:SAVE_KEY});
 const $=id=>document.getElementById(id);
@@ -89,7 +91,7 @@ game.onEvent=e=>{
   if(e.type==='equip'){tone(350,.08,'triangle',.025,500);persist();}
   if(e.type==='boost'){tone(250,.4,'triangle',.04,900);toast('Power surge!');}
   if(e.type==='royal-stage'){persist();banner(e.phase==='guards'?'The four sentinels awaken!':e.phase==='awakening'?'The royal pair is awakening…':'The king and queen are coming!');tone(100,.6,'triangle',.035,350);}
-  if(e.type==='royal-victory'){persist();const rewards=e.rewards||[];openPanel('royal-victory',`${head('Royal Champion!','The king, queen and all four sentinels are defeated.','THE ROYAL FINALE')}<div class="panel-body">${rewards.length?`<canvas id="royalWeapons" class="celebration" width="700" height="210" aria-label="Royal weapon rewards"></canvas><h2>${rewards.map(id=>item('weapon',id).name).join(' + ')}</h2><p class="dialog-copy">Yours forever! Equip your new royal weapons at any workshop.</p>`:'<canvas id="rewardBot" class="celebration" width="700" height="280"></canvas>'}<p class="dialog-copy">The ancient court is yours. All your progress and equipment are saved. +250 scrap · +12 parts</p><div class="pause-actions"><button class="primary pictorial-action" data-action="map" aria-label="Open adventure map"><span>⚑</span><small>Explore</small></button><button class="secondary pictorial-action" data-action="home"><span>⚙</span><small>Build</small></button></div></div>`);}
+  if(e.type==='royal-victory'){persist();const rewards=e.rewards||[],nextWorld=e.nextHalloween?'Halloween takeover! All fifteen regions have new robot armies. Clear their camps and bosses, then face the Zombie King and Mummy Queen.':e.completedHalloween?'The Halloween world is restored! A shuffled normal region is next.':'A fresh shuffled region awaits!';openPanel('royal-victory',`${head('Royal Champion!','The king, queen and all four sentinels are defeated.','THE ROYAL FINALE')}<div class="panel-body">${rewards.length?`<canvas id="royalWeapons" class="celebration" width="700" height="210" aria-label="Royal weapon rewards"></canvas><h2>${rewards.map(id=>item('weapon',id).name).join(' + ')}</h2><p class="dialog-copy">Yours forever! Equip your new royal weapons at any workshop.</p>`:'<canvas id="rewardBot" class="celebration" width="700" height="280"></canvas>'}<p class="dialog-copy">${nextWorld}</p><p class="dialog-copy">All your progress and equipment are saved. +250 scrap · +12 parts</p><div class="pause-actions"><button class="primary pictorial-action" data-action="map" aria-label="Open adventure map"><span>⚑</span><small>Explore</small></button><button class="secondary pictorial-action" data-action="home"><span>⚙</span><small>Build</small></button></div></div>`);}
 };
 function closePanel(){holdCleanup?.();holdCleanup=null;atlasController?.destroy();atlasController=null;if(panelMode==='workshop')workshopDetails=false;if(panel.open)panel.close();panelMode=null;game.paused=false;last=performance.now();persist();}
 function openPanel(mode,html){holdCleanup?.();holdCleanup=null;atlasController?.destroy();atlasController=null;game.paused=true;panelMode=mode;panel.dataset.mode=mode;$('panelContent').innerHTML=html;if(!panel.open)panel.showModal();panel.scrollTop=0;drawPanels();}
@@ -111,7 +113,7 @@ function workshop(){
 }
 function adventureMap(){
   const s=game.save,progress=atlasProgress(s);
-  openPanel('map',`${head('The little big world',`${s.bosses.length} relays restored · ${s.cleared.filter(id=>id.startsWith('site-')).length} power cells found`,'ADVENTURE ATLAS')}<div class="panel-body"><canvas id="atlas" class="map-canvas" aria-label="Your unlocked world. Select a destination." width="1200" height="960"></canvas><div class="map-key"><span>● Power cell</span><span>▣ Guardian</span><span>⌂ Workshop</span></div><div class="region-list">${REGIONS.map((reg,r)=>({reg,r})).filter(({r})=>progress.visible.has(r)).sort((a,b)=>Number(b.r===progress.active)-Number(a.r===progress.active)||a.r-b.r).map(({reg,r})=>`<button class="region-row ${r===progress.active?'active-region':''}" data-region="${r}"><span>${r===progress.active?progress.newArea?'★':'⚑':'✓'}</span><div><b>${reg.name}</b><small>${r===progress.active&&progress.newArea?'New trail · ':''}${s.bosses.includes(r)?'Relay restored · more treasures to find':`${cellsIn(s,r)} / ${requiredCells(r)} power cells · ${reg.boss}`}</small></div><em>Go ↗</em></button>`).join('')}</div></div>`);
+  openPanel('map',`${head(halloweenActive(s)?'Halloween robot world':'The little big world',`${s.bosses.length} relays restored · ${s.cleared.filter(id=>id.startsWith('site-')).length} power cells found`,halloweenActive(s)?`${s.replay.conquered.length} / 15 REGIONS RESTORED`:'ADVENTURE ATLAS')}<div class="panel-body"><canvas id="atlas" class="map-canvas" aria-label="Your unlocked world. Select a destination." width="1200" height="960"></canvas><div class="map-key"><span>● Power cell</span><span>▣ Guardian</span><span>⌂ Workshop</span></div><div class="region-list">${REGIONS.map((reg,r)=>({reg,r})).filter(({r})=>progress.visible.has(r)&&(!halloweenActive(s)||s.replay.conquered.includes(`haunt-${r}`))).sort((a,b)=>Number(b.r===progress.active)-Number(a.r===progress.active)||a.r-b.r).map(({reg,r})=>`<button class="region-row ${r===progress.active?'active-region':''}" data-region="${r}"><span>${r===progress.active?progress.newArea?'★':'⚑':'✓'}</span><div><b>${reg.name}${halloweenActive(s)?` · ${regionHalloween(s,r).name}`:''}</b><small>${r===progress.active&&progress.newArea?'New trail · ':''}${halloweenActive(s)?s.replay.conquered.includes(`haunt-${r}`)?'Halloween guardian defeated':'Halloween camps and guardian await':s.bosses.includes(r)?'Relay restored · more treasures to find':`${cellsIn(s,r)} / ${requiredCells(r)} power cells · ${reg.boss}`}</small></div><em>Go ↗</em></button>`).join('')}</div></div>`);
   panel.querySelector('.panel-head p')?.remove();
   const key=panel.querySelector('.map-key');key.insertAdjacentHTML('afterbegin','<span class="bot-player-key"><canvas id="mapPlayerKey" width="80" height="80" aria-hidden="true"></canvas>You</span><span>★ Current adventure</span>');key.insertAdjacentHTML('beforeend','<span>＋ Charging station</span><span style="color:#ed917b">● Patrol</span>');
   bot($('mapPlayerKey').getContext('2d'),40,43,64,{color:s.color,armor:s.build.armor,wheels:s.build.wheels,gun:s.build.weapon,gadget:s.build.gadget,reducedMotion:true});
@@ -131,8 +133,8 @@ function adventureMap(){
     const home=game.homes().find(h=>distance(h,{x,y})<3),mission=RETURNS.find(m=>returnActive(s,m)&&distance(m,{x,y})<3);
     closePanel();if(mission)goReturn(mission);else game.moveTo(home||{x,y});
   }});
-  if(pantheonUnlocked(s))panel.querySelector('.region-list').insertAdjacentHTML('afterbegin',`<button class="region-row ${progress.active===PANTHEON.r?'active-region':''}" data-action="pantheon"><span>♛</span><div><b>Crown Pantheon</b><small>${game.royals.phase==='victory'?'Royal Champion · the court is restored':'Royal finale · four sentinels, then king and queen'}</small></div><em>Go ↗</em></button>`);
-  const list=panel.querySelector('.region-list'),mission=RETURNS.find(m=>returnActive(s,m));
+  if(pantheonUnlocked(s))panel.querySelector('.region-list').insertAdjacentHTML('afterbegin',`<button class="region-row ${progress.active===PANTHEON.r?'active-region':''}" data-action="pantheon"><span>♛</span><div><b>Crown Pantheon</b><small>${halloweenActive(s)?s.replay.phase==='region'?`Restore ${15-s.replay.conquered.length} more regions to awaken the Halloween court`:'Halloween finale · Zombie King and Mummy Queen':game.royals.phase==='victory'?'Royal Champion · the court is restored':'Royal finale · four sentinels, then king and queen'}</small></div><em>Go ↗</em></button>`);
+  const list=panel.querySelector('.region-list'),mission=currentMission(s);
   const current=mission?list.querySelector(`[data-return="${mission.id}"]`):progress.active===PANTHEON.r?list.querySelector('[data-action="pantheon"]'):list.querySelector(`[data-region="${progress.active}"]`);
   if(current){current.classList.add('current-destination','active-region');current.querySelector('small')?.remove();current.querySelector('em').textContent='➜';stage.before(current);$('mapGo')?.remove();}
   const other=document.createElement('details');other.className='other-destinations';other.innerHTML='<summary>◇ Other places</summary>';list.before(other);other.append(list);
@@ -193,14 +195,14 @@ function displayDetails(){
 }
 function showRescue(){openPanel('rescue',`${head('A little rescue','Every good explorer gets a helping hand.','BACK HOME')}<div class="panel-body"><canvas class="celebration" id="rewardBot" width="700" height="280"></canvas><p class="dialog-copy">Your bot is fully repaired. All your equipment, parts and discoveries are safe. The rescue cost at most 1 scrap.</p><button class="primary" data-action="home">Back to the workshop ⌂</button></div>`);}
 function showReturnComplete(id){
-  const royal=RETURNS.find(m=>m.id===id)?.postRoyal,next=royal?PANTHEON:REGIONS[unlockedRegion(game.save)];
-  openPanel('trail',`${head(next.name,royal?'The king, queen and four sentinels await your return.':'A new trail is open.',royal?'THE ROYAL REMATCH':'TRAIL RESTORED')}<div class="panel-body"><canvas class="celebration" id="rewardBot" width="700" height="280"></canvas><div class="pause-actions"><button class="primary pictorial-action" data-action="next" aria-label="Explore ${next.name}"><span>➜</span><small>Explore</small></button><button class="secondary pictorial-action" data-action="home" aria-label="Build at the nearest workshop"><span>⚙</span><small>Build</small></button></div></div>`);
+  const royal=RETURNS.find(m=>m.id===id)?.postRoyal,mission=currentMission(game.save),more=halloweenActive(game.save)&&game.save.replay.phase==='region',next=more?REGIONS[mission.r]:royal?PANTHEON:REGIONS[unlockedRegion(game.save)];
+  openPanel('trail',`${head(next.name,more?`${game.save.replay.conquered.length} / 15 Halloween regions restored. Follow the next trail or explore another region.`:royal?halloweenActive(game.save)?'All fifteen regions restored! The Zombie King and Mummy Queen await.':'The king, queen and four sentinels await your return.':'A new trail is open.',more?'HALLOWEEN TRAIL RESTORED':royal?'THE ROYAL REMATCH':'TRAIL RESTORED')}<div class="panel-body"><canvas class="celebration" id="rewardBot" width="700" height="280"></canvas><div class="pause-actions"><button class="primary pictorial-action" data-action="next" aria-label="Explore ${next.name}"><span>➜</span><small>Explore</small></button><button class="secondary pictorial-action" data-action="home" aria-label="Build at the nearest workshop"><span>⚙</span><small>Build</small></button></div></div>`);
 }
 function showGuardian(r){
   const pair=Object.entries(EQUIPMENT).flatMap(([type,parts])=>parts.filter(p=>p.unlock===r).map(p=>({type,p}))).find(({p})=>p.id===REGIONS[r].reward)||Object.entries(EQUIPMENT).flatMap(([type,parts])=>parts.filter(p=>p.unlock===r).map(p=>({type,p})))[0];
   const discovery=pair?`<canvas id="rewardWeapon" class="celebration" width="700" height="280" data-reward="${pair.p.id}" data-type="${pair.type}"></canvas><h2 style="font-size:21px;margin:8px 0">${pair.p.name} blueprint</h2><p class="dialog-copy">${pair.p.desc} Your new blueprint is waiting at the workshop.</p>`:'<canvas class="celebration" id="rewardBot" width="700" height="280"></canvas>';
   if(r===REGIONS.length-1){openPanel('victory',`${head('All fifteen relays restored!','One final royal challenge awaits.','THE ANCIENT PATH OPENS')}<div class="panel-body">${discovery}<div class="completed-stats"><div><b>${game.save.totalBots}</b><span>bots defeated</span></div><div><b>${game.save.cleared.length}</b><span>cells discovered</span></div><div><b>${game.save.owned.length}</b><span>parts built</span></div></div><p class="dialog-copy">Beyond Starfall, the Crown Pantheon waits. Watch the sleeping court at the seal, then choose when to open it. Four sentinels defend the royal pair. Bring your strongest equipment; the king and queen slowly repair themselves.</p><div class="pause-actions"><button class="primary pictorial-action" data-action="pantheon" aria-label="Visit the royal court"><span>♛</span><small>Discover</small></button><button class="secondary pictorial-action" data-action="home" aria-label="Build at the nearest workshop"><span>⚙</span><small>Build</small></button></div></div>`);return;}
-  const mission=RETURNS.find(m=>returnActive(game.save,m)),next=mission?`${replayTitle(game.save,mission)} has appeared in ${REGIONS[mission.r].name}`:`${REGIONS[r+1].name} is now open`;
+  const mission=currentMission(game.save),next=mission?`${replayTitle(game.save,mission)} has appeared in ${REGIONS[mission.r].name}`:`${REGIONS[r+1].name} is now open`;
   openPanel('guardian',`${head('A relay comes to life!',next,'BIG DISCOVERY')}<div class="panel-body">${discovery}<div class="pause-actions"><button class="primary pictorial-action" data-action="home" aria-label="Build at the nearest workshop"><span>⚙</span><small>Build</small></button><button class="secondary pictorial-action" data-action="next" aria-label="Explore the next trail"><span>${mission?'⚑':'▶'}</span><small>Explore</small></button></div></div>`);
   tone(500,.5,'triangle',.04,1500);
 }
@@ -259,7 +261,7 @@ document.addEventListener('visibilitychange',()=>{syncMusic();if(document.hidden
 window.addEventListener('pagehide',persist);
 function hud(){
   const s=game.save,r=regionAt(game.player.x,game.player.y),max=game.maxHp(),current=Math.ceil(game.player.hp);
-  $('regionName').textContent=areaInfo(r)?.name||'Ancient trail';$('scrapCount').textContent=s.scrap;$('healthText').textContent=`${current} / ${max}`;$('healthFill').style.width=`${Math.max(0,game.player.hp/max*100)}%`;$('healthFill').style.background=game.player.hp/max<.3?'#f49b7d':'#94e5b1';$('weaponLabel').textContent=item('weapon',s.build.weapon).name;
+  $('regionName').textContent=(areaInfo(r)?.name||'Ancient trail')+(halloweenActive(s)?' · Halloween':'');$('scrapCount').textContent=s.scrap;$('healthText').textContent=`${current} / ${max}`;$('healthFill').style.width=`${Math.max(0,game.player.hp/max*100)}%`;$('healthFill').style.background=game.player.hp/max<.3?'#f49b7d':'#94e5b1';$('weaponLabel').textContent=item('weapon',s.build.weapon).name;
   $('healthText').parentElement.classList.toggle('critical',game.player.hp/max<=.18);
   if(game.charging)$('weaponLabel').textContent='Charging…';else if(game.player.hp/max<=.18)$('weaponLabel').textContent='Needs repairs!';else if(game.player.hp/max<=.5)$('weaponLabel').textContent='Damaged';
   $('weaponLabel').hidden=!game.charging&&game.player.hp/max>.5;

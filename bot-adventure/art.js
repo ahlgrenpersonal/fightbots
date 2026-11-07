@@ -1,12 +1,14 @@
-import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world90';
-import {atlasProgress,regionEdges} from './atlas-progress.js?v=world90';
-import {atlasSiteVisible} from './quiet-ui.js?v=world90';
-import {boatArt,dockArt} from './boat-art.js?v=world90';
-import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world90';
-import {COURT} from './pantheon.js?v=world90';
-import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world90';
-import * as worldData from './data.js?v=world90';
-import {replayPalette} from './replay-colors.js?v=world90';
+import {robotCostume,halloweenProp} from './halloween-art.js?v=world91';
+import {regionHalloween,halloweenTheme,halloweenActive} from './halloween.js?v=world91';
+import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world91';
+import {atlasProgress,regionEdges} from './atlas-progress.js?v=world91';
+import {atlasSiteVisible} from './quiet-ui.js?v=world91';
+import {boatArt,dockArt} from './boat-art.js?v=world91';
+import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world91';
+import {COURT} from './pantheon.js?v=world91';
+import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world91';
+import * as worldData from './data.js?v=world91';
+import {replayPalette} from './replay-colors.js?v=world91';
 
 export function rounded(c,x,y,w,h,r,fill,stroke,line=2) {
   c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=line;c.stroke();}
@@ -73,6 +75,8 @@ export function enemyEquipment(enemy){
   if(enemy.replayLook)Object.assign(look,enemy.replayLook);
   const livery=!enemy.royal&&replayPalette(enemy.replayPalette);
   if(livery)Object.assign(look,{color:livery.color,livery});
+  const costume=halloweenTheme(enemy.halloween);
+  if(costume)Object.assign(look,{halloween:costume.id,color:costume.color,livery:costume});
   return look;
 }
 function encounterRole(enemy){
@@ -401,7 +405,7 @@ export function weapon(c,id,t=0,action=0) {
 }
 
 export function bot(c,x,y,size,options={},t=0) {
-  const { color='#ee6954',livery,armor='light',wheels='basic',gun='bumper',gadget='none',type='',region=0,theme='',encounterRole='',angle=0,hit=0,swing=0,moving=false,boss=false,shield=false,health=1,reducedMotion=false }=options;
+  const { color='#ee6954',livery,halloween,armor='light',wheels='basic',gun='bumper',gadget='none',type='',region=0,theme='',encounterRole='',angle=0,hit=0,swing=0,moving=false,boss=false,shield=false,health=1,reducedMotion=false }=options;
   if(reducedMotion){t=0;}
   const damaged=health<=.5,critical=health<=.18;
   c.save();c.translate(x,y);c.scale(size/80,size/80);
@@ -469,6 +473,7 @@ export function bot(c,x,y,size,options={},t=0) {
   if(gadget!=='none'){c.save();c.translate(-33,-2);c.scale(.35,.35);gadgetArt(c,gadget,t);c.restore();}
   c.save();c.translate(Math.cos(angle)<0?-24:24,10);c.rotate(angle);weapon(c,gun,t,reducedMotion?(swing>0?.45:0):swing);c.restore();
   if(type==='shield'){c.save();c.rotate(angle);rounded(c,28,-24,13,48,5,livery?.highlight||'#b4dfd5','#20363a',3);line(c,33,-16,33,16,'#fff0ae',4);c.restore();}
+  robotCostume(c,halloween);
   if(shield){ellipse(c,0,-1,40,43,'#90eaff17');c.beginPath();c.ellipse(0,-1,40,43,0,0,Math.PI*2);c.strokeStyle='#b9f5ed90';c.lineWidth=2;c.stroke();}
   c.restore();
 }
@@ -518,6 +523,7 @@ export class Painter {
     c.save();c.translate(w/2-this.camera.x*s+sx,h*.51-this.camera.y*s+sy);c.scale(s,s);
     const x0=Math.max(0,Math.floor(this.camera.x-w/s/2)-2),x1=Math.min(WORLD_W,Math.ceil(this.camera.x+w/s/2)+2),y0=Math.max(0,Math.floor(this.camera.y-h/s*.51)-2),y1=Math.min(WORLD_H,Math.ceil(this.camera.y+h/s*.49)+2);
     for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++)this.ground(x,y,t,g);
+    if(halloweenActive(g.save)){c.fillStyle='#6e477a14';c.fillRect(x0,y0,x1-x0,y1-y0);}
     const courtVisible=x1>147&&x0<178&&y1>218&&y0<258;
     if(courtVisible){templeFloor(c,t);templeArchitecture(c);if(!pantheonUnlocked(g.save)){c.save();c.translate(PANTHEON.entry.x,PANTHEON.entry.y);c.rotate(Math.PI/2);this.gate(0,0,t);c.restore();}}
     for(const arena of g.world.arenas||[]){
@@ -553,7 +559,7 @@ export class Painter {
           const boss=unit.type==='boss',scale=boss?(unit.size??1.7)/1.7:1,rx=boss?1.15*scale:unit.kind==='player'?.8:.55,ry=boss?1.5*scale:unit.kind==='player'?.9:.65;
           const cy=unit.y-(boss?.35*scale:.1);c.beginPath();c.rect(x0-4,y0-4,x1-x0+8,y1-y0+8);c.moveTo(unit.x+rx,cy);c.ellipse(unit.x,cy,rx,ry,0,0,Math.PI*2);c.clip('evenodd');
         }
-        this.prop(obj,t);c.restore();
+        if(obj.halloween&&['flower','beacon','scrap'].includes(obj.type))halloweenProp(c,obj);else this.prop(obj,t);c.restore();
       }
       else if(obj.kind==='royal')sleepingRoyal(c,obj,t,{drawWeapon:weapon});
       else if(obj.kind==='home')this.home(obj.x,obj.y,t);
@@ -640,7 +646,7 @@ export class Painter {
     }
     c.restore();
   }
-  ground(x,y,t,g){const c=this.c,r=regionAt(x,y),reg=REGIONS[r]||REGIONS[4],n=hash(x,y);if(r===PANTHEON.r){templeGround(c,x,y);return;}const road=isRoad(x+.5,y+.5);
+  ground(x,y,t,g){const c=this.c,r=regionAt(x,y),base=REGIONS[r]||REGIONS[4],festival=regionHalloween(g.save,r),reg=festival?{...base,ground:festival.ground,path:festival.path}:base,n=hash(x,y);if(r===PANTHEON.r){templeGround(c,x,y);return;}const road=isRoad(x+.5,y+.5);
     if(g.world.water.has(`${x},${y}`)){
       c.fillStyle=reg.water;c.fillRect(x,y,1.02,1.02);
       if(r>=5){themeGround(c,x,y,reg,n,false,t,true);return;}
@@ -866,7 +872,7 @@ export class Painter {
     }c.restore();
   }
   map(canvas,g,{showPlayer=true,detail=false}={}){const c=canvas.getContext('2d'),w=600,h=760;canvas.width=w*2;canvas.height=h*2;c.scale(2,2);c.fillStyle='#19393c';c.fillRect(0,0,w,h);const progress=atlasProgress(g.save),{scale:s,ox,oy,visible,active,newArea}=progress,markerScale=.8,goal=g.nextObjective?.();
-    for(let y=0;y<WORLD_H;y++)for(let x=0;x<WORLD_W;x++){const r=regionAt(x,y);if(!visible.has(r))continue;c.fillStyle=g.world.water.has(`${x},${y}`)?(REGIONS[r]?.water||'#64a8b5'):areaInfo(r).ground;c.fillRect(ox+x*s,oy+y*s,s+.1,s+.1);if(r>=0&&r<REGIONS.length&&isRoad(x+.5,y+.5)){c.fillStyle=REGIONS[r].path;c.fillRect(ox+x*s,oy+y*s,s+.1,s+.1);}}
+    for(let y=0;y<WORLD_H;y++)for(let x=0;x<WORLD_W;x++){const r=regionAt(x,y);if(!visible.has(r))continue;c.fillStyle=g.world.water.has(`${x},${y}`)?(REGIONS[r]?.water||'#64a8b5'):(regionHalloween(g.save,r)?.ground||areaInfo(r).ground);c.fillRect(ox+x*s,oy+y*s,s+.1,s+.1);if(r>=0&&r<REGIONS.length&&isRoad(x+.5,y+.5)){c.fillStyle=regionHalloween(g.save,r)?.path||REGIONS[r].path;c.fillRect(ox+x*s,oy+y*s,s+.1,s+.1);}}
     for(const p of g.world.props)if(visible.has(regionAt(p.x,p.y))&&p.type==='mountain'&&(p.r===2||hash(Math.floor(p.x),Math.floor(p.y))<.04)){
       const x=ox+p.x*s,y=oy+p.y*s;c.beginPath();c.moveTo(x-4,y+2);c.lineTo(x,y-5);c.lineTo(x+4,y+2);c.closePath();c.fillStyle='#607e91';c.fill();c.beginPath();c.moveTo(x-1.7,y-2);c.lineTo(x,y-5);c.lineTo(x+1.7,y-2);c.closePath();c.fillStyle='#f0ffff';c.fill();
     }
