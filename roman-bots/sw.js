@@ -1,11 +1,12 @@
-const CACHE='roman-bots-roman36',ASSETS=['./','./index.html','./styles.css?v=roman36','./app.js?v=roman36','./data.js?v=roman36','./engine.js?v=roman36','./art.js?v=roman36','./geometry.js?v=roman36','./icons.js?v=roman36','./manifest.webmanifest','./version.json','./refresh.html','./assets/icon-192.png','./assets/icon-512.png','./assets/courtyard-theme.mp3','./north/index.html','./north/north.css?v=roman36','./north/north.js?v=roman36','./north/campaign.js?v=roman36','./north/world.js?v=roman36','./north/scenery.js?v=roman36'];
-ASSETS.push('./north/prologue.js?v=roman36','./north/city.js?v=roman36');
-ASSETS.push('./north/west-world.js?v=roman36','./north/west-scenery.js?v=roman36');
-ASSETS.push('./north/navigation.js?v=roman36');
-ASSETS.push('./north/south-world.js?v=roman36','./north/south-scenery.js?v=roman36');
-ASSETS.push('./north/east-world.js?v=roman36','./north/east-scenery.js?v=roman36');
-ASSETS.push('./north/return-quests.js?v=roman36','./north/quest-art.js?v=roman36');
-ASSETS.push('./north/victory-art.js?v=roman36','./north/local-map.js?v=roman36');
+const CACHE='roman-bots-roman37',ASSETS=['./','./index.html','./styles.css?v=roman37','./app.js?v=roman37','./data.js?v=roman37','./engine.js?v=roman37','./art.js?v=roman37','./geometry.js?v=roman37','./icons.js?v=roman37','./manifest.webmanifest','./version.json','./refresh.html','./assets/icon-192.png','./assets/icon-512.png','./assets/courtyard-theme.mp3','./north/index.html','./north/north.css?v=roman37','./north/north.js?v=roman37','./north/campaign.js?v=roman37','./north/world.js?v=roman37','./north/scenery.js?v=roman37'];
+ASSETS.push('./north/prologue.js?v=roman37','./north/city.js?v=roman37');
+ASSETS.push('./north/west-world.js?v=roman37','./north/west-scenery.js?v=roman37');
+ASSETS.push('./north/navigation.js?v=roman37');
+ASSETS.push('./north/south-world.js?v=roman37','./north/south-scenery.js?v=roman37');
+ASSETS.push('./north/east-world.js?v=roman37','./north/east-scenery.js?v=roman37');
+ASSETS.push('./north/return-quests.js?v=roman37','./north/quest-art.js?v=roman37');
+ASSETS.push('./north/victory-art.js?v=roman37','./north/local-map.js?v=roman37');
+ASSETS.push('./north/boss-room.js?v=roman37','./north/interior-art.js?v=roman37');
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('roman-bots-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{

@@ -1,8 +1,8 @@
-import {drawQuestAtlas} from './quest-art.js?v=roman36';
-import * as world from './east-world.js?v=roman36';
-import {drawBot} from '../art.js?v=roman36';
-import {normalizeSlot} from '../data.js?v=roman36';
-import {drawVoyage as seaVoyage} from './south-scenery.js?v=roman36';
+import {drawQuestAtlas} from './quest-art.js?v=roman37';
+import * as world from './east-world.js?v=roman37';
+import {drawBot} from '../art.js?v=roman37';
+import {normalizeSlot} from '../data.js?v=roman37';
+import {drawVoyage as seaVoyage} from './south-scenery.js?v=roman37';
 const {WIDTH,HEIGHT,HOME,KING,CAMPS,ENCOUNTERS,LANDSCAPES,LANDMARKS,tileAt,passable}=world;
 const TAU=Math.PI*2,INK='#315364',GOLD='#f6d474';
 const hash=(x,y)=>{let n=Math.imul(x+831,374761393)^Math.imul(y+117,668265263);n=Math.imul(n^(n>>>13),1274126177);return((n^(n>>>16))>>>0)/4294967296;};
@@ -32,8 +32,13 @@ function temple(c,p,royal=false){
   const b=p.footprint,w=b.right-b.left,h=b.bottom-b.top;
   c.save();c.translate(b.left,b.top);c.scale(w/12,h/5);
   rect(c,.2,1.5,11.6,3.4,'#6b8c9c');rect(c,.4,1.65,11.2,3.1,'#c0cecc');rect(c,.7,1.85,10.6,2.65,'#78959f');
-  rect(c,4.9,2.55,2.2,2.1,'#315e79');rect(c,5.1,2.7,1.8,1.95,'#8e8f79');
-  for(const x of [5.3,5.8,6.3,6.8])line(c,x,2.85,x,4.5,'#d7c38b',.09);
+  if(royal){
+    oval(c,6,3.4,.95,.95,GOLD);oval(c,6,3.4,.8,.8,'#646b9f');
+    poly(c,[[6,2.8],[6.4,3.4],[6,4],[5.6,3.4]],'#f9ecc1');
+  }else{
+    rect(c,4.9,2.55,2.2,2.1,'#315e79');rect(c,5.1,2.7,1.8,1.95,'#8e8f79');
+    for(const x of [5.3,5.8,6.3,6.8])line(c,x,2.85,x,4.5,'#d7c38b',.09);
+  }
   for(let i=0;i<6;i++){const x=1+i*2;rect(c,x-.4,2.4,.8,2.1,'#3e6b89');column(c,x,4.65,2.8,.42);}
   rect(c,0,1.15,12,.4,'#faf4df');rect(c,.15,1.5,11.7,.23,'#478bad');
   for(let i=0;i<18;i++){const x=.3+i*.64;line(c,x,1.48,x+.16,1.65,GOLD,.05);}

@@ -1,7 +1,7 @@
-import {drawQuestAtlas} from './quest-art.js?v=roman36';
-import * as world from './south-world.js?v=roman36';
-import { drawBot } from '../art.js?v=roman36';
-import { normalizeSlot } from '../data.js?v=roman36';
+import {drawQuestAtlas} from './quest-art.js?v=roman37';
+import * as world from './south-world.js?v=roman37';
+import { drawBot } from '../art.js?v=roman37';
+import { normalizeSlot } from '../data.js?v=roman37';
 
 const { WIDTH, HEIGHT, HOME, KING, CAMPS, ENCOUNTERS, LANDSCAPES, LANDMARKS, tileAt, passable } = world;
 const TAU = Math.PI * 2;
@@ -557,14 +557,11 @@ function southernPalace(c, b, state, time) {
     arc(c, x, 2.7, .31, .35, Math.PI, TAU, '#d5b97b', .07);
     column(c, x - .45, 4.28, 2.48, .18);
   }
-  // Deep blue central portal, bronze doors, and a violet-and-gold royal seal.
-  c.beginPath(); c.moveTo(6.95, 4.5); c.lineTo(6.95, 2.83);
-  c.bezierCurveTo(6.95, 1.75, 9.05, 1.75, 9.05, 2.83); c.lineTo(9.05, 4.5); c.closePath();
-  c.fillStyle = '#365d7c'; c.fill(); c.strokeStyle = '#c9ad73'; c.lineWidth = .12; c.stroke();
-  for (const x of [7.15, 7.69, 8.23, 8.77]) {
-    rect(c, x, 2.73, .15, 1.55, '#ac9973');
-    oval(c, x + .07, 3.38, .05, .05, '#ebd798');
-  }
+  // A wall relief, not a second, unreachable doorway behind the real entrance.
+  oval(c, 8, 3.1, .94, .94, '#c9ad73');
+  oval(c, 8, 3.1, .79, .79, '#467da9');
+  for(let i=0;i<12;i++){const a=i*TAU/12;poly(c,[[8+Math.cos(a)*.43,3.1+Math.sin(a)*.43],[8+Math.cos(a+.15)*.69,3.1+Math.sin(a+.15)*.69],[8+Math.cos(a+.3)*.43,3.1+Math.sin(a+.3)*.43]],'#f4d78b');}
+  oval(c, 8, 3.1, .3, .3, '#e7d199');
   rect(c, 1, 1.48, 14, .25, '#fdf4de');
   rect(c, .9, 1.23, 14.2, .25, '#b5c5be');
   poly(c, [[4.7, 1.25], [8, .08], [11.3, 1.25]], '#fbf2d9', '#6f9da5', .06);

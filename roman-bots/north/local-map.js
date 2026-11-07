@@ -1,14 +1,16 @@
-import {drawBot} from '../art.js?v=roman36';
-import {WEST_GATE,SOUTH_DOCK,EAST_DOCK,RETURN_POINTS} from './campaign.js?v=roman36';
-import {drawCity} from './city.js?v=roman36';
-import {drawLandscape as drawNorthernLandscape} from './scenery.js?v=roman36';
+import {drawBot} from '../art.js?v=roman37';
+import {WEST_GATE,SOUTH_DOCK,EAST_DOCK,RETURN_POINTS} from './campaign.js?v=roman37';
+import {drawCity} from './city.js?v=roman37';
+import {drawLandscape as drawNorthernLandscape} from './scenery.js?v=roman37';
+import {drawBossInterior} from './interior-art.js?v=roman37';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
-export const inRome=game=>game.state.region==='north'&&(game.leader()||game.state.position).y>=130;
+export const inRome=game=>!game.interior&&game.state.region==='north'&&(game.leader()||game.state.position).y>=130;
 export const areaComplete=game=>game.regionComplete&&(!game.localQuest||game.localQuest.encounters.every(e=>game.state.completed.includes(e.id)));
 export function localMapModel(game){
   const world=game.world,city=inRome(game),north=game.state.region==='north';
+  if(game.interior){const e=game.roomBoss,dead=game.state.completed.includes(e.id);return {id:game.state.region+'-room',world,bounds:world.ROOM_BOUNDS,city:false,interior:true,completed:areaComplete(game),player:game.leader(),markers:[{...e,kind:dead?'victory':'boss',destination:e},{...world.EXIT,kind:'home',exit:true,destination:world.EXIT}]};}
   const bounds=city?{left:0,top:128,right:world.WIDTH,bottom:world.HEIGHT}:{left:0,top:0,right:world.WIDTH,bottom:north?130:world.HEIGHT};
   const exits=city?[
     {id:'north-exit',x:26,y:129.5,kind:'forest',destination:{x:26,y:127}},
@@ -78,6 +80,7 @@ export function drawLocalMap(c,width,height,game,view={zoom:1}){
     c.save();c.beginPath();c.rect(b.left,b.top,b.right-b.left,b.bottom-b.top);c.clip();
     drawNorthernLandscape(c,{bounds:b,time:0,state:{...game.state,conquered:game.regionComplete}});drawCity(c,0,game.state);c.restore();
   }
+  if(model.interior)drawBossInterior(c,{region:game.state.region,king:model.world.KING,time:0,completed:model.completed});
   c.strokeStyle='#b6cfbc';c.lineWidth=1/layout.scale;c.strokeRect(b.left,b.top,b.right-b.left,b.bottom-b.top);c.restore();
   for(const marker of model.markers){
     const actual={x:marker.x*layout.scale+layout.ox,y:marker.y*layout.scale+layout.oy},{x,y}=localMapMarkerPoint(model,layout,marker);

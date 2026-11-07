@@ -6,10 +6,14 @@ export function previewRoute(game,p){
   // Trials use Battle's unobstructed arena movement, not world cell paths.
   if(game.trial)return [{x:leader.x,y:leader.y},{x:bounds.boundX(p.x),y:bounds.boundY(p.y)}];
   p=game.approachPoint?.(p)||p;
-  const end=game.world.nearestWalkable({x:bounds.boundX(p.x),y:bounds.boundY(p.y)});
-  return end?game.world.findPath(leader,end):[];
+  const end=game.movementPoint?.(p)||game.world.nearestWalkable({x:bounds.boundX(p.x),y:bounds.boundY(p.y)});
+  if(!end)return [];
+  const route=game.world.findPath(leader,end);
+  const doorway=game.interactionSites?.().some(s=>(s.action==='bossEnter'||s.action==='bossExit')&&distance(s,end)<.01);
+  return doorway&&route.length&&distance(route.at(-1),end)>.01?[...route,end]:route;
 }
 export function nextDestination(game,home=false){
+  if(game.interior)return game.state.completed.includes(game.roomBoss.id)?game.world.EXIT:game.roomBoss;
   if(home)return game.world.HOME;
   if(!game.prologueComplete)return {x:33,y:142,kind:'arena'};
   if(game.units.some(u=>u.team===0&&u.hp/u.maxHp<.25))return game.nearestCamp();

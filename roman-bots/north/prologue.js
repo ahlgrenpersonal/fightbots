@@ -1,4 +1,4 @@
-import {Battle} from '../engine.js?v=roman36';
+import {Battle} from '../engine.js?v=roman37';
 
 export const ARENA=Object.freeze({x:39,y:140});
 export const ARENA_ENTRANCE=Object.freeze({x:33,y:142});
