@@ -1,13 +1,13 @@
-import {currentMission} from './data.js?v=world92';
-import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world92';
-import { bossProfile } from './content.js?v=world92';
-import {replayTitle} from './replay-variants.js?v=world92';
-import { ReturningPatrols } from './patrols.js?v=world92';
-import {inRoyalChamber} from './pantheon.js?v=world92';
-import {RoyalCourt} from './royal-court.js?v=world92';
-import {nearestWalkable} from './data.js?v=world92';
-import {Boats} from './boats.js?v=world92';
-import {initializeReplay,beginReplay,completeReplay} from './replay.js?v=world92';
+import {currentMission} from './data.js?v=world93';
+import { HOME, WORKSHOPS, RETURNS, ENCOUNTERS, returnActive, REGIONS, EQUIPMENT, STARTERS, makeWorld, freshSave, stats, item, cellsIn, unlockedRegion, regionAt, relayFor, pathfind, canWalk, available, requiredCells, migrateSiteProgress, migrateWorldLayout, PANTHEON, areaUnlocked, pantheonUnlocked } from './data.js?v=world93';
+import { bossProfile } from './content.js?v=world93';
+import {replayTitle} from './replay-variants.js?v=world93';
+import { ReturningPatrols } from './patrols.js?v=world93';
+import {inRoyalChamber} from './pantheon.js?v=world93';
+import {RoyalCourt} from './royal-court.js?v=world93';
+import {nearestWalkable} from './data.js?v=world93';
+import {Boats} from './boats.js?v=world93';
+import {initializeReplay,beginReplay,completeReplay} from './replay.js?v=world93';
 
 export const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
 export const TAP_COOLDOWN=1.5;
@@ -114,7 +114,7 @@ export class Adventure {
     if(!areaUnlocked(this.save,regionAt(pos.x,pos.y))){this.emit('toast',{text:regionAt(pos.x,pos.y)===PANTHEON.r?'Restore every relay and finish the return missions to open the ancient pantheon.':'Restore this region\'s relay to open the next trail.'});return false;}
     if(this.boats.riding||this.boats.lakeAt(pos))return this.boats.moveTo(pos);
     this.boats.pending=null;
-    if(inRoyalChamber(pos.x,pos.y)&&this.royals.sealed){this.emit('toast',{text:'Approach the seal, watch the court, then choose when to begin.'});return this.moveTo(PANTHEON.stairTop);}
+    if(inRoyalChamber(pos.x,pos.y)&&this.royals.sealed){this.emit('toast',{text:this.royals.mausoleum?'Stand outside the mausoleum. Its doors will open…':'Approach the seal, watch the court, then choose when to begin.'});return this.moveTo(PANTHEON.stairTop);}
     let to={x:Math.floor(pos.x)+.5,y:Math.floor(pos.y)+.5};
     if(!canWalk(this.world,this.save,Math.floor(to.x),Math.floor(to.y))){
       const neighbors=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if(canWalk(this.world,this.save,Math.floor(to.x)+dx,Math.floor(to.y)+dy))neighbors.push({x:to.x+dx,y:to.y+dy});

@@ -1,14 +1,15 @@
-import {robotCostume,halloweenProp} from './halloween-art.js?v=world92';
-import {regionHalloween,halloweenTheme,halloweenActive} from './halloween.js?v=world92';
-import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world92';
-import {atlasProgress,regionEdges} from './atlas-progress.js?v=world92';
-import {atlasSiteVisible} from './quiet-ui.js?v=world92';
-import {boatArt,dockArt} from './boat-art.js?v=world92';
-import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world92';
-import {COURT} from './pantheon.js?v=world92';
-import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world92';
-import * as worldData from './data.js?v=world92';
-import {replayPalette} from './replay-colors.js?v=world92';
+import {robotCostume,halloweenProp} from './halloween-art.js?v=world93';
+import {mausoleum} from './mausoleum-art.js?v=world93';
+import {regionHalloween,halloweenTheme,halloweenActive} from './halloween.js?v=world93';
+import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world93';
+import {atlasProgress,regionEdges} from './atlas-progress.js?v=world93';
+import {atlasSiteVisible} from './quiet-ui.js?v=world93';
+import {boatArt,dockArt} from './boat-art.js?v=world93';
+import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world93';
+import {COURT} from './pantheon.js?v=world93';
+import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world93';
+import * as worldData from './data.js?v=world93';
+import {replayPalette} from './replay-colors.js?v=world93';
 
 export function rounded(c,x,y,w,h,r,fill,stroke,line=2) {
   c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=line;c.stroke();}
@@ -492,7 +493,7 @@ export class Painter {
   follow(g,dt){
     const bosses=g.enemies.filter(e=>e.type==='boss'&&e.hp>0&&!e.dormant&&g.enemyAwake(e)&&Math.hypot(e.x-g.player.x,e.y-g.player.y)<8&&(e.active||Math.hypot(e.x-g.player.x,e.y-g.player.y)<5.5));
     let target={x:g.player.x,y:g.player.y},zoom=this.baseTile;
-    if(g.royals.active&&regionAt(g.player.x,g.player.y)===PANTHEON.r){
+    if(g.royals.active&&regionAt(g.player.x,g.player.y)===PANTHEON.r&&!(g.royals.mausoleum&&g.royals.units.some(e=>g.royals.mobilized(e)&&g.royals.emerging(e)))){
       const royal=g.royals.units.filter(e=>g.royals.awake(e));
       const left=Math.min(g.player.x-1.5,...royal.map(e=>e.x-e.size*.8)),right=Math.max(g.player.x+1.5,...royal.map(e=>e.x+e.size*.8));
       const top=Math.min(g.player.y-1.5,...royal.map(e=>e.y-e.size)),bottom=Math.max(g.player.y+1.6,...royal.map(e=>e.y+e.size*.6));
@@ -525,7 +526,7 @@ export class Painter {
     for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++)this.ground(x,y,t,g);
     if(halloweenActive(g.save)){c.fillStyle='#6e477a14';c.fillRect(x0,y0,x1-x0,y1-y0);}
     const courtVisible=x1>147&&x0<178&&y1>218&&y0<258;
-    if(courtVisible){templeFloor(c,t);templeArchitecture(c);if(!pantheonUnlocked(g.save)){c.save();c.translate(PANTHEON.entry.x,PANTHEON.entry.y);c.rotate(Math.PI/2);this.gate(0,0,t);c.restore();}}
+    if(courtVisible){templeFloor(c,t);if(halloweenActive(g.save))mausoleum(c,t,{phase:g.royals.phase,opening:g.time-g.royals.openedAt});else templeArchitecture(c);if(!pantheonUnlocked(g.save)){c.save();c.translate(PANTHEON.entry.x,PANTHEON.entry.y);c.rotate(Math.PI/2);this.gate(0,0,t);c.restore();}}
     for(const arena of g.world.arenas||[]){
       const radius=arena.radius||3.8;
       if(arena.r<=unlockedRegion(g.save)&&returnVisible(g.save,arena)&&arena.x+radius>x0&&arena.x-radius<x1&&arena.y+radius>y0&&arena.y-radius<y1)arenaFloor(c,arena);
@@ -584,7 +585,7 @@ export class Painter {
         }
       }
     }
-    if(courtVisible){templeColumns(c);templeSeal(c,t,{phase:g.royals.phase,inspect:g.royals.inspect,ready:g.royals.ready,opening:g.time-g.royals.openedAt});}
+    if(courtVisible){if(!halloweenActive(g.save))templeColumns(c);templeSeal(c,t,{phase:g.royals.phase,inspect:g.royals.inspect,ready:g.royals.ready,opening:g.time-g.royals.openedAt});}
     const selected=g.enemies.find(e=>e.id===(g.tapSelection||g.target)&&e.hp>0&&!e.dormant&&g.enemyAwake(e));
     if(selected){const radius=Math.max(.65,(selected.size||1)*.65),progress=1-Math.min(1,g.tapCd/1.5);c.save();c.translate(selected.x,selected.y);ring(c,0,0,radius+.05,'#163f62',.12);ring(c,0,0,radius+.05,'#a8f5dd',.045);c.beginPath();c.arc(0,0,radius+.15,-Math.PI/2,-Math.PI/2+progress*Math.PI*2);c.strokeStyle='#ffeb94';c.lineWidth=.07;c.stroke();for(let i=0;i<4;i++){const a=i*Math.PI/2;line(c,Math.cos(a)*(radius+.07),Math.sin(a)*(radius+.07),Math.cos(a)*(radius+.27),Math.sin(a)*(radius+.27),'#effff1',.065);}c.restore();}
     for(const l of g.loot){const bob=Math.sin(t*4+l.x)*.05;ellipse(c,l.x,l.y+.12,.14,.06,'#284b4930');if(l.kind==='gear')this.gear(l.x,l.y+bob,.2);else{c.save();c.translate(l.x,l.y+bob);c.rotate(Math.PI/4);rounded(c,-.09,-.09,.18,.18,.03,'#ffe18c','#b59b46',.025);c.restore();}}

@@ -1,4 +1,4 @@
-import {shuffled,halloweenActive,regionHalloween} from './halloween.js?v=world92';
+import {shuffled,halloweenActive,regionHalloween} from './halloween.js?v=world93';
 // Each full shuffled batch introduces one new encounter; earlier ones remain.
 export const REPLAY_VARIANTS=[
   {id:'unequal-duo',mission:'replay-3',batch:2,name:'Bulwark & Flicker'},

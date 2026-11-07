@@ -1,18 +1,18 @@
-import {halloweenActive,regionHalloween} from './halloween.js?v=world92';
-import {currentMission} from './data.js?v=world92';
-import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, visibleEquipment, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world92';
-import { Adventure, distance } from './engine.js?v=world92';
-import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon,atlasBot } from './art.js?v=world92';
-import { mountAtlas } from './atlas.js?v=world92';
-import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world92';
-import {AdventureSaves} from './adventure-saves.js?v=world92';
-import {bindHoldConfirmation} from './hold-confirm.js?v=world92';
-import {bindPowerControl,updatePowerControl} from './power-control.js?v=world92';
-import {atlasProgress} from './atlas-progress.js?v=world92';
-import {localProgress} from './quiet-ui.js?v=world92';
-import {replayTitle} from './replay-variants.js?v=world92';
+import {halloweenActive,regionHalloween} from './halloween.js?v=world93';
+import {currentMission} from './data.js?v=world93';
+import { BUILD, HOME, COLORS, EQUIPMENT, REGIONS, WORKSHOPS, RETURNS, returnActive, freshSave, item, stats, available, visibleEquipment, cellsIn, unlockedRegion, regionAt, nearestWalkable, WORLD_W, WORLD_H, relayFor, regionOrigin, atlasLayout, requiredCells, migrateWorldLayout } from './data.js?v=world93';
+import { Adventure, distance } from './engine.js?v=world93';
+import { Painter, bot, weapon, rounded, categoryIcon, equipmentIcon,atlasBot } from './art.js?v=world93';
+import { mountAtlas } from './atlas.js?v=world93';
+import {PANTHEON,areaInfo,areaUnlocked,pantheonUnlocked} from './data.js?v=world93';
+import {AdventureSaves} from './adventure-saves.js?v=world93';
+import {bindHoldConfirmation} from './hold-confirm.js?v=world93';
+import {bindPowerControl,updatePowerControl} from './power-control.js?v=world93';
+import {atlasProgress} from './atlas-progress.js?v=world93';
+import {localProgress} from './quiet-ui.js?v=world93';
+import {replayTitle} from './replay-variants.js?v=world93';
 
-const buildVersion = 'world92';
+const buildVersion = 'world93';
 const SAVE_KEY='bot-adventure-save-v1';
 const adventureSaves=new AdventureSaves({storage:()=>localStorage,key:SAVE_KEY});
 const $=id=>document.getElementById(id);
@@ -90,7 +90,7 @@ game.onEvent=e=>{
   if(e.type==='crafted'){tone(500,.3,'triangle',.05,1400);toast(`${e.part.name} assembled!`);persist();}
   if(e.type==='equip'){tone(350,.08,'triangle',.025,500);persist();}
   if(e.type==='boost'){tone(250,.4,'triangle',.04,900);toast('Power surge!');}
-  if(e.type==='royal-stage'){persist();banner(e.phase==='guards'?'The four sentinels awaken!':e.phase==='awakening'?'The royal pair is awakening…':'The king and queen are coming!');tone(100,.6,'triangle',.035,350);}
+  if(e.type==='royal-stage'){persist();banner(e.phase==='guards'?halloweenActive(game.save)?'The mausoleum opens! Skeleton sentinels emerge!':'The four sentinels awaken!':e.phase==='awakening'?'The royal pair is awakening…':halloweenActive(game.save)?'The Zombie King and Mummy Queen emerge!':'The king and queen are coming!');tone(100,.6,'triangle',.035,350);}
   if(e.type==='royal-victory'){persist();const rewards=e.rewards||[],nextWorld=e.nextHalloween?'Halloween takeover! All fifteen regions have new robot armies. Clear their camps and bosses, then face the Zombie King and Mummy Queen.':e.completedHalloween?'The Halloween world is restored! A shuffled normal region is next.':'A fresh shuffled region awaits!';openPanel('royal-victory',`${head('Royal Champion!','The king, queen and all four sentinels are defeated.','THE ROYAL FINALE')}<div class="panel-body">${rewards.length?`<canvas id="royalWeapons" class="celebration" width="700" height="210" aria-label="Royal weapon rewards"></canvas><h2>${rewards.map(id=>item('weapon',id).name).join(' + ')}</h2><p class="dialog-copy">Yours forever! Equip your new royal weapons at any workshop.</p>`:'<canvas id="rewardBot" class="celebration" width="700" height="280"></canvas>'}<p class="dialog-copy">${nextWorld}</p><p class="dialog-copy">All your progress and equipment are saved. +250 scrap · +12 parts</p><div class="pause-actions"><button class="primary pictorial-action" data-action="map" aria-label="Open adventure map"><span>⚑</span><small>Explore</small></button><button class="secondary pictorial-action" data-action="home"><span>⚙</span><small>Build</small></button></div></div>`);}
 };
 function closePanel(){holdCleanup?.();holdCleanup=null;atlasController?.destroy();atlasController=null;if(panelMode==='workshop')workshopDetails=false;if(panel.open)panel.close();panelMode=null;game.paused=false;last=performance.now();persist();}
@@ -277,7 +277,7 @@ function hud(){
   else if(game.royals.observing)interaction='royal';
   else if(game.stationNear()&&game.player.hp<max-1&&!game.charging)interaction='repair';
   else if(r>=0&&r<REGIONS.length&&distance(game.player,relayFor(r))>4&&distance(game.player,relayFor(r))<6&&game.bossAwake(r))interaction='guardian';
-  $('interact').hidden=!interaction;$('interact').disabled=interaction==='royal'&&!game.royals.ready;$('interact').textContent=interaction==='royal'?game.royals.ready?'⚔ Open the gate':'◉ '+Math.ceil(5-game.royals.inspect):{home:'⌂ Home workshop · free repairs',repair:'＋ Recharge · ◆ 2',guardian:'ϟ Guardian ahead'}[interaction]||'';
+  $('interact').hidden=!interaction;$('interact').disabled=interaction==='royal'&&!game.royals.ready;$('interact').textContent=interaction==='royal'?game.royals.mausoleum?'◉ Mausoleum opens in '+Math.ceil(5-game.royals.inspect):game.royals.ready?'⚔ Open the gate':'◉ '+Math.ceil(5-game.royals.inspect):{home:'⌂ Home workshop · free repairs',repair:'＋ Recharge · ◆ 2',guardian:'ϟ Guardian ahead'}[interaction]||'';
 }
 function loop(now){const dt=Math.min(.06,(now-last)/1000);last=now;game.viewBounds={left:painter.camera.x-painter.w/painter.tile/2,right:painter.camera.x+painter.w/painter.tile/2,top:painter.camera.y-painter.h/painter.tile*.51,bottom:painter.camera.y+painter.h/painter.tile*.49};game.tick(dt);painter.draw(game,game.time,dt);if(frame++%5===0)hud();if(panel.open&&frame%3===0)drawPanels();if(now-lastSave>2200){persist();lastSave=now;}requestAnimationFrame(loop);}
 hud();requestAnimationFrame(loop);
