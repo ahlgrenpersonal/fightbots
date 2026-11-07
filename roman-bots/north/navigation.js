@@ -34,24 +34,56 @@ export class RouteGesture{
   cancel(){this.id=null;this.enemy=null;this.start=null;this.point=null;}
 }
 const signs=new WeakMap();
-function posts(world){
-  if(signs.has(world))return signs.get(world);
-  const points=world.SIGNPOSTS||world.ROUTES?.flat().map(([x,y])=>({x,y}))||[];
-  const chosen=[];
-  for(const p of points){
-    if(chosen.length>=16)break;
-    if(!world.passable(p.x,p.y)||!p.ship&&chosen.some(q=>distance(p,q)<12))continue;
-    const camp=[...world.CAMPS].sort((a,b)=>distance(a,p)-distance(b,p))[0];
-    const target=p.destination||(distance(p,world.HOME)<18?world.HOME:camp);
-    const path=world.findPath(p,target),toward=path[Math.min(5,path.length-1)]||target;
-    chosen.push({...p,home:target===world.HOME,angle:Math.atan2(toward.y-p.y,toward.x-p.x)});
+function clearSignLine(world,a,b){
+  if(!world.passable(a.x,a.y)||!world.passable(b.x,b.y))return false;
+  const dx=b.x-a.x,dy=b.y-a.y;
+  let tx=dx>0?(Math.floor(a.x)+1-a.x)/dx:dx<0?(Math.floor(a.x)-a.x)/dx:Infinity;
+  let ty=dy>0?(Math.floor(a.y)+1-a.y)/dy:dy<0?(Math.floor(a.y)-a.y)/dy:Infinity,t=0;
+  while(t<1){
+    const next=Math.min(tx,ty,1),mid=(t+next)/2;
+    if(next-t>1e-10&&!world.passable(a.x+dx*mid,a.y+dy*mid))return false;
+    if(next===1)break;
+    if(Math.abs(tx-next)<1e-10)tx+=1/Math.abs(dx);
+    if(Math.abs(ty-next)<1e-10)ty+=1/Math.abs(dy);
+    t=next;
   }
-  signs.set(world,chosen);return chosen;
+  return true;
+}
+function clearSignApproach(world,a,b){
+  const length=distance(a,b),nx=(b.y-a.y)/length*.3,ny=(a.x-b.x)/length*.3;
+  return length>0&&[-1,0,1].every(side=>clearSignLine(world,{x:a.x+nx*side,y:a.y+ny*side},{x:b.x+nx*side,y:b.y+ny*side}));
+}
+export function signposts(world){
+  if(signs.has(world))return signs.get(world);
+  const chosen=[];
+  const add=(p,destination,ship=false)=>chosen.push(Object.freeze({...p,destination,ship,home:destination===world.HOME,angle:Math.atan2(destination.y-p.y,destination.x-p.x)}));
+  // A camp arrow means a short, direct walk to that actual camp, never the
+  // first bend of a distant path that may turn away behind trees or water.
+  for(const target of [world.HOME,...world.CAMPS]){
+    const preferred=target===world.HOME?world.CAMPS[0]:world.HOME,candidates=[];
+    for(let y=Math.floor(target.y)-8;y<=target.y+8;y++)for(let x=Math.floor(target.x)-8;x<=target.x+8;x++){
+      const p={x:x+.5,y:y+.5},d=distance(p,target);
+      if(d<6||d>8||!clearSignApproach(world,p,target))continue;
+      const alignment=preferred?((p.x-target.x)*(preferred.x-target.x)+(p.y-target.y)*(preferred.y-target.y))/(d*distance(preferred,target)):0;
+      candidates.push({...p,score:(world.tileAt(p.x,p.y)==='path'?0:3)+Math.abs(d-7)-alignment});
+    }
+    candidates.sort((a,b)=>a.score-b.score||a.y-b.y||a.x-b.x);
+    const first=candidates[0];
+    if(!first)continue;
+    add({x:first.x,y:first.y},target);
+    if(target===world.HOME)continue;
+    const second=candidates.find(p=>distance(p,first)>=9);
+    if(second)add({x:second.x,y:second.y},target);
+  }
+  for(const p of world.SIGNPOSTS||[]){
+    if(p.ship&&p.destination&&distance(p,p.destination)>=2&&distance(p,p.destination)<=10&&clearSignApproach(world,p,p.destination))add({x:p.x,y:p.y},p.destination,true);
+  }
+  const result=Object.freeze(chosen);signs.set(world,result);return result;
 }
 export function drawSignposts(c,world,bounds){
-  for(const p of posts(world)){
+  for(const p of signposts(world)){
     if(p.x<bounds.left-2||p.x>bounds.right+2||p.y<bounds.top-2||p.y>bounds.bottom+2)continue;
-    c.save();c.translate(p.x+1.5,p.y-.8);
+    c.save();c.translate(p.x,p.y);
     c.strokeStyle='#635e48';c.lineWidth=.09;c.beginPath();c.moveTo(0,.3);c.lineTo(0,-1.45);c.stroke();
     c.fillStyle='#eadca5';c.strokeStyle='#426a63';c.lineWidth=.05;c.beginPath();c.roundRect(-.6,-1.5,1.2,.68,.08);c.fill();c.stroke();
     c.save();c.translate(.28,-1.14);c.rotate(p.angle);c.strokeStyle='#236e68';c.lineWidth=.055;c.beginPath();c.moveTo(-.18,0);c.lineTo(.18,0);c.lineTo(.06,-.13);c.moveTo(.18,0);c.lineTo(.06,.13);c.stroke();c.restore();

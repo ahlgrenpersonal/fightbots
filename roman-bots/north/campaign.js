@@ -1,11 +1,11 @@
-import {Battle,distance,BODY_SPACING} from '../engine.js?v=roman34';
-import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman34';
-import * as NORTH from './world.js?v=roman34';
-import * as WEST from './west-world.js?v=roman34';
-import * as SOUTH from './south-world.js?v=roman34';
-import * as EAST from './east-world.js?v=roman34';
-import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman34';
-import {RETURN_QUESTS,INVASION,activeReturnQuest,questFinished,inHarbor,HARBOR_FRONT} from './return-quests.js?v=roman34';
+import {Battle,distance,BODY_SPACING} from '../engine.js?v=roman35';
+import {WEAPONS,SHIELDS,normalizeSlot} from '../data.js?v=roman35';
+import * as NORTH from './world.js?v=roman35';
+import * as WEST from './west-world.js?v=roman35';
+import * as SOUTH from './south-world.js?v=roman35';
+import * as EAST from './east-world.js?v=roman35';
+import {Trial,ARENA_ENTRANCE,CITY_EXIT,PROLOGUE_ROUNDS,earnedCount,inArena,cityPoint} from './prologue.js?v=roman35';
+import {RETURN_QUESTS,INVASION,activeReturnQuest,questFinished,inHarbor,HARBOR_FRONT} from './return-quests.js?v=roman35';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const number=(n,a,b,f=a)=>Number.isFinite(n)?clamp(n,a,b):f;

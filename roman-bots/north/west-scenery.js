@@ -1,8 +1,8 @@
-import {drawQuestAtlas} from './quest-art.js?v=roman34';
-import { WIDTH, HEIGHT, HOME, CAMPS, ENCOUNTERS, KING, BRIDGES, LANDMARKS, LANDSCAPES, ROUTES, tileAt, passable } from './west-world.js?v=roman34';
-import { drawBot } from '../art.js?v=roman34';
-import { normalizeSlot } from '../data.js?v=roman34';
-import { citizen } from './scenery.js?v=roman34';
+import {drawQuestAtlas} from './quest-art.js?v=roman35';
+import { WIDTH, HEIGHT, HOME, CAMPS, ENCOUNTERS, KING, BRIDGES, LANDMARKS, LANDSCAPES, ROUTES, tileAt, passable } from './west-world.js?v=roman35';
+import { drawBot } from '../art.js?v=roman35';
+import { normalizeSlot } from '../data.js?v=roman35';
+import { citizen } from './scenery.js?v=roman35';
 
 const TAU = Math.PI * 2;
 const INK = '#354d50';

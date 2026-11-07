@@ -1,18 +1,18 @@
-import {Campaign,UPGRADE_PRICES,WEST_GATE,SOUTH_DOCK,EAST_DOCK} from './campaign.js?v=roman34';
-import * as NORTH from './world.js?v=roman34';
-import * as northArt from './scenery.js?v=roman34';
-import * as westArt from './west-scenery.js?v=roman34';
-import * as southArt from './south-scenery.js?v=roman34';
-import * as eastArt from './east-scenery.js?v=roman34';
-import {drawBot,drawGear} from '../art.js?v=roman34';
-import {BUILD,WEAPONS,SHIELDS} from '../data.js?v=roman34';
-import {guardsAgainst,distance,MELEE_TOLERANCE} from '../engine.js?v=roman34';
-import {botSize} from '../geometry.js?v=roman34';
-import {icon} from '../icons.js?v=roman34';
-import {drawCity,drawHeroWelcome,ATLAS_SIGN,drawWorldBoard} from './city.js?v=roman34';
-import {RouteGesture,previewRoute,nextDestination,hintPoint,drawSignposts} from './navigation.js?v=roman34';
-import {drawQuestSites,drawQuestBadge,drawQuestWarning} from './quest-art.js?v=roman34';
-import {HARBOR_FRONT} from './return-quests.js?v=roman34';
+import {Campaign,UPGRADE_PRICES,WEST_GATE,SOUTH_DOCK,EAST_DOCK} from './campaign.js?v=roman35';
+import * as NORTH from './world.js?v=roman35';
+import * as northArt from './scenery.js?v=roman35';
+import * as westArt from './west-scenery.js?v=roman35';
+import * as southArt from './south-scenery.js?v=roman35';
+import * as eastArt from './east-scenery.js?v=roman35';
+import {drawBot,drawGear} from '../art.js?v=roman35';
+import {BUILD,WEAPONS,SHIELDS} from '../data.js?v=roman35';
+import {guardsAgainst,distance,MELEE_TOLERANCE} from '../engine.js?v=roman35';
+import {botSize} from '../geometry.js?v=roman35';
+import {icon} from '../icons.js?v=roman35';
+import {drawCity,drawHeroWelcome,ATLAS_SIGN,drawWorldBoard} from './city.js?v=roman35';
+import {RouteGesture,previewRoute,nextDestination,hintPoint,drawSignposts} from './navigation.js?v=roman35';
+import {drawQuestSites,drawQuestBadge,drawQuestWarning} from './quest-art.js?v=roman35';
+import {HARBOR_FRONT} from './return-quests.js?v=roman35';
 
 const $=id=>document.getElementById(id),KEY='roman-bots-north-v1',PREFS='roman-bots-north-preferences-v1',SAVE_WARNING='Save unavailable. Keep this window open.';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -227,7 +227,7 @@ function atlas(showOverview=false){
 }
 function hasBackup(){try{return !!localStorage.getItem(KEY+'-backup');}catch{return false;}}
 function recoveryPanel(){openPanel('Saved adventure needs attention','saveRecovery','<p>The saved adventure could not be read. It has been left untouched. Try loading it again, restore the recovery save, or deliberately start again.</p><button class="wide" data-action="reloadLatest">Try loading again</button>'+(hasBackup()?'<button class="wide quiet" data-action="restore">Restore previous adventure</button>':'')+'<button class="wide quiet" data-action="restart">Start again</button>');}
-function settings(){const atHome=game.nearbyCamp()?.id==='home';openPanel('Adventure settings','settings',`<label class="setting">Squad size<select id="squadSize" ${atHome?'':'disabled'}><option value="3" ${game.state.squadSize===3?'selected':''}>Captain + 2 companions</option><option value="5" ${game.state.squadSize===5?'selected':''}>Captain + 4 companions</option></select></label><p>Change the squad at the home workshop. All regions are open from the start.</p><button class="wide quiet" data-action="restart">${icon('replay')} <span class="red">Start this adventure again</span></button>${hasBackup()?'<button class="wide quiet" data-action="restore">Restore previous adventure</button>':''}<p class="build">roman34 · Roman adventure</p>`);}
+function settings(){const atHome=game.nearbyCamp()?.id==='home';openPanel('Adventure settings','settings',`<label class="setting">Squad size<select id="squadSize" ${atHome?'':'disabled'}><option value="3" ${game.state.squadSize===3?'selected':''}>Captain + 2 companions</option><option value="5" ${game.state.squadSize===5?'selected':''}>Captain + 4 companions</option></select></label><p>Change the squad at the home workshop. All regions are open from the start.</p><button class="wide quiet" data-action="restart">${icon('replay')} <span class="red">Start this adventure again</span></button>${hasBackup()?'<button class="wide quiet" data-action="restore">Restore previous adventure</button>':''}<p class="build">roman35 · Roman adventure</p>`);}
 function pause(){openPanel('Take a breather','pause',`<button class="wide" data-action="close" aria-label="Keep playing">${icon('play')}</button><button class="wide quiet" data-action="settings" aria-label="Advanced settings">${icon('edit')}</button>`);}
 function cancelRestartHold(){
   const hold=restartHold;restartHold=null;if(!hold)return;
