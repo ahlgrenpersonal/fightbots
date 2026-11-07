@@ -29,6 +29,14 @@ export function robotCostume(c,id){
     shape(c,[[23,-5],[37,-24],[32,26],[22,22]],'#63334e');
     shape(c,[[-12,7],[-6,7],[-9,16]],'#fff1d5');shape(c,[[6,7],[12,7],[9,16]],'#fff1d5');
     oval(c,0,25,5,5,'#e5808a');box(c,-18,-29,36,5,'#40384e');
+  }else if(id==='ghost'){
+    // A translucent hood, glowing sensor eyes and scalloped shell keep it mechanical.
+    c.beginPath();c.moveTo(-26,24);c.lineTo(-25,-10);c.quadraticCurveTo(-25,-33,0,-33);c.quadraticCurveTo(25,-33,25,-10);
+    c.lineTo(27,25);c.lineTo(16,18);c.lineTo(7,28);c.lineTo(-2,20);c.lineTo(-13,28);c.closePath();
+    c.fillStyle='#e4fcffe0';c.fill();c.strokeStyle='#5d919f';c.lineWidth=1.8;c.stroke();
+    for(const x of [-10,10]){oval(c,x,-12,7,9,'#294956');oval(c,x,-12,2.5,4,'#b5ffff');}
+    oval(c,0,7,4,6,'#4f7584');line(c,-18,-2,-18,12,'#91c8d2',1.5);line(c,18,-2,18,12,'#91c8d2',1.5);
+    for(const x of [-29,29]){oval(c,x,-5,3,3,'#c4e5e9');line(c,x-2,-5,x+2,-5,ink,1);}
   }else if(id==='pumpkin'){
     oval(c,0,-7,26,25,'#ee9d45');
     for(const x of [-15,15]){c.beginPath();c.ellipse(x*.45,-7,10,24,0,0,Math.PI*2);c.strokeStyle='#b96b32';c.lineWidth=1.5;c.stroke();}
@@ -41,7 +49,10 @@ export function robotCostume(c,id){
 }
 export function halloweenProp(c,p){
   c.save();c.translate(p.x,p.y-.25);c.scale(.018,.018);
-  if(p.halloween==='pumpkin'){robotCostume(c,'pumpkin');}
+  if(p.halloween==='pumpkin'||p.halloween==='ghost'){
+    if(p.halloween==='ghost')oval(c,0,36,17,4,'#263a4033');
+    robotCostume(c,p.halloween);
+  }
   else{
     box(c,-16,-20,32,35,p.halloween==='mummy'?'#d6c899':p.halloween==='vampire'?'#9b779b':p.halloween==='skeleton'?'#dedbc5':'#8ab37a');
     box(c,-12,-16,24,6,'#d6e6bd');box(c,-10,-5,20,12,'#2e4b49');

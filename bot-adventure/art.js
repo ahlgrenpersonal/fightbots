@@ -1,14 +1,14 @@
-import {robotCostume,halloweenProp} from './halloween-art.js?v=world91';
-import {regionHalloween,halloweenTheme,halloweenActive} from './halloween.js?v=world91';
-import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world91';
-import {atlasProgress,regionEdges} from './atlas-progress.js?v=world91';
-import {atlasSiteVisible} from './quiet-ui.js?v=world91';
-import {boatArt,dockArt} from './boat-art.js?v=world91';
-import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world91';
-import {COURT} from './pantheon.js?v=world91';
-import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world91';
-import * as worldData from './data.js?v=world91';
-import {replayPalette} from './replay-colors.js?v=world91';
+import {robotCostume,halloweenProp} from './halloween-art.js?v=world92';
+import {regionHalloween,halloweenTheme,halloweenActive} from './halloween.js?v=world92';
+import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world92';
+import {atlasProgress,regionEdges} from './atlas-progress.js?v=world92';
+import {atlasSiteVisible} from './quiet-ui.js?v=world92';
+import {boatArt,dockArt} from './boat-art.js?v=world92';
+import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world92';
+import {COURT} from './pantheon.js?v=world92';
+import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world92';
+import * as worldData from './data.js?v=world92';
+import {replayPalette} from './replay-colors.js?v=world92';
 
 export function rounded(c,x,y,w,h,r,fill,stroke,line=2) {
   c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=line;c.stroke();}
