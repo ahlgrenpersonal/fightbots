@@ -1,15 +1,15 @@
-import {robotCostume,halloweenProp} from './halloween-art.js?v=world93';
-import {mausoleum} from './mausoleum-art.js?v=world93';
-import {regionHalloween,halloweenTheme,halloweenActive} from './halloween.js?v=world93';
-import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world93';
-import {atlasProgress,regionEdges} from './atlas-progress.js?v=world93';
-import {atlasSiteVisible} from './quiet-ui.js?v=world93';
-import {boatArt,dockArt} from './boat-art.js?v=world93';
-import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world93';
-import {COURT} from './pantheon.js?v=world93';
-import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world93';
-import * as worldData from './data.js?v=world93';
-import {replayPalette} from './replay-colors.js?v=world93';
+import {robotCostume,halloweenProp} from './halloween-art.js?v=world94';
+import {mausoleum} from './mausoleum-art.js?v=world94';
+import {regionHalloween,halloweenTheme,halloweenActive} from './halloween.js?v=world94';
+import { REGIONS, WORLD_W, WORLD_H, HOME, hash, regionAt, cellsIn, unlockedRegion, REGION_W, REGION_H, REGION_TILES, regionOrigin, relayFor, atlasLayout, isRoad, requiredCells, GATES } from './data.js?v=world94';
+import {atlasProgress,regionEdges} from './atlas-progress.js?v=world94';
+import {atlasSiteVisible} from './quiet-ui.js?v=world94';
+import {boatArt,dockArt} from './boat-art.js?v=world94';
+import {PANTHEON,areaInfo,pantheonUnlocked} from './data.js?v=world94';
+import {COURT} from './pantheon.js?v=world94';
+import {templeGround,templeFloor,templeArchitecture,templeColumns,templeSeal,sleepingRoyal,pantheonMarker} from './pantheon-art.js?v=world94';
+import * as worldData from './data.js?v=world94';
+import {replayPalette} from './replay-colors.js?v=world94';
 
 export function rounded(c,x,y,w,h,r,fill,stroke,line=2) {
   c.beginPath();c.roundRect(x,y,w,h,r);if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=line;c.stroke();}

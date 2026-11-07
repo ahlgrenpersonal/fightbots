@@ -1,4 +1,4 @@
-import {HOME,REGIONS,WORKSHOPS,WORLD_W,WORLD_H,regionAt,areaUnlocked,pathfind,canWalk} from './data.js?v=world93';
+import {HOME,REGIONS,WORKSHOPS,WORLD_W,WORLD_H,regionAt,areaUnlocked,pathfind,canWalk} from './data.js?v=world94';
 
 const steps=[[1,0],[-1,0],[0,1],[0,-1]],key=p=>`${Math.floor(p.x)},${Math.floor(p.y)}`,point=k=>{const [x,y]=k.split(',').map(Number);return {x:x+.5,y:y+.5};};
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);

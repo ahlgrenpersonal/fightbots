@@ -1,6 +1,6 @@
-import {halloweenActive,halloweenHealth,royalHalloween} from './halloween.js?v=world93';
-import {PANTHEON,COURT,ROYAL_SPECS,inRoyalChamber} from './pantheon.js?v=world93';
-import {pantheonUnlocked,canWalk,pathfind,regionAt,EQUIPMENT} from './data.js?v=world93';
+import {halloweenActive,halloweenHealth,royalHalloween} from './halloween.js?v=world94';
+import {PANTHEON,COURT,ROYAL_SPECS,inRoyalChamber} from './pantheon.js?v=world94';
+import {pantheonUnlocked,canWalk,pathfind,regionAt,EQUIPMENT} from './data.js?v=world94';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const inside=p=>regionAt(p.x,p.y)===PANTHEON.r&&p.y>=229&&p.y<259;
 const finite=(v,fallback)=>Number.isFinite(v)?v:fallback;
@@ -46,7 +46,10 @@ export class RoyalCourt {
   }
   get sealed(){return this.phase==='sleeping';}
   get active(){return ['guards','awakening','regents'].includes(this.phase);}
-  get observing(){return this.sealed&&(!halloweenActive(this.game.save)||this.game.save.replay.phase==='court')&&pantheonUnlocked(this.game.save)&&distance(this.game.player,PANTHEON.stairTop)<2.2;}
+  get observing(){
+    const p=this.game.player,near=this.mausoleum?p.x>=158.5&&p.x<=166.5&&p.y>=247&&p.y<=257:distance(p,PANTHEON.stairTop)<2.2;
+    return this.sealed&&(!halloweenActive(this.game.save)||this.game.save.replay.phase==='court')&&pantheonUnlocked(this.game.save)&&near;
+  }
   get ready(){return this.observing&&this.inspect>=5;}
   mobilized(e){return e.royal&&e.hp>0&&(this.phase==='guards'?e.role==='guard':this.phase==='regents'&&e.role!=='guard');}
   emerging(e){return this.mausoleum&&!e.emerged;}
